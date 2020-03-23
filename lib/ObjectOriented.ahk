@@ -33,7 +33,6 @@ Class __Array {
 ;*		Returns the number of enumerable properties in the array.
 	Count[] {
 		Get {
-			MsgBox(22222)
 			For i, v in this
 				r += (v != "")
 
