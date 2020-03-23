@@ -156,7 +156,7 @@ SetTimer(_Label, _Period := "", _Priority := 0) {
 :*:\^)::{U+207E}
 :*:\^n::{U+207F}
 
-;===============           English            ===============;
+;===============           English            ===============;  *? https://gist.github.com/endolith/876629.
 
 ;=========================           *ign Fix           =====;
 
