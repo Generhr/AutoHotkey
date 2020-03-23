@@ -4,17 +4,22 @@ KeyGet(_KeyName := "") {
 	Return, (RegExReplace(_KeyName ? _KeyName : A_ThisHotkey, "[~*$+^#! &]|AppsKey"))
 }
 
+;*	__KeyWait([_KeyName, [_Options]])
+;*	Note:
+;*		This is marginally more accurate (read unnoticeable) than the native command and accepts multiple keys as a condition if an array is passed or simply uses `A_ThisHotkey` if no key is specified.
 __KeyWait(_KeyName) {
 	Return, (GetKeyState(_KeyName, "P"))
 }
 KeyWait(_KeyName := "", _Options := "") {
 	Static oFuncObj := Func("__KeyWait")
-
 	k := [].Concat(_KeyName ? _KeyName : KeyGet(A_ThisHotkey)), s := !InStr(_Options, "D"), t := RegExReplace(_Options, "iS)[^t]*t?([\d\.]*).*", "$1") + !QueryPerformanceCounter(0)
 
-	While (k.Some(oFuncObj) == s)
+	While (k.Some(oFuncObj) == s) {
 		If (t && QueryPerformanceCounter(1) >= t)  ;* `QueryPerformanceCounter()` is only called if `t` evaluates as true.
 			Return, (ErrorLevel := 1)
+
+		Sleep, -1  ;* Need this here to register a key up event or else potentially create a second thread if there is a return immediately after this function in the calling thread.
+	}
 
 	Return, (ErrorLevel := 0)
 }
@@ -87,14 +92,14 @@ SendMessage(_Msg, _wParam := 0, _lParam := 0, _Control := "", _WinTitle := "A", 
 }
 
 SetTimer(_Label, _Period := "", _Priority := 0) {
-	SetTimer, % _Label, % _Period, % _Priority  ;* Parameters are evaluated before calling functions which means you can pass `Func("Function").Bind("Parameter")` directly to the command.
+	SetTimer, % _Label, % _Period, % _Priority  ;* Parameters are evaluated before calling functions which means you can pass `FuncObj.Bind("Parameter")` directly to the command.
 }
 
-ToolTip(_Text := "", _X := "", _Y := "", _RelativeTo := "", _WhichToolTip := 1) {
+ToolTip(_Text := "", _x := "", _y := "", _RelativeTo := "", _WhichToolTip := 1) {
 	If (_RelativeTo)
 		CoordMode, ToolTip, % _RelativeTo  ;- No error handling, no restore.
 
-	ToolTip, % _Text, _X, _Y, _WhichToolTip
+	ToolTip, % _Text, _x, _y, _WhichToolTip
 }
 
 WinGet(_SubCommand := "", _WinTitle := "A", _WinText := "", _ExcludeTitle := "", _ExcludeText := "", _DetectHiddenWindows := "") {
@@ -145,9 +150,36 @@ WinGet(_SubCommand := "", _WinTitle := "A", _WinText := "", _ExcludeTitle := "",
 	Throw, (Exception("Invalid title.", -1, Format("""{}"" is invalid or doesn't exist.", _WinTitle)))
 }
 
-;=====            ComObj            =========================;
+;=====            ComObj            =========================;  *** https://github.com/dufferzafar/Autohotkey-Scripts/blob/master/lib/com.ahk
 
-;=====        Date and time         =========================;
+ShowDesktop() {
+	Static vComObj := ComObjCreate("shell.application")
+
+	vComObj.ToggleDesktop()
+}
+
+Speak(_String) {
+	Static vComObj := ComObjCreate("SAPI.SpVoice")
+
+	vComObj.Speak(_String)
+}
+
+DownloadContent(_Url) {
+	Static vComObj := ComObjCreate("MSXML2.XMLHTTP")
+
+	vComObj.Open("Get", _Url, 0)  ;! ("GET", _Url, False)
+	vComObj.Send()
+
+	Return, (vComObj.ResponseText)
+}
+
+;=====             DLL              =========================;
+
+ShowStartMenu() {
+	DllCall("User32.dll\PostMessageW", "Ptr", DllCall("User32.dll\GetForegroundWindow", "Ptr"), "UInt", 0x112, "Ptr", 0xF130, "Ptr", 0)
+}
+
+;=====        Date and Time         =========================;
 
 ;* Description:
 ;*		Returns accurately how many seconds have passed between `QueryPerformanceCounter(0)` and `QueryPerformanceCounter(1)`.
@@ -173,16 +205,13 @@ Type(_Variable) {
 ;=====           Variable           =========================;
 
 Swap(ByRef _Variable1, ByRef _Variable2) {
-	t := _Variable1
-
-	_Variable1 := _Variable2
-	_Variable2 := t
+	t := _Variable1, _Variable1 := _Variable2, _Variable2 := t
 }
 
 ;=====            Window            =========================;
 
 ;* Description:
-;*		Gradually fade in/out a target window to a target alpha over a period of time.
+;*		Gradually fade a target window in/out to a target alpha over a period of time.
 Fade(_Mode, _Alpha := "" , _Time := 5000, _Window := "A") {  ;- _Mode is not case sensitive.
 	a := t := (t := WinGet("Transparent", (w := _Window == "A" ? "ahk_id" . WinGet("ID") : _Window))) == "" ? 255*(_Mode = "In") : t, s := A_TickCount
 		v := [t - _Alpha, _Alpha - t][_Mode = "In"]
