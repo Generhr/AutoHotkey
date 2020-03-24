@@ -1,6 +1,4 @@
-# AutoHotkey
-
-## Window.ahk
+# Window.ahk
 Monitors which window is active and performs 3 functions:
             
 1. Suspend any scripts that it is baby sitting if a window in the "Suspend" becomes active.
