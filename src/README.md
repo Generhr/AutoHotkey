@@ -3,12 +3,12 @@ Monitors which window is active and performs 3 functions:
             
 1. Suspend any scripts that it is baby sitting if a window in the "Suspend" becomes active.
 2. Reloads any scripts that it is baby sitting if that script was editted.
-3. Forces any window in Settings.ini to maintain it's x, y, width and height (unless it is maximized)
+3. Forces any window in Settings.ini to maintain it's x, y, width and height (unless it is maximized or Ctrl is held).
 
 Setup:
 1. For any scripts that you want Window.ahk to babysit, they must have the following code in them:
 ```　
-    OnMessage(0xFF,"StatusReport")
+    OnMessage(0xFF, "StatusReport")
     
     StatusReport() {
         Return, (A_IsSuspended)
