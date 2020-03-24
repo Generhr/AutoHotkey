@@ -14,6 +14,11 @@ Setup:
         Return, (A_IsSuspended)
     }
 ```
+   and in your Settings.ini:
+```
+            [Scripts]
+            Scripts="Script1.ahk|Script2.ahk|...|ScriptN.ahk"
+```
 2. Your Settings.ini file must include a section titled "[Window Positions]". For example:
 ```
     [Window Positions]
