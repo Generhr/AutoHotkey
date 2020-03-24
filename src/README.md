@@ -1,4 +1,4 @@
-# Window.ahk
+c# Window.ahk
 Monitors which window is active and performs 3 functions:
             
 1. Suspend any scripts that it is baby sitting if a window in the "Suspend" becomes active.
@@ -16,8 +16,8 @@ Setup:
 ```
    and in your Settings.ini:
 ```
-            [Scripts]
-            Scripts="Script1.ahk|Script2.ahk|...|ScriptN.ahk"
+    [Scripts]
+    Scripts="Script1.ahk|Script2.ahk|...|ScriptN.ahk"
 ```
 2. Your Settings.ini file must include a section titled "[Window Positions]". For example:
 ```
