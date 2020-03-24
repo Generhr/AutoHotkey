@@ -1,4 +1,14 @@
 # Window.ahk
+Monitors your internet connection and attempts to reconnect to your network if the connection fail.
+
+Setup:
+1. Your Settings.ini must include a section titled "[Network]". For example:
+```
+    [Network]
+    Network="My wifi name"
+```
+
+# Window.ahk
 Monitors which window is active and performs 3 functions:
             
 1. Suspend any scripts that it is baby sitting if a window in the "Suspend" becomes active.
