@@ -7,71 +7,79 @@
 #Include, %A_ScriptDir%\..\lib\ObjectOriented.ahk
 #Include, %A_ScriptDir%\..\lib\String.ahk
 
+#KeyHistory, 0
 #NoEnv
 #NoTrayIcon
 #Persistent
 #SingleInstance, Force
 
-DetectHiddenWindows, On
+ListLines, Off
+Process, Priority, , Normal
 SetTitleMatchMode, 2
 SetWinDelay, -1
 
-Process, Priority, , Normal
-
 ;===============            Group             ===============;
 
-For i, v in []  ;? [["Title", "ProcessName"], ..., ["Title", "ProcessName"]].
+For i, v in []  ;? [["Title", "ProcessName", "ExcludeTitle"], ..., ["Title", "ProcessName", "ExcludeTitle"]].
 	GroupAdd, Suspend, % v[0] . (v[1] ? " ahk_exe " . v[1] . ".exe" : ""), , , % v[2]
 
 ;===============           Variable           ===============;
 
 IniRead, vScripts, % A_WorkingDir . "\cfg\Settings.ini", Scripts, Scripts
-Global vScripts
-
-;===============            Timer             ===============;
-
-SetTimer("WindowMonitor", "-50")
 
 ;===============            Other             ===============;
 
-For i, v in String.Split(vScripts, "|")
-	DllCall("SetFileAttributes", "Str", A_WorkingDir . "\src\" . v, "UInt", 0x80)  ;* Need this here to avoid double reloading with `WindowMonitor()`.
+For i, v in String.Split((vScripts := RegExReplace(vScripts, "i)\.ahk")), "|")
+	DllCall("SetFileAttributes", "Str", A_WorkingDir . "\src\" . v . ".ahk", "UInt", 0x80)  ;* Need this here to avoid double reloading with `WindowMonitor()`.
+
+;===============            Timer             ===============;
+
+SetTimer(Func("WindowMonitor").Bind(vScripts), -500)
 
 Exit
 
 ;=====           Function           =========================;
 
-WindowMonitor() {
-	Static vIsSuspended := [0, 0]
+WindowMonitor(_Scripts := "") {
+	Static oScripts
+	If (_Scripts) {
+		oScripts := [_Scripts, {}]
+		For i, v in String.Split(oScripts[0], "|")
+			oScripts[1][v] := [0]
+	}
+
+	While (!(WinGet("Title") || WinGet("Class") || WinGet("ProcessName")))  ;* Catch for right clicking a script menu.
+		Sleep(0)
 
 	WinWaitActive, A  ;* Set "Last Found" window.
 	w := WinGet()
 
-	For i, v in String.Split(vScripts, "|") {
-		SendMessage(0xFF, , , , v . "ahk_exeAutoHotkey.exe")  ;* Query if the script is suspended.
+	For k, v in oScripts[1] {
+		SendMessage(0xFF, , , , k . ".ahk - AutoHotkey", , , , , "On")  ;* Query if this script is suspended.
 
-		If ((vIsSuspended[0] == vIsSuspended[1]) && ((!ErrorLevel && WinActive("ahk_group Suspend")) || (ErrorLevel && !WinActive("ahk_group Suspend")))) {
-			Run, % A_WorkingDir . "\bin\Nircmd.exe speak text " . Format("""{}.""", (vIsSuspended[0] := vIsSuspended[1] := !ErrorLevel) ? "You're suspended young lady!" : "Carry on...")
+		If ((v[0] == ErrorLevel) && ((!ErrorLevel && WinActive("ahk_group Suspend")) || (ErrorLevel && !WinActive("ahk_group Suspend")))) {
+			v[0] := !ErrorLevel  ;* Keep track locally to check for manual suspending.
 
-			PostMessage(0x111, 65305, , , v . "ahk_exe AutoHotkey.exe")   ;? 65305 = suspend.
+			Run, % A_WorkingDir . "\bin\Nircmd.exe speak text " . Format("""{}.""", ErrorLevel ? "Carry on..." : "You're suspended young lady!")
+			ScriptCommand(k . ".ahk", "Suspend")
+
+			Sleep(50)
+			SendMessage(0xFF, 1, , , k . ".ahk - AutoHotkey", , , , , "On")  ;* Optional feedback message to set icon or whatever. Do a check for `wParam == 1` in your `StatusReport(wParam := "")` to receive.
 		}
 
-		If (w.Class != "#32768" && !(w.Title ~= "AutoHotkey Help|" . vScripts))  ;* Check to see if the file attributes have changed (OS updated the attributes because it was saved).
-			If (DllCall("GetFileAttributes", "Str", A_WorkingDir . "\src\" . v) == 0x20) {  ;? 0x20 = FILE_ATTRIBUTE_ARCHIVE.
-				DllCall("SetFileAttributes", "Str", A_WorkingDir . "\src\" . v, "UInt", 0x80)  ;? 0x80 = FILE_ATTRIBUTE_NORMAL.
+		If (w.Class != "#32768" && !(w.Title ~= "AutoHotkey Help|" . oScripts[0]))  ;* Check to see if the file attributes have changed (OS updated the attributes because it was saved).
+			If (DllCall("GetFileAttributes", "Str", A_WorkingDir . "\src\" . k . ".ahk") == 0x20) {  ;? 0x20 = FILE_ATTRIBUTE_ARCHIVE.
+				DllCall("SetFileAttributes", "Str", A_WorkingDir . "\src\" . k . ".ahk", "UInt", 0x80)  ;? 0x80 = FILE_ATTRIBUTE_NORMAL.
 
-				PostMessage(0x111, 65303, , , v . "ahk_exe AutoHotkey.exe")   ;? 65305 = reload.
+				ScriptCommand(k . ".ahk", "Reload")
 			}
 	}
 
 	If (w.Class != "#32768")
 		If (((w.ProcessName := (!w.ProcessName || w.ProcessName == "ApplicationFrameHost.exe") ? w.Title . ".exe" : w.ProcessName) == "Explorer.EXE" && w.Class == "CabinetWClass") || (w.ProcessName == "notepad++.exe" && !["Find", "Reload", "Save"].Includes(w.Title)) || (w.ProcessName == "hh.exe" && w.Title != "Find") || w.ProcessName ~= "(7zFM|Calculator|Camera|Code|Discord)\.exe")
-			WindowPosition(w)  ;* Pass the object to save processing power. :)
+			WindowPosition(w)
 
 	WinWaitNotActive, % "ahk_id" . w.ID
-
-	For i, v in String.Split(vScripts, "|")
-		vIsSuspended[0] := SendMessage(0xFF, , , , v . "ahk_exeAutoHotkey.exe")
 
 	SetTimer(A_ThisFunc, -50)
 }
