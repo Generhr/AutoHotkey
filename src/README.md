@@ -1,4 +1,4 @@
-# Window.ahk
+# Conection.ahk
 Monitors your internet connection and attempts to reconnect to your network if the connection fail.
 
 Setup:
@@ -11,7 +11,7 @@ Setup:
 # Window.ahk
 Monitors which window is active and performs 3 functions:
             
-1. Suspend any scripts that it is baby sitting if a window in the "Suspend" becomes active.
+1. Suspend any scripts that it is baby sitting if a window in the Suspend Group becomes active.
 2. Reloads any scripts that it is baby sitting if that script was editted.
 3. Forces any window in Settings.ini to maintain it's x, y, width and height (unless it is maximized or Ctrl is held).
 
@@ -20,14 +20,18 @@ Setup:
 ```　
     OnMessage(0xFF, "StatusReport")
     
-    StatusReport() {
-        Return, (A_IsSuspended)
+    StatusReport(wParmam := "") {
+	    If (wParam == 1) {
+	    	;Option code to make any changes after being told to suspend/unsuspend.
+	    }
+        Else
+            Return, (A_IsSuspended)
     }
 ```
-   and in your Settings.ini:
+   and a list of scripts to monitor (you can ommit the extension) separated with "|" in your Settings.ini:
 ```
     [Scripts]
-    Scripts="Script1.ahk|Script2.ahk|...|ScriptN.ahk"
+    Scripts="Script1|Script2|...|ScriptN"
 ```
 2. Your Settings.ini file must include a section titled "[Window Positions]". For example:
 ```
@@ -41,4 +45,4 @@ Setup:
     hh.exe=-7, 730, 894, 357
     notepad++.exe=1549, 0, 377, 1087
 ```
-3. Any exceptions to the windows declared in Settings.ini must be coded at line 68.
+3. Any exceptions to the windows declared in Settings.ini must be coded at line 79.
