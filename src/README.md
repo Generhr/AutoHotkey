@@ -21,9 +21,9 @@ Setup:
     OnMessage(0xFF, "StatusReport")
     
     StatusReport(wParmam := "") {
-	    If (wParam == 1) {
-	    	;Option code to make any changes after being told to suspend/unsuspend.
-	    }
+        If (wParam == 1) {
+            ;Optional code to make any changes after being told to suspend/unsuspend.
+        }
         Else
             Return, (A_IsSuspended)
     }
