@@ -122,7 +122,7 @@ Sleep(_Milliseconds) {
 }
 
 ;*	ToolTip([_Text[, _x[, _y[, _RelativeTo[, _WhichToolTip]]]]])
-ToolTip(_Text := "", _x := "", _y := "", _RelativeTo := "", _WhichToolTip := 1) {
+ToolTip(_Text := "", _x := "", _y := "", _RelativeTo := "Screen", _WhichToolTip := 1) {
 	If (_RelativeTo)
 		CoordMode, ToolTip, % _RelativeTo  ;- No error handling, no restore.
 
@@ -377,6 +377,20 @@ Fade(_Mode, _Alpha := "" , _Time := 5000, _Window := "A") {
 			While (a > z)
 				WinSet, Transparent, % a := (1 - ((A_TickCount - s)/_Time))*v + z, % w
 	}
+}
+
+;*	ShowDesktop(_Script, _Command)
+ScriptCommand(_Script, _Command) {
+    Static vCommand := {"Open": 65300
+		, "Help": 65301
+		, "Spy": 65302
+		, "Reload": 65303
+		, "Edit": 65304
+		, "Suspend": 65305
+		, "Pause": 65306
+		, "Exit": 65307}
+
+	PostMessage(0x111, vCommand[_Command], , , _Script . " - AutoHotkey", , , , "On")
 }
 
 ;=====            Other             =========================;
