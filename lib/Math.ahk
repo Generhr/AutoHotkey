@@ -826,8 +826,11 @@ Class Math {
 	;* Description:
 		;* Calculate the numerically smallest of two or more numbers.
 	Min(vNumbers*) {
-		If (Type(vNumbers[1]) == "Array" || Type(vNumbers[2]) == "Array" || vNumbers.Count() > 2)
-			Return, (Min(([].Concat(vNumbers*))*))  ;- Doesn't maintain structure.
+		If (Type(vNumbers[1]) == "Array" || Type(vNumbers[2]) == "Array" || vNumbers.Count() > 2) {
+			r := [].Concat(vNumbers*)
+
+			Return, (Min(r[0], r*))
+		}
 
 		Return, (Min(vNumbers*))
 	}
@@ -836,8 +839,11 @@ Class Math {
 	;* Description:
 		;* Calculate the numerically largest of two or more numbers.
 	Max(vNumbers*) {
-		If (Type(vNumbers[1]) == "Array" || Type(vNumbers[2]) == "Array" || vNumbers.Count() > 2)
-			Return, (Max(([].Concat(vNumbers*))*))  ;- Doesn't maintain structure.
+		If (Type(vNumbers[1]) == "Array" || Type(vNumbers[2]) == "Array" || vNumbers.Count() > 2) {
+			r := [].Concat(vNumbers*)
+
+			Return, (Max(r[0], r*))
+		}
 
 		Return, (Max(vNumbers*))
 	}
@@ -888,5 +894,42 @@ Class Math {
 	;* Math.RandomSeed(vSeed)
 	RandomSeed(vSeed) {
 		Random, , vSeed
+	}
+
+	;* Box Muller yields a result which is clamped between -6 and 6 (assuming double precision). And it is really less efficient than other available methods.
+	BoxMuller(vMean := 0, vDeviation := 1.0) {
+		Static vSecondary
+
+		If (!vSecondary) {
+			u1 := 0
+
+			While (u1 < 1.0e-15)
+				u1 := Math.Random()
+			u2 := Math.Random()*6.283185307179586476925286766559005768394338798750211641949889, r := Sqrt(-2*Math.Log(u1)), vSecondary := r*Math.Sin(u2)  ;! x := Sqrt(-2*Math.Log(u1))*Math.Cos(u2)*vDeviation + vMean, y := Sqrt(-2*Math.Log(u1))*Math.Sin(u2)*vDeviation + vMean
+
+			Return, (r*Math.Cos(u2)*vDeviation + vMean)
+		}
+
+		Swap(r, vSecondary)
+
+		Return, (r*vDeviation + vMean)
+	}
+
+	MarsagliaPolar(vMean := 0, vDeviation := 1.0) {
+		Static vSecondary
+
+		If (!vSecondary) {
+			r := 1
+
+			While (r >= 1 || r == 0)
+				u1 := Math.Random()*2 - 1, u2 := Math.Random()*2 - 1, r := u1*u1 + u2*u2
+			vSecondary := (r := Sqrt(-2*Math.Log(r)/r))*u1
+
+			Return, (r*u2*vDeviation + vMean)
+		}
+
+		Swap(r, vSecondary)
+
+		Return, (r*vDeviation + vMean)
 	}
 }
