@@ -1,131 +1,148 @@
 ﻿;=====           Function           =========================;
 
-Array(_Parameter*) {
+Array(vParameters*) {
 	r := new __Array
 
-	Loop, % _Parameter.Length()
-		r[A_Index - 1] := _Parameter[A_Index]
+	Loop, % vParameters.Length()  ;* Using a loop because enumerating with a variadic parameter will skip empty elements.
+		r[A_Index - 1] := vParameters[A_Index]
 
 	Return, (r)
 }
 
-Object(_Parameter*) {
+Object(vParameters*) {
 	r := new __Object
 
-	Loop, % _Parameter.Count()//2
-		r[_Parameter[(i := A_Index*2) - 1]] := _Parameter[i]
+	Loop, % vParameters.Count()//2
+		r[vParameters[(i := A_Index*2) - 1]] := vParameters[i]
 
 	Return, (r)
 }
 
-__Sort(_Value1, _Value2) {
-	Return, (_Value1 < _Value2 ? -1 : _Value1 > _Value2 ? 1 : 0)
+__Sort(vValue1, vValue2) {
+	Return, (vValue1 < vValue2 ? -1 : vValue1 > vValue2 ? 1 : 0)
 }
 
 ;=====            Class             =========================;
 
 Class __Array {
+    Static StringCaseSense := 1, ThrowException := 1
 
 	;-----           Property           -------------------------;
 
-;*	Array.Count
-;*	Description:
-;*		Returns the number of enumerable properties in the array.
-	Count[] {
-		Get {
-			For i, v in this
-				r += (v != "")
+	__Get(vKey) {
+		Switch (vKey) {
 
-			Return, (Round(r))
+			;* Array.Length
+			Case "Length":
+				Return, (Round(this.MaxIndex() + 1))
+
+			;* Array.Count
+			;* Description:
+				;* Count of enumerable properties.
+			Case "Count":
+				For i, v in this
+					r += (v != "")
+
+				Return, (Round(r))
 		}
 	}
 
-;*	Array.Length[ := Integer]
-;*	Description:
-;*		The Length property of an object which is an instance of type Array sets or returns the number of elements in that array. The value is an unsigned, 32-bit integer that is always numerically greater than the highest index in the array.
-	Length[] {
-		Get {
-			Return, (Round(this.MaxIndex() + 1))
-		}
+	__Set(vKey, vValue) {
+		Switch (vKey) {
 
-		Set {
-			If (value ~= "^[0-9]+$") {
-				o := value - (s := Round(this.MaxIndex() + 1))
+			;* Array.Length := N
+			Case "Length":
+				If (Math.IsInteger(vValue) && vValue >= 0) {
+					o := vValue - (s := Round(this.MaxIndex() + 1))
 
-				Loop, % Math.Abs(o)
-					(o < 0) ? this.RemoveAt(--s) : this[s++] := ""  ;? ["" || "undefined"].
+					Loop, % Math.Abs(o)
+						(o < 0) ? this.RemoveAt(--s) : this[s++] := ""  ;? ["" || "undefined"].
 
-				Return, (s)
-			}
-			Throw, (Exception("Invalid assignment.", -1, Format("""{}"" is invalid. This property may only be assigned a possitive integer.", value)))
+					Return, (s)
+				}
+
+				If (this.ThrowException)
+					Throw, (Exception("Invalid assignment.", -1, Format("""{}"" is invalid. This property may only be assigned a possitive integer.", vValue)))
+
+			;* Array.StringCaseSense := (1 || 0)
+			Case "StringCaseSense":
+				ObjRawSet(__Array, "StringCaseSense", vValue)
+
+			;* Array.ThrowException := (1 || 0)
+			Case "ThrowException":
+				ObjRawSet(__Array, "ThrowException", vValue)
 		}
 	}
 
 	;-----            Method            -------------------------;
 
+	__Call(vKey) {
+		Switch (vKey) {
+
+			;* Array.Count()
+			Case "Count":
+				Return, (this.Count)  ;* Redirect `Array.Count()` to `Array.Count[]`.
+		}
+	}
+
 	;---------------            Custom            ---------------;
 
-;*	[String := ]Array.Print()
-;*	Description:
-;*		Converts the array into a string to more easily see the structure. No effort has been made to handle FuncObj/ComObj however.
+	;* Array.Print()
+	;* Description:
+		;* Converts the array into a string to more easily see the structure.
 	Print() {
-		m := this.MaxIndex()
+		m := Round(this.MaxIndex() + 1)
 
-		For i, v in this
-			r .= (i == 0 ? "[" : "") . (IsObject(v) ? v.Print() : (v == "" || Type(v) == "String" ? Format("""{}""", v) : v)) . (i < m ? ", " : "]")
+		Loop, % m
+			i := A_Index - 1, r .= (A_Index == 1 ? "[" : "") . (IsObject(this[i]) ? this[i].Print() : (Math.IsNumeric(this[i]) ? this[i] : Format("""{}""", this[i]))) . (A_Index < m ? ", " : "]")
 
 		Return, (r ? r : "[]")
 	}
 
-;*	Array.Empty()
-;*	Description:
-;*		Removes all elements in an array.
-;*	Note:
-;*		This is the same as `Array.Length := 0` but it returns a reference to `this` instead of the new length to allow for unreadable one line code. Winning.
+	;* Array.Empty()
+	;* Description:
+		;* Removes all elements in an array.
+	;* Note:
+		;* This is the same as `Array.Length := 0` but it returns a reference to `this` instead of the new length to allow for unreadable one line code. Winning.
 	Empty() {
 		this.RemoveAt(0, Round(this.MaxIndex() + 1))
 
 		Return, (this)
 	}
 
-;*	Array.Shuffle()
-;*	Description:
-;*		Fisher–Yates shuffle (https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle).
+	;* Array.Shuffle()
+	;* Description:
+		;* Fisher–Yates shuffle (https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle).
 	Shuffle() {
-		Loop, % s := this.MaxIndex()
-			this.Swap(i := A_Index - 1, Math.Random(i, s))
-
-		Return, (this)
-	}
-
-;*	Array.Swap(_Index1, _Index2)
-;*	Description:
-;*		Swap any two elements in an array.
-	Swap(_Index1, _Index2) {
 		m := this.MaxIndex()
 
-		If (_Index1 >= 0 && _Index1 <= m && _Index2 >= 0 && _Index2 <= m) {  ;- No error handling.
-			t := this[_Index1]
-
-			this[_Index1] := this[_Index2]
-			this[_Index2] := t
-		}
+		For i, v in this
+			this.Swap(i, Math.Random(i, m))
 
 		Return, (this)
 	}
 
-	;---------------             MDN              ---------------;  ;? https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
+	;* Array.Swap(vIndex1, vIndex2)
+	;* Description:
+		;* Swap any two elements in an array.
+	Swap(vIndex1, vIndex2) {
+		m := this.MaxIndex()
 
-;*	Array := Array.Concat([_Value1[, _Value2[, ...[, _ValueN]]]])
-;
-;*	Description:
-;*		Merges two or more arrays. This method does not change the existing arrays, but instead returns a new array.
-	Concat(_Value*) {
+		If (Math.IsBetween(vIndex1, 0, m) && Math.IsBetween(vIndex2, 0, m))  ;- No error handling.
+			t := this[vIndex1], this[vIndex1] := this[vIndex2], this[vIndex2] := t
+
+		Return, (this)
+	}
+
+	;---------------             MDN              ---------------;  ;? https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array, https://javascript.info/array-methods.
+
+	;* Array.Concat(vValue1, vValue2, ..., vValueN)
+	;* Description:
+		;* Merges two or more arrays. This method does not change the existing arrays, but instead returns a new array.
+	Concat(vValues*) {
 		r := this.Clone()
 
-		Loop, % _Value.Length() {  ;* Using a loop because enumerating with the variadic parameter will skip empty elements.
-			v := _Value[A_Index]
-
+		For i, v in [vValues*] {
 			If (Type(v) == "Array")
 				For i, v in v
 					r.Push(v)
@@ -136,157 +153,157 @@ Class __Array {
 		Return, (r)
 	}
 
-;*	Array.Every(Func("Function"))
-;*	Description:
-;*		Tests whether all elements in the array pass the test implemented by the provided function. It returns a Boolean value.
-;*	Note:
-;*		Calling this method on an empty array will return true for any condition.
-	Every(_Callback) {
+	;* Array.Every(Func("Function"))
+	;* Description:
+		;* Tests whether all elements in the array pass the test implemented by the provided function. It returns a Boolean value.
+	;* Note:
+		;* Calling this method on an empty array will return true for any condition.
+	Every(oCallback) {
 		For i, v in this
-			If (!_Callback.Call(v, i, this))
+			If (!oCallback.Call(v, i, this))
 				Return, (0)
 
 		Return, (1)
 	}
 
-;*	Array.Fill(_Value[, _Start[, _End]])
-;*	Description:
-;*		Changes all elements in an array to a static value, from a start index (default 0) to an end index (default Array.Length). It returns the modified array.
-	Fill(_Value := "", _Start := 0, _End := "undefined") {  ;? _Value := ["" || "undefined"].
-		s := Round(this.MaxIndex() + 1)
+	;* Array.Fill($vValue, $vStart, $vEnd)
+	;* Description:
+		;* Changes all elements in an array to a static value, from a start index (default 0) to an end index (default `Array.Length`). It returns the modified array.
+	Fill(vValue := "", vStart := 0, vEnd := "") {  ;? vValue := ["" || "undefined"].
+		m := Round(this.MaxIndex() + 1)
+			, vStart := vStart >= 0 ? Math.Min(m, vStart) : Math.Max(m + vStart, 0)
 
-		Loop, % (_End != "undefined" ? _End >= 0 ? Math.Min(s, _End) : Math.Max(s + _End, 0) : s) - _Start := _Start >= 0 ? Math.Min(s, _Start) : Math.Max(s + _Start, 0)
-			this[_Start++] := _Value
+		Loop, % (vEnd != "" ? vEnd >= 0 ? Math.Min(m, vEnd) : Math.Max(m + vEnd, 0) : m) - vStart
+			this[vStart++] := vValue
 
 		Return, (this)
 	}
 
-;*	Array := Array.Filter(Func("Function"))
-;*	Description:
-;*		Creates a new array with all elements that pass the test implemented by the provided function.
-	Filter(_Callback) {
+	;* Array.Filter(Func("Function"))
+	;* Description:
+		;* Creates a new array with all elements that pass the test implemented by the provided function.
+	Filter(oCallback) {
 		r := []
 
 		For i, v in this
-			If (_Callback.Call(v, i, this))
+			If (oCallback.Call(v, i, this))
 				r.Push(v)
 
 		Return, (r)
 	}
 
-;*	Array.Find(Func("Function"))
-;*	Description:
-;*		Returns the value of the first element in the provided array that satisfies the provided testing function.
-	Find(_Callback) {
+	;* Array.Find(Func("Function"))
+	;* Description:
+		;* Returns the value of the first element in the provided array that satisfies the provided testing function.
+	Find(oCallback) {
 		For i, v in this
-			If (_Callback.Call(v, i, this))
+			If (oCallback.Call(v, i, this))
 				Return, (v)
 
 		Return, ("")  ;? ["" || "undefined"].
 	}
 
-;*	Array.FindIndex(Func("Function"))
-;*	Description:
-;*		Returns the index of the first element in the array that satisfies the provided testing function. Otherwise, it returns -1, indicating that no element passed the test.
-	FindIndex(_Callback) {
+	;* Array.FindIndex(Func("Function"))
+	;* Description:
+		;* Returns the index of the first element in the array that satisfies the provided testing function. Otherwise, it returns -1, indicating that no element passed the test.
+	FindIndex(oCallback) {
 		For i, v in this
-			If (_Callback.Call(v, i, this))
+			If (oCallback.Call(v, i, this))
 				Return, (i)
 
 		Return, (-1)
 	}
 
-;*	Array := Array.Flat([_Depth])
-;*	Description:
-;*		Creates a new array with all sub-array elements concatenated into it recursively up to the specified depth.
-	Flat(_Depth := 1) {
+	;* Array.Flat($vDepth)
+	;* Description:
+		;* Creates a new array with all sub-array elements concatenated into it recursively up to the specified depth.
+	Flat(vDepth := 1) {
 		r := []
 
 		For i, v in this
-			If (Type(v) == "Array" && _Depth > 0)
-				r := r.Concat(v.Flat(_Depth - 1))
-			Else If (v != "")  ;* Skip empty elements.
+			If (Type(v) == "Array" && vDepth > 0)
+				r := r.Concat(v.Flat(vDepth - 1))
+			Else If (v != "")  ;- Skip empty elements.
 				r.Push(v)
 
 		Return, (r)
 	}
 
-;*	Array.ForEach(Func("Function"))
-;*	Description:
-;*		Executes a provided function once for each array element.
-	ForEach(_Callback) {
+	;* Array.ForEach(Func("Function"))
+	;* Description:
+		;* Executes a provided function once for each array element.
+	ForEach(oCallback) {
 		For i, v in this
-			If (v != "")
-				this[i] := _Callback.Call(v, i, this)
+			this[i] := oCallback.Call(v, i, this)
 	}
 
-;*	Array.Includes(_Needle[, _Start])
-;*	Description:
-;*		Determines whether an array includes a certain value among its entries, returning true or false as appropriate.
-	Includes(_Needle, _Start := 0) {
-		Return, (_Start <= this.MaxIndex() && this.IndexOf(_Needle, _Start) != -1)
+	;* Array.Includes(vNeedle, $vStart)
+	;* Description:
+		;* Determines whether an array includes a certain value among its entries, returning true or false as appropriate.
+	Includes(vNeedle, vStart := 0) {
+		Return, (vStart < Round(this.MaxIndex() + 1) && this.IndexOf(vNeedle, vStart) != -1)
 	}
 
-;*	Array.IndexOf(_Needle[, _Start])
-;*	Description:
-;*		Returns the first index at which a given element can be found in the array, or -1 if it is not present.
-	IndexOf(_SearchElement, _Start := 0) {
-		s := Round(this.MaxIndex() + 1)
+	;* Array.IndexOf(vNeedle, $vStart)
+	;* Description:
+		;* Returns the first index at which a given element can be found in the array, or -1 if it is not present.
+	IndexOf(vNeedle, vStart := 0) {
+		m := Round(this.MaxIndex() + 1)
+			, vStart := vStart >= 0 ? Math.Min(m, vStart) : Math.Max(m + vStart, 0)
 
-		Loop, % s - _Start := _Start >= 0 ? Math.Min(s, _Start) : Math.Max(s + _Start, 0) {
-			If (this[_Start] == _SearchElement)  ;- Case sensitive.
-				Return, (_Start)
+		Loop, % m - vStart {
+			If (this.StringCaseSense ? this[vStart] == vNeedle : this[vStart] = vNeedle)
+				Return, (vStart)
 
-			_Start++
+			vStart++
 		}
 
 		Return, (-1)
 	}
 
-;*	Array.Join([_Delimiters])
-;*	Description:
-;*		Creates and returns a new string by concatenating all of the elements in an array (or an array-like object), separated by commas or a specified separator string. If the array has only one item, then that item will be returned without using the separator.
-	Join(_Delimiters := ", ") {
+	;* Array.Join($vDelimiter)
+	;* Description:
+		;* Creates and returns a new string by concatenating all of the elements in an array (or an array-like object), separated by commas or a specified separator string. If the array has only one item, then that item will be returned without using the separator.
+	Join(vDelimiter := ", ") {
 		m := Round(this.MaxIndex())
 
 		For i, v in this
-			r .= (IsObject(v) ? Type(v) == "Array" ? v.Join(_Delimiters) : "[object Object]" : v) . (i < m ? _Delimiters : "")
+			r .= (IsObject(v) ? Type(v) == "Array" ? v.Join(vDelimiter) : "[object Object]" : v) . (i < m ? vDelimiter : "")
 
 		Return, (r)
 	}
 
-;*	Array.LastIndexOf(_Needle[, _Start])
-;*	Description:
-;*		Returns the last index at which a given element can be found in the array, or -1 if it is not present. The array is searched backwards, starting at fromIndex.
-	LastIndexOf(_Needle, _Start := -1) {
-		s := Round(this.MaxIndex() + 1)
-			, _Start := (_Start >= 0 ? Math.Min(s - 1, _Start) : Math.Max(s + _Start, -1))
+	;* Array.LastIndexOf(vNeedle, $vStart)
+	;* Description:
+		;* Returns the last index at which a given element can be found in the array, or -1 if it is not present. The array is searched backwards, starting at fromIndex.
+	LastIndexOf(vNeedle, vStart := -1) {
+		vStart := (vStart >= 0 ? Math.Min(Round(this.MaxIndex() + 1) - 1, vStart) : Math.Max(Round(this.MaxIndex() + 1) + vStart, -1))
 
-		While (_Start > -1) {
-			If (this[_Start] == _Needle)  ;- Case sensitive.
-				Return, (_Start)
+		While (vStart > -1) {
+			If (this.StringCaseSense ? this[vStart] == vNeedle : this[vStart] = vNeedle)
+				Return, (vStart)
 
-			_Start--
+			vStart--
 		}
 
 		Return, (-1)
 	}
 
-;*	Array.Map(Func("Function"))
-;*	Description:
-;*		Creates a new array populated with the results of calling a provided function on every element in the calling array.
-	Map(_Callback) {
+	;* Array.Map(Func("Function"))
+	;* Description:
+		;* Creates a new array populated with the results of calling a provided function on every element in the calling array.
+	Map(oCallback) {
 		r := []
 
 		For i, v in this
-			r[i] := (_Callback.Call(v, i, this))
+			r.Push(oCallback.Call(v, i, this))
 
 		Return, (r)
 	}
 
-;*	Array.Pop()
-;*	Description:
-;*		Removes the last element from an array and returns that element. This method changes the length of the array.
+	;* Array.Pop()
+	;* Description:
+		;* Removes the last element from an array and returns that element. This method changes the length of the array.
 	Pop() {
 		Try
 			Return, (this.RemoveAt(this.MaxIndex()))
@@ -294,121 +311,247 @@ Class __Array {
 			Return, ("")  ;? ["" || "undefined"].
 	}
 
-;*	Array.Push([_Element1[, _Element2[, ...[, _ElementN]]]])
-;*	Description:
-;*		Adds one or more elements to the end of an array and returns the new length of the array.
-	Push(_Element*) {
-		s := Round(this.MaxIndex() + 1)
+	;* Array.Push(vElement1, vElement2, ..., vElementN)
+	;* Description:
+		;* Adds one or more elements to the end of an array and returns the new length of the array.
+	Push(vElements*) {
+		m := Round(this.MaxIndex() + 1)
 
-		Loop, % _Element.Length()
-			this.InsertAt(s++, _Element[A_Index])
+		For i, v in [vElements*]
+			this.InsertAt(m++, v)
 
-		Return, (s)
+		Return, (m)
 	}
 
-;*	Array.Reverse()
-;*	Description:
-;*		Reverses an array in place. The first array element becomes the last, and the last array element becomes the first.
+	;* Array.Reverse()
+	;* Description:
+		;* Reverses an array in place. The first array element becomes the last, and the last array element becomes the first.
 	Reverse() {
-		Loop, % s := Round(this.MaxIndex() + 1)
-			this.InsertAt(s - 1, this.RemoveAt(s - A_Index))
+		m := this.MaxIndex()
+
+		For i, v in this
+			this.InsertAt(m, this.RemoveAt(m - i))
 
 		Return, (this)
 	}
 
-;*	Array.Shift()
-;*	Description:
-;*		Removes the first element from an array and returns that removed element. This method changes the length of the array.
+	;* Array.Shift()
+	;* Description:
+		;* Removes the first element from an array and returns that removed element. This method changes the length of the array.
 	Shift() {
 		Return, (this.RemoveAt(0))  ;? [this.RemoveAt(0) || Round(this.MaxIndex() + 1) ? this.RemoveAt(0) : "undefined"].
 	}
 
-;*	Array.Slice([_Start[, _End]])
-;*	Description:
-;*		Returns a shallow copy of a portion of an array into a new array object selected from begin to end (end not included) where begin and end represent the index of items in that array. The original array will not be modified.
-	Slice(_Start := 0, _End := "undefined") {
-		s := Round(this.MaxIndex() + 1), r := []
+	;* Array.Slice($vStart, $vEnd)
+	;* Description:
+		;* Returns a shallow copy of a portion of an array into a new array object selected from begin to end (end not included) where begin and end represent the index of items in that array. The original array will not be modified.
+	Slice(vStart := 0, vEnd := "") {
+		m := Round(this.MaxIndex() + 1), r := []
+			, vStart := (vStart >= 0 ? Math.Min(m, vStart) : Math.Max(m + vStart, 0))
 
-		Loop, % (_End != "undefined" ? _End >= 0 ? Math.Min(s, _End) : Math.Max(s + _End, 0) : s) - _Start := (_Start >= 0 ? Math.Min(s, _Start) : Math.Max(s + _Start, 0))
-			r.Push(this[_Start++])
+		Loop, % (vEnd != "" ? vEnd >= 0 ? Math.Min(m, vEnd) : Math.Max(m + vEnd, 0) : m) - vStart
+			r.Push(this[vStart++])
 
 		Return, (r)
 	}
 
-;*	Array.Some(Func("Function"))
-;*	Description:
-;*		Tests whether at least one element in the array passes the test implemented by the provided function. It returns a Boolean value.
-;*	Note:
-;*		Calling this method on an empty array returns false for any condition.
-	Some(_Callback) {
-
+	;* Array.Some(Func("Function"))
+	;* Description:
+		;* Tests whether at least one element in the array passes the test implemented by the provided function. It returns a Boolean value.
+	;* Note:
+		;* Calling this method on an empty array returns false for any condition.
+	Some(oCallback) {
 		For i, v in this
-			If (_Callback.Call(v, i, this))
+			If (oCallback.Call(v, i, this))
 				Return, (1)
 
 		Return, (0)
 	}
 
-;*	Array.Sort([_CompareFunction])
-;*	Description:
-;*		Sorts the elements of an array in place and returns the sorted array. The default sort order is ascending, built upon converting the elements into strings, then comparing their sequences of UTF-16 code units values.
-;*	Note:
-;*		Use `StringCaseSense, [On || Off]` with the default _CompareFunction to control case sensetivity.
-	Sort(_CompareFunction := "__Sort") {
-		s := Round(this.MaxIndex())
+	;* Array.Sort($Func("Function"))
+	;* Description:
+		;* Sorts the elements of an array in place and returns the sorted array. The default sort order is ascending, built upon converting the elements into strings, then comparing their sequences of UTF-16 code units values.
+	Sort(oCompareFunction := "__Sort") {
+		z := A_StringCaseSense
+
+		StringCaseSense, % this.StringCaseSense
 
 		While (c != 0) {
 			c := 0
 
-			Loop, % s
-				If (%_CompareFunction%(this[A_Index - 1], this[A_Index]) > 0)
+			Loop, % Round(this.MaxIndex())
+				If (%oCompareFunction%(this[A_Index - 1], this[A_Index]) > 0)
 					this.Swap(A_Index - (c := 1), A_Index)
-
-			s--
 		}
+
+		StringCaseSense, % z
 
 		Return, (this)
 	}
 
-;*	Array.Splice(_Start[, _DeleteCount[, _Element1[, _Element2[, ...[, _ElementN]]]]])
-;*	Description:
-;*		Changes the contents of an array by removing or replacing existing elements and/or adding new elements in place.
-	Splice(_Start, _DeleteCount := "undefined", _Element*) {
-		s := Round(this.MaxIndex() + 1), m := _Element.MaxIndex(), r := []
+	;* Array.Splice(vStart, $vDeleteCount, $vElement1, $vElement2, ..., $vElementN)
+	;* Description:
+		;* Changes the contents of an array by removing or replacing existing elements and/or adding new elements in place.
+	Splice(vStart, vDeleteCount := "", vElements*) {
+		m1 := Round(this.MaxIndex() + 1), m2 := vElements.MaxIndex(), r := []
+			, vStart := vStart >= 0 ? Math.Min(m1, vStart) : Math.Max(m1 + vStart, 0)
 
-		Loop, % (_DeleteCount != "undefined" ? Math.Max(s <= (_Start := _Start >= 0 ? Math.Min(s, _Start) : Math.Max(s + _Start, 0)) + _DeleteCount ? s - _Start : _DeleteCount, 0) : m ? 0 : s)
-			r.InsertAt(A_Index - 1, this.RemoveAt(_Start))
+		Loop, % (vDeleteCount != "" ? Math.Max(m1 <= vStart + vDeleteCount ? m1 - vStart : vDeleteCount, 0) : m2 ? 0 : m1)
+			r.InsertAt(A_Index - 1, this.RemoveAt(vStart))
 
-		If (m)
-			this.InsertAt(_Start, _Element*)
+		If (m2)
+			this.InsertAt(vStart, vElements*)
 
 		return (r)
 	}
 
-;*	Array.UnShift(_Element1[, _Element2[, ...[, _ElementN]]])
-;*	Description:
-;*		Adds one or more elements to the beginning of an array and returns the new length of the array.
-	UnShift(_Element*) {
-		s := Round(this.MaxIndex() + (m := _Element.MaxIndex()) + 1)
+	;* Array.UnShift(vElement1, vElement2, ..., vElementN)
+	;* Description:
+		;* Adds one or more elements to the beginning of an array and returns the new length of the array.
+	UnShift(vElements*) {
+		For i, v in [vElements*]
+			this.InsertAt(i, v)
 
-		Loop, % m
-			this.InsertAt(A_Index - 1, _Element[A_Index])
-
-		Return, (s)
+		Return, (Round(this.MaxIndex() + 1))
 	}
 }
 
 Class __Object {
+    Static StringCaseSense := 1, ThrowException := 1
 
-;*	Object.Print()
-;*	Description:
-;*		Returns the number of key-value pairs present in the object.
+	__Set(vKey, vValue) {
+		Switch (vKey) {
+
+			;* Object.StringCaseSense := (1 || 0)
+			Case "StringCaseSense":
+				ObjRawSet(__Object, "StringCaseSense", vValue)
+
+			;* Object.ThrowException := (1 || 0)
+			Case "ThrowException":
+				ObjRawSet(__Object, "ThrowException", vValue)
+		}
+	}
+
+	;-----            Method            -------------------------;
+
+	;* Object.Print()
+	;* Description:
+		;* Converts an object into a string to more easily see the structure.
 	Print() {
-		c := this.Count()
+		m := this.Count()
 
 		For k, v in this
-			r .= (A_Index = 1 ? "{" : "") . k . ": " . (IsObject(v) ? v.Print() : (v == "" || Type(v) == "String" ? Format("""{}""", v) : v)) . (A_Index < c ? ", " : "}")
+			r .= (A_Index == 1 ? "{" : "") . k . ": " . (IsObject(v) ? v.Print() : (Math.IsNumeric(v) ? v : Format("""{}""", v))) . (A_Index < m ? ", " : "}")
 
 		Return, (r ? r : "{}")
+	}
+}
+
+Class __String {
+	Static ο := ("".base.base := __String), StringCaseSense := 1, ThrowException := 1
+
+	;-----           Property           -------------------------;
+
+	__Get(vKeys*) {
+		Switch (vKeys[1]) {
+
+			;* "String".Length
+			Case "Length":
+				Return, (StrLen(this))
+
+			;* "String"[N, N]
+			;* Note:
+				;* This is the same as `"String".Slice(x*)` but it will return just one character if the second parameter is undefined.
+			Default:
+				If (Math.IsInteger(vKeys[1])) {
+					m := StrLen(this)
+
+					Return, (SubStr(this, vKeys[1] + 1, Max(((Math.IsInteger(vKeys[2])) ? (((vKeys[2] >= 0) ? (Math.Min(m, vKeys[2])) : (Math.Max(m + vKeys[2], 0))) - ((vKeys[1] >= 0) ? (Math.Min(m, vKeys[1])) : (Math.Max(m + vKeys[1], 0)))) : (vKeys[2] != 0)), 0)))
+				}
+				MsgBox("__String.__Get(): " . vKeys[1])
+		}
+	}
+
+	__Set(vKey, vValue) {
+		Switch (vKey) {
+
+			;* "String".StringCaseSense := (1 || 0)
+			Case "StringCaseSense":
+				ObjRawSet(__String, "StringCaseSense", vValue)
+
+			;* "String".ThrowException := (1 || 0)
+			Case "ThrowException":
+				ObjRawSet(__String, "ThrowException", vValue)
+		}
+		MsgBox("__String.__Set(): " . vKey)
+		Return
+	}
+
+	;-----            Method            -------------------------;
+	;---------------            Custom            ---------------;
+
+	Hex() {
+		Loop, Parse, this
+			h .= Format("{:x}", Asc(A_LoopField))
+
+		Return, (h)
+	}
+
+	String() {
+		VarSetCapacity(b, StrLen(this)//2, 0), a := &b
+
+		Loop, Parse, this
+			If (Math.IsEven(A_Index))
+				s := A_LoopField
+			Else
+				a := NumPut("0x" . s . A_LoopField, a + 0, "UChar")
+
+		Return, (StrGet(&b, "UTF-8"))
+	}
+
+	;---------------             MDN              ---------------;
+
+	Includes(vNeedle, vStart := 0) {
+		Return, (InStr(this, vNeedle, 1, Math.Max(0, Math.Min(StrLen(this), Round(vStart))) + 1) != 0)
+	}
+
+	IndexOf(vNeedle, vStart := 0) {
+		Return, (InStr(this, vNeedle, 1, Math.Max(0, Math.Min(StrLen(this), Round(vStart))) + 1) - 1)
+	}
+
+	Reverse() {
+		d := Chr(959)
+
+		Loop, Parse, % StrReplace(this, d, "`r`n")
+			s := A_LoopField . s
+
+		Return, (StrReplace(s, "`r`n", d))  ;! DllCall("msvcrt\_" . (A_IsUnicode ? "wcs" : "Str") . "rev", "UInt", &this, "CDECL")
+	}
+
+	Slice(vStart, vEnd := "") {
+		m := StrLen(this)
+
+		Return, (SubStr(this, vStart + 1, Max(((Math.IsInteger(vEnd)) ? (((vEnd >= 0) ? (Math.Min(m, vEnd)) : (Math.Max(m + vEnd, 0))) - ((vStart >= 0) ? (Math.Min(m, vStart)) : (Math.Max(m + vStart, 0)))) : (m)), 0)))
+	}
+
+	Split() {
+		d := Chr(959), r := []
+
+		Loop, Parse, % StrReplace(this, vValue[1], d), % d, % vValue[2]
+			r.Push(A_LoopField)
+
+		Return, (r)
+	}
+
+	ToLowerCase() {
+		Return, (Format("{:L}", this))
+	}
+
+	ToUpperCase() {
+		Return, (Format("{:U}", this))
+	}
+
+	Trim() {
+		Return, (Trim(this))
 	}
 }
