@@ -158,6 +158,20 @@ Class Math {
 		Return, (__Result.ToUpperCase())
 	}
 
+	ToNumber(ByRef vVariable) {
+		MsgBox("ToNumber(): " vVariable.Print())
+		If (Type(vVariable) == "Array") {
+			For i, v in vVariable {
+				If (!Math.IsNumeric(v)) {
+					vVariable[i] := Round(v)
+				}
+			}
+			Return, (vVariable)
+		}
+
+		Return, (!Math.IsNumeric(v) ? Round(vVariable) : vVariable)
+	}
+
 	;---------------          Elementary          ---------------;
 	;-------------------------         Exponential          -----;
 
@@ -395,12 +409,8 @@ Class Math {
 		Return, (DllCall("msvcrt\atan", "Double", vTheta, "Double"))
 	}
 
-	ATan2(vX, vY) {
-		If (Round(vX) != 0 && Round(vY) != 0)
-			Return, (DllCall("msvcrt\atan2", "Double", vY, "Double", vX, "Double"))  ;* x != 0 && y != 0
-
-		If (this.__ThrowException)
-			Throw, (Exception("NaN.", -1, Format("Math.ATan2({}, {}) is out of bounds.", vX, vY)))
+	ATan2(oPoint) {
+		Return, (DllCall("msvcrt\atan2", "Double", oPoint.y, "Double", oPoint.x, "Double"))
 	}
 
 	Csc(vTheta) {
