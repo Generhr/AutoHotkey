@@ -23,10 +23,10 @@ Exit
 Restore(_Clipboard) {
 	Static vFuncObj := Func("Restore")
 
-	Switch (A_TimeIdle > 850) {  ;? [A_TimeIdle || A_TimeIdleKeyboard].
-		Case 0: SetTimer(vFuncObj.Bind(_Clipboard), -25)
-		Case 1: Clipboard := _Clipboard
-	}
+	If (A_TimeIdle > 850)  ;? [A_TimeIdle || A_TimeIdleKeyboard].
+		Return, (Clipboard := _Clipboard)
+
+	SetTimer(vFuncObj.Bind(_Clipboard), -25)
 }
 
 SetTimer(_Label, _Period := "", _Priority := 0) {
@@ -45,37 +45,35 @@ SetTimer(_Label, _Period := "", _Priority := 0) {
 	}
 	Return
 
-~$F10::
-	SetTitleMatchMode, 2
-
-	If (WinActive(A_ScriptName))
-		ListVars
-	Return
-
 ;=====          Hotstring          =========================;
 
 ;===============           Personal           ===============;
 
-:*x:\ee::Send, % vEmail
+:*x:oni@::Send, % vEmail
 
-;===============       Window Specific        ===============;
+;===============             Code             ===============;
 
 #If (WinActive("ahk_exe Code.exe"))
 
-	:*x:\\a::
+	:*x:\\i::Send, % "If () {{}{}}{Left}{Enter}{Up}Condition^{Left}^+{Right}"
+	:*x:\\s::Send, % "Switch () {{}{}}{Left}{Enter}Case ""_____"":{Up}{Left 3}Condition^{Left}^+{Right}"
+	:*x:\\t::Send, % "(Condition ? ----- : -----)^{Left 5}^+{Right}"
 	:*x:\\o::
+	:*x:\\a::
 		c := Clipboard
 
 		Switch (A_ThisHotkey) {
-			Case ":*x:\\a": Send, % "{[}""value""" . (Clipboard := ", ""value""") . "{]}{Left}"
-			Case ":*x:\\o": Send, % "{{}""key"": ""value""" . (Clipboard := ", ""key"": ""value""") . "{}}{Left}"
+			Case ":*x:\\o":
+				Send, % "{{}""key"": ""value""" . (Clipboard := ", ""key"": ""value""") . "{}}{Left}"
+			Case ":*x:\\a":
+				Send, % "{[}""value""" . (Clipboard := ", ""value""") . "{]}{Left}"
 		}
 
 		SetTimer(Func("Restore").Bind(c), -200)
 		Return
-	:*x:\\i::Send, If () {{}{}}{Left}{Enter}{Up}Condition^{Left}^+{Right}
-	:*x:\\s::Send, Switch () {{}{}}{Left}{Enter}Case "Result":{Up}{Left 3}Condition^{Left}^+{Right}
-	:*x:\\t::Send, (Condition ? "True" : "False")^{Left 9}^+{Right}
+
+	:*x:\point::Send, % "{{}""x"": _____, ""y"": _____{}}^{Left 7}^+{Right}"
+	:*x:\rect::Send, % "{{}""x"": _____, ""y"": _____, ""Width"": _____, ""Height"": _____{}}^{Left 17}^+{Right}"
 
 	:*x:\cc::SendRaw, % "Clipboard := "
 	:*x:\mm::SendRaw, % "MsgBox("
@@ -89,7 +87,7 @@ SetTimer(_Label, _Period := "", _Priority := 0) {
 
 #If
 
-;===============            Angle             ===============;
+;===============            Angle             ===============;  ;? https://altcodeunicode.com/.
 
 :?*:\degree::{U+00B0}
 
@@ -98,7 +96,7 @@ SetTimer(_Label, _Period := "", _Priority := 0) {
 :*:\cent::{U+00A2}
 :*:\pound::{U+00A3}
 
-;===============          Fractions           ===============;
+;===============           Fraction           ===============;
 
 :*:\1/4::{U+00BC}
 :*:\1/2::{U+00BD}
