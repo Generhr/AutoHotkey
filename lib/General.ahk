@@ -17,12 +17,12 @@ KeyGet(vKeyName := "") {
 	;* vOptions:
 		;* Same as docs for `KeyWait`.
 KeyWait(vKeyName, vOptions := "") {
-	Static oFuncObj := Func("__KeyWait")
+	Static __FuncObj := Func("__KeyWait")
 	k := [].Concat(vKeyName), s := !vOptions.Includes("D"), t := RegExReplace(vOptions, "iS)[^t]*t?([\d\.]*).*", "$1") + !QueryPerformanceCounter(0)
 
 	k.ForEach(Func("KeyGet"))
 
-	While (k.Some(oFuncObj) == s) {
+	While (k.Some(__FuncObj) == s) {
 		If (t && QueryPerformanceCounter(1) >= t)  ;* `QueryPerformanceCounter()` is only called if `t` evaluates as true.
 			Return, (ErrorLevel := 1)
 
@@ -65,7 +65,7 @@ MouseGet(vSubCommand := "", vRelativeTo := "", vFlag := 0) {
 }
 
 ;* MsgBox($vText, $vOptions, $vTitle, $vTimeout)
-MsgBox(vText := "", vOptions := 0, vTitle := "", vTimeout := 0) {  ;Beep boop.
+MsgBox(vText := "", vOptions := 0, vTitle := "Beep boop.", vTimeout := 0) {
 	MsgBox, % vOptions, % vTitle, % (vText == "") ? ("""""") : (vText), % vTimeout
 }
 
@@ -115,7 +115,7 @@ SendMessage(vMsg, vParameter1 := 0, vParameter2 := 0, vControl := "", vWinTitle 
 
 ;* SetTimer(vLabel, $vPeriod, $vPriority)
 SetTimer(vLabel, vPeriod := "", vPriority := 0) {
-	SetTimer, % vLabel, % vPeriod, % vPriority  ;* Parameters are evaluated before calling functions which means you can pass `FuncObj.Bind("Parameter")` directly to the command.
+	SetTimer, % vLabel, % vPeriod, % vPriority  ;* Parameters are evaluated before calling functions which means you can pass `FuncObj.Bind("Parameter")` directly to `SetTimer()`.
 }
 
 ;* Sleep(vMilliseconds)
@@ -232,9 +232,9 @@ BlockInput(vMode := 0) {
 ;* Description:
 	;* Returns accurately how many seconds have passed between `QueryPerformanceCounter(0)` and `QueryPerformanceCounter(1)`.
 QueryPerformanceCounter(vQuery := 0) {
-	Static vFrequency, vCurrent := !DllCall("QueryPerformanceFrequency", "Int64P", vFrequency), vPrevious  ;? https://msdn.microsoft.com/en-us/library/ms644905.aspx.
+	Static __Frequency,  __Previous := !DllCall("QueryPerformanceFrequency", "Int64P", __Frequency)  ;? https://msdn.microsoft.com/en-us/library/ms644905.aspx.
 
-	Return, (!DllCall("QueryPerformanceCounter", "Int64P", vCurrent) + ((vQuery) ? (vCurrent - vPrevious) : (vPrevious := vCurrent))/vFrequency)  ;? https://msdn.microsoft.com/en-us/library/ms644904.aspx.
+	Return, (!DllCall("QueryPerformanceCounter", "Int64P", c) + ((vQuery) ? (c - __Previous) : (__Previous := c))/__Frequency)  ;? https://msdn.microsoft.com/en-us/library/ms644904.aspx.
 }
 
 Class Date {
@@ -293,14 +293,14 @@ MCode(vMachineCode) {
 	;* oPos:
 		;* *: An object containg x, y, width and height.
 ClipCursor(vConfine := 0, oPos := "") {
-    Static vClipCursor := VarSetCapacity(vClipCursor, 16, 0)
+    Static __Rect := VarSetCapacity(__Rect, 16, 0)
 
     If (!vConfine)
         Return, (DllCall("user32.dll\ClipCursor"))  ;? https://msdn.microsoft.com/en-us/library/ms648383.aspx.
 
-    NumPut(oPos.x, vClipCursor, 0, "Int"), NumPut(oPos.y, vClipCursor, 4, "Int"), NumPut(oPos.x + oPos.Width, vClipCursor, 8, "Int"), NumPut(oPos.y + oPos.Height, vClipCursor, 12, "Int")  ;? https://docs.microsoft.com/en-us/windows/win32/api/windef/ns-windef-rect.
+    NumPut(oPos.x, __Rect, 0, "Int"), NumPut(oPos.y, __Rect, 4, "Int"), NumPut(oPos.x + oPos.Width, __Rect, 8, "Int"), NumPut(oPos.y + oPos.Height, __Rect, 12, "Int")  ;? https://docs.microsoft.com/en-us/windows/win32/api/windef/ns-windef-rect.
 
-	If (!DllCall("user32.dll\ClipCursor", "Ptr", &vClipCursor))
+	If (!DllCall("user32.dll\ClipCursor", "Ptr", &__Rect))
         Return, (ErrorLevel := DllCall("kernel32.dll\GetLastError"))
 
     Return, (ErrorLevel := 0)
@@ -341,10 +341,10 @@ SwapMouseButton(vMode := 0) {
 
 ;* Type(vVariable)
 Type(vVariable) {
-	Static vRegExMatchObject := NumGet(&(m, RegExMatch("", "O)", m))), vBoundFuncObject := NumGet(&(f := Func("Func").Bind())), vFileObject := NumGet(&(f := FileOpen("*", "w"))), vEnumeratorObject := NumGet(&(e := ObjNewEnum({})))
+	Static __RegExMatchObject := NumGet(&(m, RegExMatch("", "O)", m))), __BoundFuncObject := NumGet(&(f := Func("Func").Bind())), __FileObject := NumGet(&(f := FileOpen("*", "w"))), __EnumeratorObject := NumGet(&(e := ObjNewEnum({})))
 
     If (IsObject(vVariable))
-        Return, ((ObjGetCapacity(vVariable) != "") ? (RegExReplace(vVariable.base.__Class, "__")) : ((IsFunc(vVariable)) ? ("FuncObject") : ((ComObjType(vVariable) != "") ? ("ComObject") : ((NumGet(&vVariable) == vBoundFuncObject) ? ("BoundFuncObject ") : ((NumGet(&vVariable) == vRegExMatchObject) ? ("RegExMatchObject") : ((NumGet(&vVariable) == vFileObject) ? ("FileObject") : ((NumGet(&vVariable) == vEnumeratorObject) ? ("EnumeratorObject") : ("Property"))))))))
+        Return, ((ObjGetCapacity(vVariable) != "") ? ((vVariable.Base.__Class == "__Array") ? ("Array") : ("Object")) : ((IsFunc(vVariable)) ? ("FuncObject") : ((ComObjType(vVariable) != "") ? ("ComObject") : ((NumGet(&vVariable) == __BoundFuncObject) ? ("BoundFuncObject ") : ((NumGet(&vVariable) == __RegExMatchObject) ? ("RegExMatchObject") : ((NumGet(&vVariable) == __FileObject) ? ("FileObject") : ((NumGet(&vVariable) == __EnumeratorObject) ? ("EnumeratorObject") : ("Property"))))))))
 	Else If vVariable is Number
 		Return, ((vVariable == Round(vVariable)) ? ("Integer") : ("Float"))
 	Else
@@ -355,12 +355,12 @@ Type(vVariable) {
 
 ;* DownloadContent(vUrl)
 DownloadContent(vUrl) {
-	Static oComObj := ComObjCreate("MSXML2.XMLHTTP")
+	Static __ComObj := ComObjCreate("MSXML2.XMLHTTP")
 
-	oComObj.Open("Get", vUrl, 0)
-	oComObj.Send()
+	__ComObj.Open("Get", vUrl, 0)
+	__ComObj.Send()
 
-	Return, (oComObj.ResponseText)
+	Return, (__ComObj.ResponseText)
 }
 
 ;* VarExist(vVariable)
@@ -405,18 +405,18 @@ Fade(vMode, vAlpha := "" , vTime := 5000, vWindow := "A") {
 
 ;* ScriptCommand(vScript, vCommand)
 ScriptCommand(vScript, vCommand) {
-    Static oCommand := {"Open": 65300, "Help": 65301, "Spy": 65302, "Reload": 65303, "Edit": 65304, "Suspend": 65305, "Pause": 65306, "Exit": 65307}
+    Static __Command := {"Open": 65300, "Help": 65301, "Spy": 65302, "Reload": 65303, "Edit": 65304, "Suspend": 65305, "Pause": 65306, "Exit": 65307}
 
-	PostMessage(0x111, oCommand[vCommand], , , vScript . " - AutoHotkey", , , , "On")
+	PostMessage(0x111, __Command[vCommand], , , vScript . " - AutoHotkey", , , , "On")
 }
 
 ;==============            Other             ===============;
 
 ;* ShowDesktop()
 ShowDesktop() {
-	Static oComObj := ComObjCreate("shell.application")
+	Static __ComObj := ComObjCreate("shell.application")
 
-	oComObj.ToggleDesktop()
+	__ComObj.ToggleDesktop()
 }
 
 ;* ShowStartMenu()
@@ -428,7 +428,7 @@ ShowStartMenu() {
 ;* Note:
 	;* This is not ideal for active use as it will halt the thread that makes the request, better to call it from a second script or compile a dedicated executable.
 Speak(vString) {
-	Static oComObj := ComObjCreate("SAPI.SpVoice")
+	Static __ComObj := ComObjCreate("SAPI.SpVoice")
 
-	oComObj.Speak(vString)
+	__ComObj.Speak(vString)
 }
