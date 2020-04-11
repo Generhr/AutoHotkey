@@ -159,7 +159,6 @@ Class Math {
 	}
 
 	ToNumber(ByRef vVariable) {
-		MsgBox("ToNumber(): " vVariable.Print())
 		If (Type(vVariable) == "Array") {
 			For i, v in vVariable {
 				If (!Math.IsNumeric(v)) {
@@ -169,7 +168,7 @@ Class Math {
 			Return, (vVariable)
 		}
 
-		Return, (!Math.IsNumeric(v) ? Round(vVariable) : vVariable)
+		Return, ((!Math.IsNumeric(vVariable)) ? (Round(vVariable)) : (vVariable))
 	}
 
 	;---------------          Elementary          ---------------;
