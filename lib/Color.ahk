@@ -2,25 +2,39 @@
 
 Class Color {
 
-	;-----         Constructor          -------------------------;
-
-	__New(vAlpha := "FF", vRed := "FF", vGreen := "FF", vBlue := "FF") {
-		Return, ("0x" . vAlpha . vRed . vGreen . vBlue)
-	}
-
-	;-----            Method            -------------------------;
-
-	ToHSB(vHue := 0, vSaturation := 1, vBrightness := 1) {
-		h := ((vHue == 1) ? (0) : (vHue))*6.0, s := Math.Clamp(vSaturation, 0, 1), b := Math.Clamp(vBrightness, 0, 1)
-			, i := ~~h, f := h - i, p := b*(1.0 - s), q := b*(1.0 - s*f), t := b*(1.0 - s*(1.0 - f))
-
-		Return, ((s == 0) ? (0) : ((i == 0) ? ([b, t, p]) : ((i == 1) ? ([q, b, p]) : ((i == 2) ? ([p, b, t]) : ((i == 3) ? ([p, q, b]) : ((i == 4) ? ([t, p, b]) : ([b, p, q])))))))
-	}
-
+	;* Color.Random($HexAlpha)
 	Random(vAlpha := "FF") {
 		Static __Colors := ["F0F8FF", "E52B50", "FFBF00", "9966CC", "FAEBD7", "FBCEB1", "00FFFF", "7FFFD4", "007FFF", "89CFF0", "F5F5DC", "FFE4C4", "000000", "FFEBCD", "0000FF", "0095B6", "8A2BE2", "DE5D83", "CD7F32", "964B00", "800020", "DEB887", "702963", "5F9EA0", "960018", "DE3163", "007BA7", "F7E7CE", "7FFF00", "7B3F00", "0047AB", "6F4E37", "B87333", "FF7F50", "6495ED", "FFF8DC", "DC143C", "00FFFF", "00008B", "008B8B", "B8860B", "A9A9A9", "006400", "BDB76B", "8B008B", "556B2F", "FF8C00", "9932CC", "8B0000", "E9967A", "8FBC8F", "483D8B", "2F4F4F", "00CED1", "9400D3", "FF1493", "00BFFF", "EDC9AF", "696969", "1E90FF", "7DF9FF", "50C878", "00FF3F", "B22222", "FFFAF0", "228B22", "FF00FF", "DCDCDC", "F8F8FF", "FFD700", "DAA520", "808080", "008000", "ADFF2F", "3FFF00", "F0FFF0", "FF69B4", "CD5C5C", "4B0082", "FFFFF0", "00A86B", "29AB87", "F0E68C", "B57EDC", "FFF0F5", "7CFC00", "FFF700", "FFFACD", "ADD8E6", "F08080", "E0FFFF", "FAFAD2", "90EE90", "D3D3D3", "FFB6C1", "FFA07A", "20B2AA", "87CEFA", "778899", "B0C4DE", "FFFFE0", "C8A2C8", "BFFF00", "32CD32", "FAF0E6", "FF00FF", "FF00AF", "800000", "E0B0FF", "66CDAA", "0000CD", "BA55D3", "9370D8", "3CB371", "7B68EE", "00FA9A", "48D1CC", "C71585", "191970", "F5FFFA", "FFE4E1", "FFE4B5", "FFDEAD", "000080", "000080", "CC7722", "FDF5E6", "808000", "6B8E23", "FF6600", "FF4500", "DA70D6", "EEE8AA", "98FB98", "AFEEEE", "D87093", "FFEFD5", "FFE5B4", "FFDAB9", "D1E231", "CCCCFF", "1C39BB", "CD853F", "FD6C9E", "8E4585", "B0E0E6", "003153", "CC8899", "800080", "E30B5C", "FF0000", "C71585", "FF007F", "BC8F8F", "4169E1", "E0115F", "8B4513", "FA8072", "F4A460", "92000A", "0F52BA", "FF2400", "2E8B57", "FFF5EE", "A0522D", "C0C0C0", "87CEEB", "6A5ACD", "708090", "FFFAFA", "A7FC00", "00FF7F", "4682B4", "D2B48C", "483C32", "008080", "D8BFD8", "FF6347", "40E0D0", "3F00FF", "7F00FF", "D02090", "40826D", "F5DEB3", "FFFFFF", "F5F5F5", "FFFF00", "9ACD32"]
 
 		Return, ("0x" . vAlpha . __Colors[Math.Random(0, 187)])
+	}
+
+	Class HSL {
+
+		;* Color.HSL.ToRGB(Hue, Saturation, Luminosity)
+		ToRGB(vHue, vSaturation := 1.0, vLuminosity := .5) {
+			RGB := DllCall("Shlwapi\ColorHLSToRGB", "UShort", Math.Clamp(vHue, 0, 1)*240, "UShort", Math.Clamp(vLuminosity, 0, 1)*240, "UShort", Math.Clamp(vSaturation, 0, 1)*240)
+
+			Return, (Format("{:#08X}", 255 << 24 | (RGB & 0xFF0000) >> 16 | RGB & 0xFF00 | (RGB & 0xFF) << 16))
+		}
+	}
+
+	Class RGB {
+
+		;* Color.RGB.ToHSL(HexARGB)
+		ToHSL(vColor) {
+			DllCall("Shlwapi\ColorRGBToHLS", "UInt", (vColor & 0xFF0000) >> 16 | vColor & 0xFF00 | (vColor & 0xFF) << 16, "UShort*", h := 0, "UShort*", l := 0, "UShort*", s := 0)
+
+			Return, ([h*1.5, s/240, l/240])
+		}
+
+		;* Color.RGB.Compare([HexARGB1, HexARGB2])
+		Compare(oColors) {
+			Loop, 2 {
+				RegExMatch(oColors[A_Index - 1], "O)(.{2})(.{2})(.{2})$", o%A_Index%)
+			}
+			Return, (((Abs(Format("{:i}", "0x" . o1[1]) - Format("{:i}", "0x" . o2[1])) + Abs(Format("{:i}", "0x" . o1[2]) - Format("{:i}", "0x" . o2[2])) + Abs(Format("{:i}", "0x" . o1[3]) - Format("{:i}", "0x" . o2[3])))/3)/255*100)
+		}
 	}
 
 	Class __Color {
