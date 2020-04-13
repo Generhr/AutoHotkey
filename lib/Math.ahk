@@ -18,7 +18,6 @@ Class Math {
 
 	__Get(vKey, vValues*) {
 		Switch (vKey) {
-
 			Case "Precision":
 				Return, (this.__Precision)
 
@@ -90,11 +89,11 @@ Class Math {
 	;-----            Method            -------------------------;
 	;---------------          Comparison          ---------------;
 
-	;* Math.IsBetween(Number)
+	;* Math.IsBetween(Number, LowerLimit, UpperLimit, ExcludedNumber, ...)
 	;* Description:
 		;* Determine whether a number is within bounds (inclusive) and is not an excluded number.
 	IsBetween(vNumber, vLower, vUpper, vExclude*) {
-		For i, v in vExclude {
+		For i, v in [vExclude*] {
 			If (v == vNumber) {
 				Return, (0)
 			}
@@ -159,13 +158,21 @@ Class Math {
 	ToBase(vNumber, vCurrentBase := 10, vTargetBase := 16) {
 		Static __IsUnicode := A_IsUnicode ? ["_wcstoui64", "_i64tow"] : ["_strtoui64", "_i64toa"], __Result := VarSetCapacity(__Result, 66, 0)
 
+		If (vNumber < 0) {
+			s := "-", vNumber := Math.Abs(vNumber)
+		}
+
 		DllCall("msvcrt.dll\" . __IsUnicode[1], "Int64", DllCall("msvcrt.dll\" . __IsUnicode[0], "Str", vNumber, "UInt", 0, "UInt", vCurrentBase, "Int64"), "Str", __Result, "UInt", vTargetBase)
 
-		Return, (__Result.ToUpperCase())
+		If (vTargetBase > 10) {
+			__Result := "0x" . __Result.ToUpperCase()
+		}
+
+		Return, (s . __Result)
 	}
 
 	;* Math.ToFloat(Number || [Number, ...])
-	ToFloat(vNumber){
+	ToFloat(vNumber) {
 		If (Type(vVariable) == "Array") {
 			r := vNumber.Clone()
 
@@ -632,7 +639,7 @@ Class Math {
 	;---------------           Integer            ---------------;
 	;-------------------------       Division-related       -----;
 
-	;* Math.GCD(Number, ..., [Number, ...])
+	;* Math.GCD(Integer, ..., [Integer, ...])
 	;* Description:
 		;* Calculates the greatest common divisor of two or more integers.
 	GCD(vNumbers*) {
@@ -646,11 +653,11 @@ Class Math {
 					NumPut(v, a, (c++)*4, "Int")
 				}
 				Else If (this.ThrowException) {
-					Throw, (Exception("Type error.", -1, Format("Math.GCD({}) may only contain integers.", [vNumbers*].Print())))
+					Throw, (Exception("TypeError.", -1, Format("Math.GCD({}) may only contain integers.", [vNumbers*].Print())))
 				}
 			}
 
-			Return, (DllCall(__MCode[1], "Int", &a, "Int", c, "Int"))  ;* I couldn't find a way to get the length of an array that is passed as a parameter to a C function so I'm passing it here.
+			Return, (DllCall(__MCode[1], "Int", &a, "Int", c, "Int"))
 		}
 
 		If (this.IsInteger(vNumbers[1]) && this.IsInteger(vNumbers[2])) {
@@ -658,13 +665,11 @@ Class Math {
 		}
 
 		If (this.ThrowException) {
-			Throw, (Exception("Type error.", -1, Format("Math.GCD({}) may only contain integers.", [vNumbers*].Join(", "))))
+			Throw, (Exception("TypeError.", -1, Format("Math.GCD({}) may only contain integers.", [vNumbers*].Join(", "))))
 		}
 	}
-;!	For i, v in [[[81, 6], 3], [[8, 12, 20], 4], [[8, 40, 100], 4], [[20, 30, 45, 10, 55], 5]]
-;!		MsgBox(Math.GCD(v[0]) " == " v[1])
 
-	;* Math.LCM(Number, ..., [Number, ...])
+	;* Math.LCM(Integer, ..., [Integer, ...])
 	;* Description:
 		;* Calculates the greatest common multiple of two or more integers.
 	LCM(vNumbers*) {
@@ -678,7 +683,7 @@ Class Math {
 					r := r*v/DllCall(__MCode, "Int", r, "Int", v, "Int")
 				}
 				Else If (this.ThrowException) {
-					Throw, (Exception("Type error.", -1, Format("Math.LCM({}) may only contain integers.", [vNumbers*].Print())))
+					Throw, (Exception("TypeError.", -1, Format("Math.LCM({}) may only contain integers.", [vNumbers*].Print())))
 				}
 			}
 
@@ -690,15 +695,13 @@ Class Math {
 		}
 
 		If (this.ThrowException) {
-			Throw, (Exception("Type error.", -1, Format("Math.LCM({}) may only contain integers.", [vNumbers*].Join(", "))))
+			Throw, (Exception("TypeError.", -1, Format("Math.LCM({}) may only contain integers.", [vNumbers*].Join(", "))))
 		}
 	}
-;!	For i, v in [[[20, 30, 45, 6, 10], 180], [[12, 15, 10, 75], 300], [[330, 75, 450, 225], 4950], [[12, 8], 24]]
-;!		MsgBox(Math.LCM(v[0]) " == " v[1])
 
 	;-------------------------      Recurrence and Sum      -----;
 
-	;* Math.Factorial(Number)
+	;* Math.Factorial(Integer)
 	;* Description:
 		;* Calculate the factorial of an integer.
 	Factorial(vNumber) {
@@ -712,9 +715,6 @@ Class Math {
 			Throw, (Exception("NaN.", -1, Format("Math.Factorial({}) is out of bounds.", vNumber)))
 		}
 	}
-;!	For i, v in [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628800, 39916800, 479001600, 6227020800, 87178291200, 1307674368000, 20922789888000, 355687428096000, 6402373705728000, 121645100408832000, 2432902008176640000, 51090942171709440000, 1124000727777607680000, 25852016738884976640000, 620448401733239439360000, 15511210043330985984000000, 403291461126605635584000000, 10888869450418352160768000000, 304888344611713860501504000000, 8841761993739701954543616000000, 265252859812191058636308480000000]
-;!		If (Math.Factorial(i) != v)
-;!			MsgBox(i ": " v)
 
 	;* Math.Fibonacci(N)
 	;* Description:
@@ -730,9 +730,6 @@ Class Math {
 			Throw, (Exception("NaN.", -1, Format("Math.Fibonacci({}) is out of bounds.", vN)))
 		}
 	}
-;!	For i, v in [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811, 514229, 832040]
-;!		If (Math.Fibonacci(i) != v)
-;!			MsgBox(i ": " v)
 
 	;---------------       Number Theoretic       ---------------;
 
@@ -750,9 +747,6 @@ Class Math {
 			Throw, (Exception("NaN.", -1, Format("Math.Prime({}) is out of bounds.", vN)))
 		}
 	}
-;!	For i, v in [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113]
-;!		If (Math.Prime(A_Index) != v)
-;!			MsgBox(A_Index ": " v)
 
 	;---------------          Numerical           ---------------;
 	;-------------------------          Arithmetic          -----;
@@ -802,7 +796,7 @@ Class Math {
 						r[i] := (v < vLower) ? (vLower) : ((v > vUpper) ? (vUpper) : (v))
 					}
 					Else If (Type(v) == "Array") {
-						r[i] := this.Abs(v)
+						r[i] := this.Clamp(v)
 					}
 				}
 			}
@@ -812,7 +806,7 @@ Class Math {
 						r[i] := (v > vUpper) ? (vUpper) : (v)
 					}
 					Else If (Type(v) == "Array") {
-						r[i] := this.Abs(v)
+						r[i] := this.Clamp(v)
 					}
 				}
 			}
@@ -822,7 +816,7 @@ Class Math {
 						r[i] := (v < vLower) ? (vLower) : (v)
 					}
 					Else If (Type(v) == "Array") {
-						r[i] := this.Abs(v)
+						r[i] := this.Clamp(v)
 					}
 				}
 			}
@@ -850,11 +844,11 @@ Class Math {
 					r[i] := Mod(v, vDivisor)
 				}
 				Else If (Type(v) == "Array") {
-					r[i] := this.Abs(v)
+					r[i] := this.Mod(v)
 				}
 			}
 
-			Return, (r)  ;*** Round?
+			Return, (r)
 		}
 
 		Return, (Mod(vNumber, vDivisor))
@@ -880,7 +874,7 @@ Class Math {
 	;* Description:
 		;* Round a number towards plus infinity.
 	Ceil(vNumber, vDecimalPlace := 0) {
-		p := 10**(vDecimalPlace)
+		p := 10**vDecimalPlace
 
 		If (Type(vNumber) == "Array") {
 			r := vNumber.Clone()
@@ -894,10 +888,10 @@ Class Math {
 				}
 			}
 
-			Return, (Math.Round(r, vDecimalPlace))
+			Return, (r)
 		}
 
-		Return, (Math.Round(Ceil(vNumber*p)/p, vDecimalPlace))
+		Return, (Ceil(vNumber*p)/p)
 	}
 
 	;* Math.Floor(Number || [Number, ...], DecimalPlace)
@@ -918,10 +912,10 @@ Class Math {
 				}
 			}
 
-			Return, (Math.Round(r, vDecimalPlace))
+			Return, (r)
 		}
 
-		Return, (Math.Round(Floor(vNumber*p)/p, vDecimalPlace))
+		Return, (Floor(vNumber*p)/p)
 	}
 
 	;* Math.Fix(Number || [Number, ...], DecimalPlace)
@@ -942,13 +936,11 @@ Class Math {
 				}
 			}
 
-			Return, (Math.Round(r, vDecimalPlace))
+			Return, (r)
 		}
 
-		Return, (Math.Round(vNumber < 0 ? Ceil(vNumber*p)/p : Floor(vNumber*p)/p, vDecimalPlace))
+		Return, (vNumber < 0 ? Ceil(vNumber*p)/p : Floor(vNumber*p)/p)
 	}
-;!	vNumber := [12.123, 12.982, -12.123], vDecimalPlace := 2
-;!	MsgBox("Floor:`t" . Format("{:20s}", Math.Floor(vNumber, vDecimalPlace).Print()) . "`nCeil:`t" . Format("{:20s}", Math.Ceil(vNumber, vDecimalPlace).Print()) . "`nFix:`t" . Format("{:20s}", Math.Fix(vNumber, vDecimalPlace).Print()))
 
 	;* Math.Round(Number || [Number, ...], DecimalPlace)
 	;* Description:
@@ -959,7 +951,7 @@ Class Math {
 
 			For i, v in r {
 				If (this.IsNumeric(v)) {
-					r[i] := RegExReplace((Round(v, vDecimalPlace)), "S)(?=\.).*?\K\.?0*$")
+					r[i] := Round(v, vDecimalPlace)
 				}
 				Else If (Type(v) == "Array") {
 					r[i] := this.Round(v, vDecimalPlace)
@@ -969,17 +961,12 @@ Class Math {
 			Return, (r)
 		}
 
-		Return, (RegExReplace(Round(vNumber, vDecimalPlace), "S)(?=\.).*?\K\.?0*$"))  ;! RegExReplace(v, "S)(\d+(?:\.(?:(?!0+$)\d)+)?)[.0]*", "$1")
+		Return, (Round(vNumber, vDecimalPlace))  ;! (RegExReplace(Round(vNumber, vDecimalPlace), "S)(?=\.).*?\K\.?0*$"))
 	}
-;!	For i, v in [[1200, 1200], [1200.005, 1200.005], [1.0000, 1], [110000, 110000], [0001.00200101000000000, 1.00200101], [1.100, 1.1], [1.00010000, 1.0001], [0.000000000000000, 0]] {
-;!		If (Math.Round(v[0], Math.Precision) != v[1]) {
-;!			MsgBox(Math.Round(v[0], Math.Precision) " != " v[1])
-;!		}
-;!	}
 
 	;-------------------------         Statistical          -----;
 
-	;* Math.Min(vNumber, ..., [Number, ...])
+	;* Math.Min(Number, ..., [Number, ...])
 	;* Description:
 		;* Calculate the numerically smallest of two or more numbers.
 	Min(vNumbers*) {
@@ -992,7 +979,7 @@ Class Math {
 		Return, (Min(vNumbers*))
 	}
 
-	;* Math.Max(vNumber, ..., [Number, ...])
+	;* Math.Max(Number, ..., [Number, ...])
 	;* Description:
 		;* Calculate the numerically largest of two or more numbers.
 	Max(vNumbers*) {
@@ -1005,7 +992,7 @@ Class Math {
 		Return, (Max(vNumbers*))
 	}
 
-	;* Math.Mean(vNumber, ..., [Number, ...])
+	;* Math.Mean(Number, ..., [Number, ...])
 	;* Description:
 		;* Calculate statistical mean of two or more numbers.
 	Mean(vNumbers*) {
@@ -1020,12 +1007,12 @@ Class Math {
 		Return, (t/c)
 	}
 
-	;* Percent(vNumber, vPercentage)
+	;* Percent(Number, Percentage)
 	Percent(vNumber, vPercentage) {
 		Return, (vNumber/100.0*vPercentage)
 	}
 
-	;* PercentChange(vNumber1, vNumber2)
+	;* PercentChange(Number1, Number2)
 	PercentChange(vNumber1, vNumber2) {
 		vNumber1 := this.Abs(vNumber1), vNumber2 := this.Abs(vNumber2)
 
@@ -1046,7 +1033,7 @@ Class Math {
 		Static __K := (v := Math.__Ziggurat()).k, __W := v.w, __F := v.f  ;* Populate the lookup tables.
 
 		Loop {
-			u := Math.Random(-2147483648, 2147483647), i := u & 255
+			u := Math.Random(-0x80000000, 0x7FFFFFFF), i := u & 0xFF
 
 			If (Abs(u) < __K[i]) {  ;* Rectangle. This will be the case for 99.33% of values (512 rectangles would be 99.64%).
 				Return, (u*__W[i]*vDeviation + vMean)
@@ -1055,13 +1042,14 @@ Class Math {
 			x := u*__W[i]
 
 			If (i == 0) {  ;* Base segment. Sample using a ratio of uniforms.
-				While (2*y <= x**2)
-					x := -Math.Log(Math.Random())*.27366123732975828, y := -Math.Log(Math.Random())  ;? .27366123732975828 = 1/r
+				While (2*y <= x**2) {
+					x := -Math.Log(Math.RandomFloat())*.27366123732975828, y := -Math.Log(Math.RandomFloat())  ;? .27366123732975828 = 1/r
+				}
 
 				Return, (((u > 0)*2 - 1)*(3.6541528853610088 + x)*vDeviation + vMean)
 			}
 
-			If ((__F[i - 1] - __F[i])*Math.Random() + __F[i] < Exp(-.5*x**2)) {  ;* Wedge.
+			If ((__F[i - 1] - __F[i])*Math.RandomFloat() + __F[i] < Exp(-.5*x**2)) {  ;* Wedge.
 				Return, (x*vDeviation + vMean)
 			}
 
@@ -1098,7 +1086,7 @@ Class Math {
 			r := 0
 
 			While (r > 1.0 || r == 0) {
-				u1 := Math.Random()*2.0 - 1.0, u2 := Math.Random()*2.0 - 1.0
+				u1 := Math.RandomFloat()*2.0 - 1.0, u2 := Math.RandomFloat()*2.0 - 1.0
 					, r := u1**2 + u2**2
 			}
 			__Secondary := (r := Sqrt((-2.0*Math.Log(r))/r))*u1
@@ -1114,20 +1102,11 @@ Class Math {
 	;-------------------------           Uniform            -----;
 
 	;* Math.Random(Min, Max)
-	;* Note:
-		;* AHK's built in Random command limits the range of its parameters: both `vMin` and `vMax` must be signed 32-bit integers (between -2147483648(-2**31) and 2147483647(2**31 - 1))
-	Random(vMin := 0.0, vMax := 1.0) {
-		Random, r, vMin, vMax
-
-		Return, (r)
-	}
-
-	;* Math.Random64(Min, Max)
 	;* Description:
 		;* Combines (if needed) two random numbers generated by `Random` to provide a random number in any range.
 	;* Credit:
 		;* Laszlo: https://autohotkey.com/board/topic/19233-64-bit-random-numbers/
-	Random64(vMin := -2147483648, vMax := 2147483647) {
+	Random(vMin := -0x80000000, vMax := 0x7FFFFFFF) {
 		d := vMax - vMin
 
 		If (d > 0) {  ;* No overflow.
@@ -1138,7 +1117,7 @@ Class Math {
 			}
 			Else {
 				Loop {  ;* Range < 2^63.
-					Random u1, 0, (1 << (1 + DllCall("ntdll\RtlFindMostSignificantBit", "Int64", d >> 32))) - 1  ;! r | (r |= (r |= (r |= (r |= r >> 1) >> 2) >> 4) >> 8) >> 16
+					Random u1, 0, (1 << (1 + DllCall("ntdll\RtlFindMostSignificantBit", "Int64", d >> 32))) - 1
 					Random u2, -0x80000000, 0x7FFFFFFF
 					r := (u1 << 32) | u2 + 0x80000000
 
@@ -1148,6 +1127,7 @@ Class Math {
 				}
 			}
 		}
+
 		Loop {  ;* Range >= 2^63.
 			Random u1, -0x80000000, 0x7FFFFFFF
 			Random u2, -0x80000000, 0x7FFFFFFF
@@ -1160,13 +1140,18 @@ Class Math {
 	}
 
 	;* Math.RandomBool(Percentage)
-	RandomBool(vProbability) {
-		Return, (this.Random(0.0, 100.0) <= vProbability)
+	RandomBool(vProbability := 0.5) {
+		Random, r, 0, 1.0
+
+		Return, (r >= vProbability)
 	}
-;!	r := []
-;!	Loop, 5000
-;!		r.Push(Math.RandomBool(10))
-;!	MsgBox(Math.Mean(r))
+
+	;* Math.RandomSeed(Seed)
+	RandomFloat() {
+		Random, r, 0, 1.0
+
+		Return, (r)
+	}
 
 	;* Math.RandomSeed(Seed)
 	RandomSeed(vSeed) {
