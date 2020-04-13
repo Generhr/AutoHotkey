@@ -3,8 +3,9 @@
 Array(vParameters*) {
 	r := new __Array
 
-	Loop, % vParameters.Length()  ;* Using a loop because enumerating with a variadic parameter will skip empty elements.
+	Loop, % vParameters.Length() {
 		r[A_Index - 1] := vParameters[A_Index]
+	}
 
 	Return, (r)
 }
@@ -12,10 +13,29 @@ Array(vParameters*) {
 Object(vParameters*) {
 	r := new __Object
 
-	Loop, % vParameters.Count()//2
+	Loop, % vParameters.Count()//2 {
 		r[vParameters[(i := A_Index*2) - 1]] := vParameters[i]
+	}
 
 	Return, (r)
+}
+
+Range(vStart := 0, vStop := "", vStep := 1) {
+	If (vStop == "") {
+		vStop := vStart, vStart := 0
+	}
+
+	If (Math.IsInteger(vStart) && Math.IsInteger(vStop)) {
+		r := []
+
+		Loop, % Math.Max(Math.Ceil((vStop - vStart)/vStep), 0) {
+			r.Push(vStart), vStart += vStep
+		}
+
+		Return, (r)
+	}
+
+	Throw, (Exception("TypeError.", -1, Format("Range({}) may only contain integers.", [vStart, vStop, vStep].Join(", "))))
 }
 
 __Sort(vValue1, vValue2) {
@@ -40,10 +60,21 @@ Class __Array {
 			;* Description:
 				;* Count of enumerable properties.
 			Case "Count":
-				For i, v in this
+				For i, v in this {
 					r += (v != "")
+				}
 
 				Return, (Round(r))
+
+			;* Array[-N]
+			Default:
+				If (vKey < 0) {
+					v := Round(this.MaxIndex() + 1) + vKey
+
+					If (this.HasKey(v)) {
+						Return, (this[v])
+					}
+				}
 		}
 	}
 
@@ -55,26 +86,21 @@ Class __Array {
 				If (Math.IsInteger(vValue) && vValue >= 0) {
 					o := vValue - (s := Round(this.MaxIndex() + 1))
 
-					Loop, % Math.Abs(o)
-						(o < 0) ? this.RemoveAt(--s) : this[s++] := ""  ;? ["" || "undefined"].
+					Loop, % Math.Abs(o) {
+						(o < 0) ? this.RemoveAt(--s) : this[s++] := ""  ;? ["" || "undefined"]
+					}
 
 					Return, (s)
 				}
 
-				If (this.ThrowException)
+				If (this.ThrowException) {
 					Throw, (Exception("Invalid assignment.", -1, Format("""{}"" is invalid. This property may only be assigned a possitive integer.", vValue)))
-
-			;* Array.StringCaseSense := (1 || 0)
-			Case "StringCaseSense":
-				ObjRawSet(__Array, "StringCaseSense", vValue)
-
-			;* Array.ThrowException := (1 || 0)
-			Case "ThrowException":
-				ObjRawSet(__Array, "ThrowException", vValue)
+				}
 		}
 	}
 
 	;-----            Method            -------------------------;
+	;---------------             AHK              ---------------;
 
 	__Call(vKey) {
 		Switch (vKey) {
@@ -93,8 +119,10 @@ Class __Array {
 	Print() {
 		m := Round(this.MaxIndex() + 1)
 
-		Loop, % m
-			i := A_Index - 1, r .= (A_Index == 1 ? "[" : "") . (IsObject(this[i]) ? this[i].Print() : (Math.IsNumeric(this[i]) ? this[i] : Format("""{}""", this[i]))) . (A_Index < m ? ", " : "]")
+		Loop, % m {
+			i := A_Index - 1
+				, r .= (A_Index == 1 ? "[" : "") . (IsObject(this[i]) ? this[i].Print() : ((Math.IsNumeric(this[i])) ? (RegExReplace(this[i], "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", this[i])))) . (A_Index < m ? ", " : "]")  ;! RegExReplace(v, "S)^0*(\d+(?:\.(?:(?!0+$)\d)+)?).*", "$1")
+		}
 
 		Return, (r ? r : "[]")
 	}
@@ -116,8 +144,9 @@ Class __Array {
 	Shuffle() {
 		m := this.MaxIndex()
 
-		For i, v in this
+		For i, v in this {
 			this.Swap(i, Math.Random(i, m))
+		}
 
 		Return, (this)
 	}
@@ -128,8 +157,9 @@ Class __Array {
 	Swap(vIndex1, vIndex2) {
 		m := this.MaxIndex()
 
-		If (Math.IsBetween(vIndex1, 0, m) && Math.IsBetween(vIndex2, 0, m))  ;- No error handling.
+		If (Math.IsBetween(vIndex1, 0, m) && Math.IsBetween(vIndex2, 0, m)) {  ;- No error handling.
 			t := this[vIndex1], this[vIndex1] := this[vIndex2], this[vIndex2] := t
+		}
 
 		Return, (this)
 	}
@@ -143,11 +173,14 @@ Class __Array {
 		r := this.Clone()
 
 		For i, v in [vValues*] {
-			If (Type(v) == "Array")
-				For i, v in v
+			If (Type(v) == "Array") {
+				For i, v in v {
 					r.Push(v)
-			Else
+				}
+			}
+			Else {
 				r.Push(v)
+			}
 		}
 
 		Return, (r)
@@ -159,9 +192,11 @@ Class __Array {
 	;* Note:
 		;* Calling this method on an empty array will return true for any condition.
 	Every(oCallback) {
-		For i, v in this
-			If (!oCallback.Call(v, i, this))
+		For i, v in this {
+			If (!oCallback.Call(v, i, this)) {
 				Return, (0)
+			}
+		}
 
 		Return, (1)
 	}
@@ -169,12 +204,13 @@ Class __Array {
 	;* Array.Fill($vValue, $vStart, $vEnd)
 	;* Description:
 		;* Changes all elements in an array to a static value, from a start index (default 0) to an end index (default `Array.Length`). It returns the modified array.
-	Fill(vValue := "", vStart := 0, vEnd := "") {  ;? vValue := ["" || "undefined"].
+	Fill(vValue := "", vStart := 0, vEnd := "") {  ;? vValue := ["" || "undefined"]
 		m := Round(this.MaxIndex() + 1)
 			, vStart := vStart >= 0 ? Math.Min(m, vStart) : Math.Max(m + vStart, 0)
 
-		Loop, % (vEnd != "" ? vEnd >= 0 ? Math.Min(m, vEnd) : Math.Max(m + vEnd, 0) : m) - vStart
+		Loop, % (vEnd != "" ? vEnd >= 0 ? Math.Min(m, vEnd) : Math.Max(m + vEnd, 0) : m) - vStart {
 			this[vStart++] := vValue
+		}
 
 		Return, (this)
 	}
@@ -185,31 +221,42 @@ Class __Array {
 	Filter(oCallback) {
 		r := []
 
-		For i, v in this
-			If (oCallback.Call(v, i, this))
+		For i, v in this {
+			If (oCallback.Call(v, i, this)) {
 				r.Push(v)
+			}
+		}
 
 		Return, (r)
 	}
+
+;  // Return all the elements for which a truth test fails.
+;  function reject(obj, predicate, context) {
+;    return filter(obj, negate(cb(predicate)), context);
+;  }
 
 	;* Array.Find(Func("Function"))
 	;* Description:
 		;* Returns the value of the first element in the provided array that satisfies the provided testing function.
 	Find(oCallback) {
-		For i, v in this
-			If (oCallback.Call(v, i, this))
+		For i, v in this {
+			If (oCallback.Call(v, i, this)) {
 				Return, (v)
+			}
+		}
 
-		Return, ("")  ;? ["" || "undefined"].
+		Return, ("")  ;? ["" || "undefined"]
 	}
 
 	;* Array.FindIndex(Func("Function"))
 	;* Description:
 		;* Returns the index of the first element in the array that satisfies the provided testing function. Otherwise, it returns -1, indicating that no element passed the test.
 	FindIndex(oCallback) {
-		For i, v in this
-			If (oCallback.Call(v, i, this))
+		For i, v in this {
+			If (oCallback.Call(v, i, this)) {
 				Return, (i)
+			}
+		}
 
 		Return, (-1)
 	}
@@ -220,11 +267,14 @@ Class __Array {
 	Flat(vDepth := 1) {
 		r := []
 
-		For i, v in this
-			If (Type(v) == "Array" && vDepth > 0)
+		For i, v in this {
+			If (Type(v) == "Array" && vDepth > 0) {
 				r := r.Concat(v.Flat(vDepth - 1))
-			Else If (v != "")  ;- Skip empty elements.
+			}
+			Else If (v != "") {  ;- Skip empty elements.
 				r.Push(v)
+			}
+		}
 
 		Return, (r)
 	}
@@ -233,8 +283,9 @@ Class __Array {
 	;* Description:
 		;* Executes a provided function once for each array element.
 	ForEach(oCallback) {
-		For i, v in this
+		For i, v in this {
 			this[i] := oCallback.Call(v, i, this)
+		}
 	}
 
 	;* Array.Includes(vNeedle, $vStart)
@@ -252,8 +303,9 @@ Class __Array {
 			, vStart := vStart >= 0 ? Math.Min(m, vStart) : Math.Max(m + vStart, 0)
 
 		Loop, % m - vStart {
-			If (this.StringCaseSense ? this[vStart] == vNeedle : this[vStart] = vNeedle)
+			If (this.StringCaseSense ? this[vStart] == vNeedle : this[vStart] = vNeedle) {
 				Return, (vStart)
+			}
 
 			vStart++
 		}
@@ -267,8 +319,9 @@ Class __Array {
 	Join(vDelimiter := ", ") {
 		m := Round(this.MaxIndex())
 
-		For i, v in this
+		For i, v in this {
 			r .= (IsObject(v) ? Type(v) == "Array" ? v.Join(vDelimiter) : "[object Object]" : v) . (i < m ? vDelimiter : "")
+		}
 
 		Return, (r)
 	}
@@ -280,8 +333,9 @@ Class __Array {
 		vStart := (vStart >= 0 ? Math.Min(Round(this.MaxIndex() + 1) - 1, vStart) : Math.Max(Round(this.MaxIndex() + 1) + vStart, -1))
 
 		While (vStart > -1) {
-			If (this.StringCaseSense ? this[vStart] == vNeedle : this[vStart] = vNeedle)
+			If (this.StringCaseSense ? this[vStart] == vNeedle : this[vStart] = vNeedle) {
 				Return, (vStart)
+			}
 
 			vStart--
 		}
@@ -295,8 +349,9 @@ Class __Array {
 	Map(oCallback) {
 		r := []
 
-		For i, v in this
+		For i, v in this {
 			r.Push(oCallback.Call(v, i, this))
+		}
 
 		Return, (r)
 	}
@@ -305,10 +360,12 @@ Class __Array {
 	;* Description:
 		;* Removes the last element from an array and returns that element. This method changes the length of the array.
 	Pop() {
-		Try
+		Try {
 			Return, (this.RemoveAt(this.MaxIndex()))
-		Catch
-			Return, ("")  ;? ["" || "undefined"].
+		}
+		Catch {
+			Return, ("")  ;? ["" || "undefined"]
+		}
 	}
 
 	;* Array.Push(vElement1, vElement2, ..., vElementN)
@@ -317,8 +374,9 @@ Class __Array {
 	Push(vElements*) {
 		m := Round(this.MaxIndex() + 1)
 
-		For i, v in [vElements*]
+		For i, v in [vElements*] {
 			this.InsertAt(m++, v)
+		}
 
 		Return, (m)
 	}
@@ -329,8 +387,9 @@ Class __Array {
 	Reverse() {
 		m := this.MaxIndex()
 
-		For i, v in this
+		For i, v in this {
 			this.InsertAt(m, this.RemoveAt(m - i))
+		}
 
 		Return, (this)
 	}
@@ -339,7 +398,7 @@ Class __Array {
 	;* Description:
 		;* Removes the first element from an array and returns that removed element. This method changes the length of the array.
 	Shift() {
-		Return, (this.RemoveAt(0))  ;? [this.RemoveAt(0) || Round(this.MaxIndex() + 1) ? this.RemoveAt(0) : "undefined"].
+		Return, (this.RemoveAt(0))  ;? [this.RemoveAt(0) || Round(this.MaxIndex() + 1) ? this.RemoveAt(0) : "undefined"]
 	}
 
 	;* Array.Slice($vStart, $vEnd)
@@ -419,19 +478,6 @@ Class __Array {
 Class __Object {
     Static StringCaseSense := 1, ThrowException := 1
 
-	__Set(vKey, vValue) {
-		Switch (vKey) {
-
-			;* Object.StringCaseSense := (1 || 0)
-			Case "StringCaseSense":
-				ObjRawSet(__Object, "StringCaseSense", vValue)
-
-			;* Object.ThrowException := (1 || 0)
-			Case "ThrowException":
-				ObjRawSet(__Object, "ThrowException", vValue)
-		}
-	}
-
 	;-----            Method            -------------------------;
 
 	;* Object.Print()
@@ -440,15 +486,16 @@ Class __Object {
 	Print() {
 		m := this.Count()
 
-		For k, v in this
-			r .= (A_Index == 1 ? "{" : "") . k . ": " . (IsObject(v) ? v.Print() : (Math.IsNumeric(v) ? v : Format("""{}""", v))) . (A_Index < m ? ", " : "}")
+		For k, v in this {
+			r .= (A_Index == 1 ? "{" : "") . k . ": " . (IsObject(v) ? v.Print() : (Math.IsNumeric(v) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : Format("""{}""", v))) . (A_Index < m ? ", " : "}")
+		}
 
 		Return, (r ? r : "{}")
 	}
 }
 
 Class __String {
-	Static ο := ("".base.base := __String), StringCaseSense := 1, ThrowException := 1
+	Static __ := ("".base.base := __String), StringCaseSense := 1, ThrowException := 1
 
 	;-----           Property           -------------------------;
 
@@ -461,30 +508,17 @@ Class __String {
 
 			;* "String"[N, N]
 			;* Note:
-				;* This is the same as `"String".Slice(x*)` but it will return just one character if the second parameter is undefined.
+				;* This is the same as `"String".Slice(N*)` but it will return just one character if the second parameter is undefined.
 			Default:
 				If (Math.IsInteger(vKeys[1])) {
 					m := StrLen(this)
 
 					Return, (SubStr(this, vKeys[1] + 1, Max(((Math.IsInteger(vKeys[2])) ? (((vKeys[2] >= 0) ? (Math.Min(m, vKeys[2])) : (Math.Max(m + vKeys[2], 0))) - ((vKeys[1] >= 0) ? (Math.Min(m, vKeys[1])) : (Math.Max(m + vKeys[1], 0)))) : (vKeys[2] != 0)), 0)))
 				}
-				MsgBox("__String.__Get(): " . vKeys[1])
 		}
 	}
 
 	__Set(vKey, vValue) {
-		Switch (vKey) {
-
-			;* "String".StringCaseSense := (1 || 0)
-			Case "StringCaseSense":
-				ObjRawSet(__String, "StringCaseSense", vValue)
-
-			;* "String".ThrowException := (1 || 0)
-			Case "ThrowException":
-				ObjRawSet(__String, "ThrowException", vValue)
-		}
-		MsgBox("__String.__Set(): " . vKey)
-		Return
 	}
 
 	;-----            Method            -------------------------;
@@ -501,10 +535,12 @@ Class __String {
 		VarSetCapacity(b, StrLen(this)//2, 0), a := &b
 
 		Loop, Parse, this
-			If (Math.IsEven(A_Index))
+			If (Math.IsEven(A_Index)) {
 				s := A_LoopField
-			Else
+			}
+			Else {
 				a := NumPut("0x" . s . A_LoopField, a + 0, "UChar")
+			}
 
 		Return, (StrGet(&b, "UTF-8"))
 	}
