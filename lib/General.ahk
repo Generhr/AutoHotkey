@@ -158,7 +158,9 @@ WinGet(vSubCommand := "", vWinTitle := "A", vWinText := "", vExcludeTitle := "",
 				Case "List":
 					WinGet, h, List, % vWinTitle, % vWinText, % vExcludeTitle, % vExcludeText
 
-					Loop, % ((r := []).Length := h) {
+					r := []
+
+					Loop, % h {
 						r.Push(h%A_Index%)
 					}
 				Case "Pos":
