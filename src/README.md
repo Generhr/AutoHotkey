@@ -1,3 +1,7 @@
+# AutoCorrect.ahk
+Credit:
+1. https://gist.github.com/endolith/876629
+
 # Conection.ahk
 Monitors your internet connection and attempts to reconnect to your network if the connection fail.
 
@@ -8,11 +12,14 @@ Setup:
     Network="My wifi name"
 ```
 
+# Master.ahk
+A collection of general purpose Hotkeys.
+
 # Window.ahk
 Monitors which window is active and performs 3 functions:
-            
+
 1. Suspend any scripts that it is baby sitting if a window in the Suspend Group becomes active.
-2. Reloads any scripts that it is baby sitting if that script was editted.
+2. Reloads any scripts that it is baby sitting if that script was editted in an IDE.
 3. Forces any window in Settings.ini to maintain it's x, y, width and height (unless it is maximized or Ctrl is held).
 
 Setup:
