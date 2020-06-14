@@ -19,7 +19,7 @@ SetWinDelay, -1
 
 ;===============            Group             ===============;
 
-For i, v in [["Steam", "ahk_exe Steam.exe"]] {  ;? [["Title", "ProcessName", "ExcludeTitle"], ...].
+For i, v in [] {  ;? [["Title", "ProcessName", "ExcludeTitle"], ...]
 	GroupAdd, Suspend, % v[0] . (v[1] ? " ahk_exe " . RegExReplace(v[1], "i)\.exe") . ".exe" : ""), , , % v[2]
 }
 
@@ -30,7 +30,7 @@ IniRead, vScripts, % A_WorkingDir . "\cfg\Settings.ini", Scripts, Scripts
 ;===============            Other             ===============;
 
 For i, v in String.Split((vScripts := RegExReplace(vScripts, "i)\.ahk")), "|") {
-	DllCall("SetFileAttributes", "Str", A_WorkingDir . "\src\" . v . ".ahk", "UInt", 0x80)  ;* Need this here to avoid double reloading with `WindowMonitor()`.
+	DllCall("SetFileAttributes", "Str", A_WorkingDir . "\src\" . v . ".ahk", "UInt", 0x80)  ;* Need this here to avoid double reloading.
 }
 
 ;===============            Timer             ===============;
@@ -75,15 +75,15 @@ WindowMonitor(_Scripts := "") {
 	For k, v in oScripts[1] {
 		k .= ".ahk"
 
-		SendMessage(0xFF, , , , k . " - AutoHotkey", , , , , "On")  ;* Query if this script is suspended.
+		e := SendMessage(0xFF, , , k . " - AutoHotkey", , , , "On")  ;* Query if this script is suspended.
 
-		If ((v[0] == ErrorLevel) && ((!ErrorLevel && WinActive("ahk_group Suspend")) || (ErrorLevel && !WinActive("ahk_group Suspend")))) {
-			v[0] := !ErrorLevel  ;* Keep track locally to check for manual suspending.
+		If ((v[0] == e) && ((!e && WinActive("ahk_group Suspend")) || (e && !WinActive("ahk_group Suspend")))) {
+			v[0] := !e  ;* Keep track locally to check for manual suspending.
 
 			ScriptCommand(k, "Suspend")
 
 			Sleep(50)
-			SendMessage(0xFF, 1, , , k . " - AutoHotkey", , , , , "On")  ;* Optional feedback message to set icon or whatever.
+			SendMessage(0xFF, 1, , k . " - AutoHotkey", , , , "On")  ;* Optional feedback message to set icon or whatever.
 		}
 
 		If (w.Class != "#32768" && w.ProcessName != "AutoHotkey.exe" && !(w.Title ~= "AutoHotkey Help|" . oScripts[0]))  ;* Check to see if the file attributes have changed (OS updated the attributes because it was saved).
@@ -95,7 +95,11 @@ WindowMonitor(_Scripts := "") {
 	}
 
 	If (w.Class != "#32768") {
-		If (((w.ProcessName := (!w.ProcessName || w.ProcessName == "ApplicationFrameHost.exe") ? w.Title . ".exe" : w.ProcessName) == "Explorer.EXE" && w.Class == "CabinetWClass") || (w.ProcessName == "notepad++.exe" && !["Find", "Reload", "Save"].Includes(w.Title)) || (w.ProcessName == "hh.exe" && w.Title != "Find") || w.ProcessName ~= "(7zFM|Calculator|Camera|Code|Discord)\.exe") {
+		If (((w.ProcessName := (!w.ProcessName || w.ProcessName == "ApplicationFrameHost.exe") ? w.Title . ".exe" : w.ProcessName) == "Explorer.EXE" && w.Class == "CabinetWClass")
+			|| (w.ProcessName ~= "(7zFM|Calculator|Camera|Code|Discord)\.exe"))
+			|| (w.ProcessName == "chrome.exe" && !["", "Bookmark added", "Edit bookmark", "Edit folder name", "Leave site?", "New folder", "Save As"].Includes(w.Title))
+			|| (w.ProcessName == "notepad++.exe" && !["Find", "Keep non existing file", "Reload", "Replace", "Save"].Includes(w.Title))
+			|| (w.ProcessName == "hh.exe" && w.Title != "Find") {
 			WindowPosition(w)
 		}
 	}
@@ -106,7 +110,7 @@ WindowMonitor(_Scripts := "") {
 }
 
 WindowPosition(vWindow := "") {
-	Static oWindow
+	Static oWindow, oExplorer := []
 	If (vWindow) {  ;*Initial call passes a window object.
 		oWindow := vWindow
 
@@ -115,20 +119,39 @@ WindowPosition(vWindow := "") {
 			oWindow.Pos := {"x": (v := String.Split(v, ", "))[0], "y": v[1], "Width": v[2], "Height": v[3]}
 
 			If (!oWindow.MinMax) {  ;* If the window is not maximized then perform an initial move because Windows repositions some windows randomly when they're first started.
-				WinMove, A, , v[0], v[1], v[2], v[3]
+				If (oWindow.ProcessName == "Explorer.EXE") {
+					For i in oExplorer {
+						If (!WinExist("ahk_id" . oExplorer[i])) {
+							oExplorer.RemoveAt(i)
+						}
+					}
+
+					If (!oExplorer.Includes(oWindow.List[0])) {
+						oExplorer.Push(oWindow.List[0])
+					}
+
+					i := oExplorer.IndexOf(oWindow.List[0]), oWindow.Pos.x += i*50, oWindow.Pos.y -= i*50
+
+					For i in oExplorer {
+						WinMove, % "ahk_id" . oExplorer[i], , v[0] + i*50, v[1] - i*50, v[2], v[3]
+					}
+				}
+				Else {
+					WinMove, A, , v[0], v[1], v[2], v[3]
+				}
 			}
 		}
-		Else {  ;* If there are no setting for this window, save the current position. Be aware that if the window is initially maximized and has it no saved configuration then the configuration written to ini will be that of the maximized window.
+		Else {  ;* If there are no setting for this window, save the current position. Be aware that if the window is initially maximized and has it no saved configuration then the configuration written to Settings.ini will be that of the maximized window.
 			IniWrite, % oWindow.Pos.x . ", " . oWindow.Pos.y . ", " . oWindow.Pos.Width . ", " . oWindow.Pos.Height, % A_WorkingDir . "\cfg\Settings.ini", Window Positions, % oWindow.ProcessName
 		}
 	}
 
 	If (WinActive("ahk_id" . oWindow.ID)) {
 		If (!WinGet("MinMax")) {
-			If ((oWindow.Pos.x != (w := WinGet("Pos")).x || oWindow.Pos.y != w.y) && w.Width && w.Height) {
+			If ((oWindow.Pos.x != (w := WinGet("Pos")).x || oWindow.Pos.y != w.y || oWindow.Pos.Width != w.Width || oWindow.Pos.Height != w.Height) && w.Width && w.Height) {
 				KeyWait("LButton")
 
-				If (GetKeyState("Ctrl", "P")) { ;* Allow repositioning and save the new coordinates if `{Ctrl}` is held down.
+				If (GetKeyState("Ctrl", "P") || GetKeyState("AppsKey", "P")) {  ;* Allow repositioning and save the new coordinates if `{Ctrl}` or `{AppsKey}` is held down when `{LButton}` is released.
 					IniWrite, % (oWindow.Pos := w).x ", " oWindow.Pos.y ", " oWindow.Pos.Width ", " oWindow.Pos.Height, % A_WorkingDir . "\cfg\Settings.ini", Window Positions, % oWindow.ProcessName
 				}
 				Else {
