@@ -1,5 +1,5 @@
 ﻿;=====           Function           =========================;
-;===============             AHK              ===============;
+;===============              AHK             ===============;
 
 ;* KeyGet(KeyName)
 ;* Description:
@@ -71,13 +71,13 @@ MsgBox(vText := "", vOptions := 0, vTitle := "Beep boop.", vTimeout := 0) {
 	MsgBox, % vOptions, % vTitle, % (vText == "") ? ("""""") : (vText), % vTimeout
 }
 
-;* PostMessage(Msg, wParam, lParam, Control, WinTitle, WinText, ExcludeTitle, ExcludeText, DetectHiddenWindows)
-PostMessage(vMsg, vParameter1 := 0, vParameter2 := 0, vControl := "", vWinTitle := "", vWinText := "", vExcludeTitle := "", vExcludeText := "", vDetectHiddenWindows := "") {
+;* PostMessage(Msg, wParam, lParam, WinTitle, ExcludeTitle, Control, DetectHiddenWindows)
+PostMessage(vMsg, vParameter1 := 0, vParameter2 := 0, vWinTitle := "", vExcludeTitle := "", vControl := "", vDetectHiddenWindows := "") {
 	If (vDetectHiddenWindows != "" && vDetectHiddenWindows != (z := A_DetectHiddenWindows)) {
 		DetectHiddenWindows, % vDetectHiddenWindows  ;- No error handling.
 	}
 
-	PostMessage, vMsg, vParameter1, vParameter2, % vControl, % vWinTitle, % vWinText, % vExcludeTitle, % vExcludeText
+	PostMessage, vMsg, vParameter1, vParameter2, % vControl, % vWinTitle, , % vExcludeTitle
 
 	If (z) {
 		DetectHiddenWindows, % z
@@ -107,13 +107,13 @@ RunActivate(vWinTitle, vTarget, vOptions := "", vTimeout := "", oPos := "") {
 	Return, (WinExist())
 }
 
-;* SendMessage(Msg, wParam, lParam, Control, WinTitle, WinText, ExcludeTitle, ExcludeText, Timeout, DetectHiddenWindows)
-SendMessage(vMsg, vParameter1 := 0, vParameter2 := 0, vControl := "", vWinTitle := "", vWinText := "", vExcludeTitle := "", vExcludeText := "", vTimeout := 5000, vDetectHiddenWindows := "") {
+;* SendMessage(Msg, wParam, lParam, WinTitle, ExcludeTitle, Control, Timeout, DetectHiddenWindows)
+SendMessage(vMsg, vParameter1 := 0, vParameter2 := 0, vWinTitle := "", vExcludeTitle := "", vControl := "", vTimeout := 5000, vDetectHiddenWindows := "") {
 	If (vDetectHiddenWindows != "" && vDetectHiddenWindows != (z := A_DetectHiddenWindows)) {
 		DetectHiddenWindows, % vDetectHiddenWindows  ;- No error handling.
 	}
 
-	SendMessage, vMsg, vParameter1, vParameter2, % vControl, % vWinTitle, % vWinText, % vExcludeTitle, % vExcludeText, vTimeout
+	SendMessage, vMsg, vParameter1, vParameter2, % vControl, % vWinTitle, , % vExcludeTitle, , vTimeout
 
 	If (z) {
 		DetectHiddenWindows, % z
@@ -157,7 +157,6 @@ WinGet(vSubCommand := "", vWinTitle := "A", vWinText := "", vExcludeTitle := "",
 					r := RegExReplace(n, "i).*\.([a-z]+).*", "$1")
 				Case "List":
 					WinGet, h, List, % vWinTitle, % vWinText, % vExcludeTitle, % vExcludeText
-
 					r := []
 
 					Loop, % h {
@@ -181,7 +180,7 @@ WinGet(vSubCommand := "", vWinTitle := "A", vWinText := "", vExcludeTitle := "",
 				Case "Visible":
 					WinGet, h, ID, % vWinTitle, % vWinText, % vExcludeTitle, % vExcludeText
 
-					r := DllCall("IsWindowVisible", "UInt", h)  ;? https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-iswindowvisible.
+					r := DllCall("IsWindowVisible", "UInt", h)  ;: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-iswindowvisible
 				Default:
 					WinGet, r, % vSubCommand, % vWinTitle, % vWinText, % vExcludeTitle, % vExcludeText  ;- Native error handling.
 			}
@@ -203,11 +202,11 @@ WinGet(vSubCommand := "", vWinTitle := "A", vWinText := "", vExcludeTitle := "",
 	Throw, (Exception("Invalid title.", -1, Format("""{}"" is invalid or doesn't exist.", vWinTitle)))
 }
 
-;===============          Clipboard           ===============;
+;===============           Clipboard          ===============;
 
 ;* CloseClipboard()
 CloseClipboard() {
-    If (!DllCall("user32\CloseClipboard")) {  ;? https://github.com/jNizM/AHK_DllCall_WinAPI/tree/master/src/Clipboard%20Functions.
+    If (!DllCall("user32\CloseClipboard")) {  ;: https://github.com/jNizM/AHK_DllCall_WinAPI/tree/master/src/Clipboard%20Functions
         Return, (ErrorLevel := DllCall("kernel32\GetLastError"))
 	}
 
@@ -216,7 +215,7 @@ CloseClipboard() {
 
 ;* EmptyClipboard()
 EmptyClipboard() {
-    If (!DllCall("user32\EmptyClipboard")) {  ;? https://msdn.microsoft.com/en-us/library/ms649037.aspx
+    If (!DllCall("user32\EmptyClipboard")) {  ;: https://msdn.microsoft.com/en-us/library/ms649037.aspx
         Return, (ErrorLevel := DllCall("kernel32\GetLastError"))
 	}
 
@@ -225,7 +224,7 @@ EmptyClipboard() {
 
 ;* OpenClipboard(NewOwner)
 OpenClipboard(vNewOwner := 0) {
-    If (!DllCall("user32\OpenClipboard", "Ptr", vNewOwner)) {  ;? https://msdn.microsoft.com/en-us/library/ms649048.aspx
+    If (!DllCall("user32\OpenClipboard", "Ptr", vNewOwner)) {  ;: https://msdn.microsoft.com/en-us/library/ms649048.aspx
         Return, (ErrorLevel := DllCall("kernel32\GetLastError"))
 	}
 
@@ -238,22 +237,26 @@ OpenClipboard(vNewOwner := 0) {
 ;* Note:
 	;* Note that only the thread that blocked input can successfully unblock input.
 BlockInput(vMode := 0) {
-    If (!DllCall("user32\BlockInput", "UInt", vMode)) {  ;? https://msdn.microsoft.com/en-us/library/ms646290.aspx
+    If (!DllCall("user32\BlockInput", "UInt", vMode)) {  ;: https://msdn.microsoft.com/en-us/library/ms646290.aspx
         Return, (ErrorLevel := DllCall("kernel32\GetLastError"))
 	}
 
     Return, (ErrorLevel := 0)
 }
 
-;==============        Date and Time         ===============;
+DoubleTap(){
+    Return, ((A_ThisHotkey == A_PriorHotkey) && (A_TimeSincePriorHotkey <= 300))
+}
+
+;==============         Date and Time        ===============;
 
 ;* QueryPerformanceCounter(Mode)
 ;* Description:
 	;* Returns accurately how many seconds have passed between `QueryPerformanceCounter(0)` and `QueryPerformanceCounter(1)`.
 QueryPerformanceCounter(vMode := 0) {
-	Static __Frequency,  __Previous := !DllCall("QueryPerformanceFrequency", "Int64P", __Frequency)  ;? https://msdn.microsoft.com/en-us/library/ms644905.aspx
+	Static __Frequency,  __Previous := !DllCall("QueryPerformanceFrequency", "Int64P", __Frequency)  ;: https://msdn.microsoft.com/en-us/library/ms644905.aspx
 
-	Return, (!DllCall("QueryPerformanceCounter", "Int64P", c) + ((vMode) ? (c - __Previous) : (__Previous := c))/__Frequency)  ;? https://msdn.microsoft.com/en-us/library/ms644904.aspx
+	Return, (!DllCall("QueryPerformanceCounter", "Int64P", c) + ((vMode) ? (c - __Previous) : (__Previous := c))/__Frequency)  ;: https://msdn.microsoft.com/en-us/library/ms644904.aspx
 }
 
 Class Date {
@@ -294,7 +297,7 @@ MCode(vMachineCode) {
 		Return
 	}
 
-	DllCall("Crypt32\CryptStringToBinaryW", "Str", m3, "UInt", 0, "UInt", e[m1], "Ptr", 0, "UIntP", s, "Ptr", 0, "Ptr", 0)  ;? e[m1] = 4: (Hex) || 1: (Base64)
+	DllCall("Crypt32\CryptStringToBinaryW", "Str", m3, "UInt", 0, "UInt", e[m1], "Ptr", 0, "UIntP", s, "Ptr", 0, "Ptr", 0)  ;? e[m1] = 4 (Hex) || 1 (Base64)
 
 	p := DllCall("Kernel32\GlobalAlloc", "UInt", 0, "Ptr", s, "Ptr")
     If (A_PtrSize == 8) {
@@ -308,7 +311,7 @@ MCode(vMachineCode) {
 	DllCall("GlobalFree", "Ptr", p)
 }
 
-;==============            Mouse             ===============;
+;==============             Mouse            ===============;
 
 ;* ClipCursor(Confine, {"x": x, "y": y, "Width": Width, "Height": Height})
 ;* Description:
@@ -323,14 +326,14 @@ ClipCursor(vConfine := 0, oPos := "") {
 	Static __Rect := VarSetCapacity(__Rect, 16, 0)
 
 	If (!vConfine) {
-		Return, (DllCall("user32\ClipCursor"))  ;? https://msdn.microsoft.com/en-us/library/ms648383.aspx
+		Return, (DllCall("user32\ClipCursor"))  ;: https://msdn.microsoft.com/en-us/library/ms648383.aspx
 	}
 
 	If (Math.IsNumeric(oPos.x) && Math.IsNumeric(oPos.y) && Math.IsNumeric(oPos.Width) && Math.IsNumeric(oPos.Height)) {
-		NumPut(oPos.x, __Rect, 0, "Int"), NumPut(oPos.y, __Rect, 4, "Int"), NumPut(oPos.x + oPos.Width, __Rect, 8, "Int"), NumPut(oPos.y + oPos.Height, __Rect, 12, "Int")  ;? https://docs.microsoft.com/en-us/windows/win32/api/windef/ns-windef-rect.
+		NumPut(oPos.x, __Rect, 0, "Int"), NumPut(oPos.y, __Rect, 4, "Int"), NumPut(oPos.x + oPos.Width, __Rect, 8, "Int"), NumPut(oPos.y + oPos.Height, __Rect, 12, "Int")  ;: https://docs.microsoft.com/en-us/windows/win32/api/windef/ns-windef-rect
 	}
 	Else {
-		DllCall("GetWindowRect", "UPtr", WinGet("ID"), "UPtr", &__Rect)
+		DllCall("GetWindowRect", "UPtr", WinExist(), "UPtr", &__Rect)
 	}
 
 	If (!DllCall("user32\ClipCursor", "Ptr", &__Rect))
@@ -341,17 +344,17 @@ ClipCursor(vConfine := 0, oPos := "") {
 
 ;* GetDoubleClickTime()
 GetDoubleClickTime() {
-    Return, (DllCall("user32\GetDoubleClickTime"))  ;? https://msdn.microsoft.com/en-us/library/ms646258.aspx
+    Return, (DllCall("user32\GetDoubleClickTime"))  ;: https://msdn.microsoft.com/en-us/library/ms646258.aspx
 }
 
 ;* GetCapture()
 GetCapture() {
-    Return, (DllCall("user32\GetCapture"))  ;? https://msdn.microsoft.com/en-us/library/ms646262.aspx
+    Return, (DllCall("user32\GetCapture"))  ;: https://msdn.microsoft.com/en-us/library/ms646262.aspx
 }
 
 ;* ReleaseCapture()
 ReleaseCapture() {
-    If (!DllCall("user32\ReleaseCapture")) {  ;? https://msdn.microsoft.com/en-us/library/ms646261.aspx
+    If (!DllCall("user32\ReleaseCapture")) {  ;: https://msdn.microsoft.com/en-us/library/ms646261.aspx
         Return, (ErrorLevel := DllCall("kernel32\GetLastError"))
 	}
 
@@ -360,7 +363,7 @@ ReleaseCapture() {
 
 ;* SetDoubleClickTime()
 SetDoubleClickTime(vInterval := 500) {
-    If (!DllCall("user32\SetDoubleClickTime", "UInt", vInterval)) {  ;? https://msdn.microsoft.com/en-us/library/ms646263.aspx
+    If (!DllCall("user32\SetDoubleClickTime", "UInt", vInterval)) {  ;: https://msdn.microsoft.com/en-us/library/ms646263.aspx
         Return, (ErrorLevel := DllCall("kernel32\GetLastError"))
 	}
 
@@ -369,7 +372,7 @@ SetDoubleClickTime(vInterval := 500) {
 
 ;* SwapMouseButton()
 SwapMouseButton(vMode := 0) {
-    DllCall("user32\SwapMouseButton", "UInt", vMode)  ;? https://msdn.microsoft.com/en-us/library/ms646264.aspx
+    DllCall("user32\SwapMouseButton", "UInt", vMode)  ;: https://msdn.microsoft.com/en-us/library/ms646264.aspx
 }
 
 ;==============             Type             ===============;
@@ -414,7 +417,7 @@ VarExist(ByRef vVariable) {
 	Return, ((&vVariable == &v) ? (0) : ((vVariable == "") ? (2) : (1)))
 }
 
-;* Swap(Variable, Variable2)
+;* Swap(Variable1, Variable2)
 Swap(ByRef vVariable1, ByRef vVariable2) {
 	t := vVariable1, vVariable1 := vVariable2, vVariable2 := t
 }
@@ -425,7 +428,7 @@ Swap(ByRef vVariable1, ByRef vVariable2) {
 ;* Description:
 	;* Gradually fade a target window to a target alpha over a period of time.
 Fade(vMode, vAlpha := "", vTime := 5000, vTargetWindow := "A") {
-	a := t := ((t := WinGet("Transparent", (w := (vTargetWindow == "A") ? ("ahk_id" . WinGet("ID")) : (vTargetWindow)))) == "") ? (255*(vMode = "In")) : (t), s := A_TickCount  ;* Safety check for `WinGet("Transparent")` returning `""` because I'm unsure how to test for the fourth exception mentioned in the docs.
+	a := t := ((t := WinGet("Transparent", (w := (vTargetWindow == "A") ? ("ahk_id" . WinExist()) : (vTargetWindow)))) == "") ? (255*(vMode = "In")) : (t), s := A_TickCount  ;* Safety check for `WinGet("Transparent")` returning `""` because I'm unsure how to test for the fourth exception mentioned in the docs.
 
 	Switch (vMode) {  ;- No error handling.
 		Case "In":
@@ -443,14 +446,45 @@ Fade(vMode, vAlpha := "", vTime := 5000, vTargetWindow := "A") {
 	}
 }
 
+Desktop() {
+	v := WinGet("Style")
+
+	Return, ((v & 0xC00000) ? (v & 0x80000000) : (!(v & 0x00020000 || v & 0x00010000)))  ;? 0xC00000 = WS_CAPTION, 0x80000000 = WS_POPUP, 0x00020000 = WS_MINIMIZEBOX, 0x00010000 = WS_MAXIMIZEBOX
+	Return, (["", "NotifyIconOverflowWindow", "Progman", "Shell_TrayWnd", "Windows.UI.Core.CoreWindow", "WorkerW"].Includes(WinGet("Class")))  ;HwndWrapper[ExpressVPN.exe;;4aa35596-23e0-414b-8d79-42598d67db97]
+
+	MsgBox(!(v & 0x00800000) . " (WS_BORDER)`n"
+		. !(v & 0x00C00000) . " (WS_CAPTION)`n"
+		. !(v & 0x40000000) . " (WS_CHILD || WS_CHILDWINDOW)`n"
+;		. !(v & 0x02000000) . " (WS_CLIPCHILDREN)`n"  ;! Desktop
+;		. !(v & 0x04000000) . " (WS_CLIPSIBLINGS)`n"  ;! Desktop
+		. !(v & 0x08000000) . " (WS_DISABLED)`n"
+		. !(v & 0x00400000) . " (WS_DLGFRAME)`n"
+		. !(v & 0x00020000) . " (WS_MINIMIZEBOX || WS_GROUP)`n"
+		. !(v & 0x00100000) . " (WS_HSCROLL)`n"
+		. !(v & 0x20000000) . " (WS_ICONIC || WS_MINIMIZE)`n"
+		. !(v & 0x01000000) . " (WS_MAXIMIZE)`n"
+		. !(v & 0x00010000) . " (WS_MAXIMIZEBOX || WS_TABSTOP)`n"
+		. !(v & 0x00000000) . " (WS_OVERLAPPED || WS_TILED)`n"
+;		. !(v & 0x80000000) . " (WS_POPUP)`n"  ;! Desktop
+		. !(v & 0x00040000) . " (WS_SIZEBOX || WS_THICKFRAME)`n"
+		. !(v & 0x00080000) . " (WS_SYSMENU)`n"
+;		. !(v & 0x10000000) . " (WS_VISIBLE)`n"  ;! Desktop
+		. !(v & 0x00200000) . " (WS_VSCROLL)`n`n"
+		. "Test: " . Desktop())  ;*** Use WS_DLGFRAME as a potential alternative to WS_CAPTION.
+}
+
 ;* ScriptCommand(ScriptName, Command)
 ScriptCommand(vScript, vCommand) {
     Static __Command := {"Open": 65300, "Help": 65301, "Spy": 65302, "Reload": 65303, "Edit": 65304, "Suspend": 65305, "Pause": 65306, "Exit": 65307}
 
-	PostMessage(0x111, __Command[vCommand], , , vScript . " - AutoHotkey", , , , "On")
+	PostMessage(0x111, __Command[vCommand], , vScript . " - AutoHotkey", , , "On")
 }
 
-;==============            Other             ===============;
+;==============             Other            ===============;
+
+InternetConnection() {
+	Return, (ErrorLevel := DllCall("Wininet\InternetGetConnectedState", "Str", "", "Int", 0))  ;: https://docs.microsoft.com/en-us/windows/win32/api/wininet/nf-wininet-internetgetconnectedstate
+}
 
 ;* ShowDesktop()
 ShowDesktop() {
@@ -461,7 +495,7 @@ ShowDesktop() {
 
 ;* ShowStartMenu()
 ShowStartMenu() {
-	DllCall("User32\PostMessage", "Ptr", WinGet("ID"), "UInt", 0x112, "Ptr", 0xF130, "Ptr", 0)
+	DllCall("User32\PostMessage", "Ptr", WinExist(), "UInt", 0x112, "Ptr", 0xF130, "Ptr", 0)
 }
 
 ;* Speak(String)
