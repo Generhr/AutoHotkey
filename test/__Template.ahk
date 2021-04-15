@@ -7,6 +7,12 @@
 Process, Priority, , Normal
 SetTitleMatchMode, 2
 
+;=======================================================  Group  ===============;
+
+for i, v in [A_ScriptName, "Assert.lib", "Color.lib", "GDIp.lib", "General.lib", "Geometry.lib", "Math.lib", "ObjectOriented.lib", "OCR.lib", "String.lib", "Structure.lib"] {
+	GroupAdd, Library, % v
+}
+
 ;======================================================== Hook ================;
 
 OnExit("Exit")
@@ -19,7 +25,7 @@ ExitApp
 
 ;=============== Hotkey =======================================================;
 
-#If (WinActive(A_ScriptName) || WinActive(SubStr(A_ScriptName, 1, -3) . "lib"))
+#If (WinActive("ahk_group Library"))
 
 	~*$Esc::ExitApp
 
