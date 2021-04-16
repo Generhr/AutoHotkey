@@ -1,4 +1,4 @@
-﻿Class Assert {
+Class Assert {
 	Static Tests := 0, Failures := 0, Successes := 0
 		, Log := []
 
@@ -10,7 +10,7 @@
 		this.Label := name
 	}
 
-	Test(result, expected, mode, message := "") {
+	Test(result, expected, negate := 0) {
 		Local
 
 		this.Tests++
@@ -23,7 +23,7 @@
 			expected := this.Print(expected)
 		}
 
-		if (~(mode + (result == expected) - 2)) {  ;* The bitwise operator will return a truthy value for anything but -1.
+		if (~((result == expected) - (negate + 1))) {  ;* The bitwise operator will return a truthy value for anything but -1.
 			this.Successes++
 
 			return (1)
@@ -55,13 +55,9 @@
 					. StrReplace(Format("{:0" . 20 - subtract . "}", 0), "0", "=") . "`n")
 			}
 
-			this.Log.Push(Format("`nTest #{}", SubStr("000" . this.Tests, -2)))
-			this.Log.Push(Format("`nResult: {}", result))
-			this.Log.Push(Format("`nExpected: {}", expected))
-
-			if (!(message == "")) {
-				this.Log.Push("`n" . message)
-			}
+			this.Log.Push(Format("`nTest #{}", SubStr("000" . this.Tests, -2))
+				. Format("`nResult{}:`n{}", (negate) ? (" (expected to be different)") : (""), result)
+				. Format("`nExpected:`n{}", expected))
 
 			this.Log.Push("`n")
 
@@ -70,35 +66,55 @@
 	}
 
 	IsEqual(result, expected) {
-		return (this.Test(result, expected, 1))
+		return (this.Test(result, expected))
 	}
 
 	IsNotEqual(result, expected) {
-		return (this.Test(result, expected, 0))
+		return (this.Test(result, expected, 1))
 	}
 
 	IsTrue(result) {
-		return (this.Test(result, 1, 1))
+		return (this.Test(result, 1))
 	}
 
 	IsFalse(result) {
-		return (this.Test(result, 0, 1))
+		return (this.Test(result, 0))
 	}
 
 	IsNull(result) {
-		return (this.Test(result, "", 1))
+		return (this.Test(result, ""))
+	}
+
+	BuildReport() {
+		r := Format("{} {} completed with a {}% success rate ({} {}).`n", this.Tests, (this.Tests == 1) ? ("test") : ("tests"), Floor((this.Successes/this.Tests)*100), this.Failures, (this.Failures == 1) ? ("failure") : ("failures"))
+
+		for i, entry in this.Log {
+			r .= entry
+		}
+
+		return (r)
 	}
 
 	Report() {
-		Local
+		this.Console(this.BuildReport())
+	}
 
-		report := Format("{} {} completed with a {}% success rate ({} {}).`n", this.Tests, (this.Tests == 1) ? ("test") : ("tests"), Floor((this.Successes/this.Tests)*100), this.Failures, (this.Failures == 1) ? ("failure") : ("failures"))
+	WriteResultsToFile(path := "", clear := 1, run := 1) {
+		if (path == "") {
+			Static default := A_ScriptDir . "\Assert.log"
 
-		for i, entry in this.Log {
-			report .= entry
+			path := default
 		}
 
-		this.Console(report)
+		if (clear) {
+			FileDelete, % path
+		}
+
+		FileAppend, % this.BuildReport(), % path
+
+		if (run) {
+			Run, % path
+		}
 	}
 
 	Print(object) {
@@ -107,6 +123,8 @@
 		Static needleRegEx := "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$"  ;! RegExReplace(v, "S)^0*(\d+(?:\.(?:(?!0+$)\d)+)?).*", "$1")
 
 		if IsObject(object) {
+			index := object.MinIndex()
+
 			for key in object {
 				isArray := (key == index++)
 			} until (!isArray)
@@ -150,17 +168,14 @@
 		try {
 			DllCall("AttachConsole", "Int", -1) || DllCall("AllocConsole")
 			FileAppend, % output . "`n", CONOUT$
-
-			Sleep, 500
-			loop {
-				Sleep, 50
-			} until (A_TimeIdleKeyboard < 50)
-
-			DllCall("FreeConsole")
 		}
 		catch {
 			return (0)
 		}
+
+		KeyWait, Esc, D
+
+		DllCall("FreeConsole")
 
 		return (1)
 	}
