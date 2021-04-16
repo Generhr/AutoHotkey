@@ -143,7 +143,7 @@ Sleep(milliseconds) {
 ;* ToolTip((message), ([Point2] point), (which), (relativeTo))
 ToolTip(message := "", point := "", which := 1, relativeTo := "") {
 	if (relativeTo) {
-		CoordMode, ToolTip, % relativeTo  ;- No error handling.
+		CoordMode, ToolTip, % relativeTo  ;~ No error handling.
 	}
 
 	ToolTip, % (message.Base.HasKey("Print")) ? (message.Print()) : (message), point.x, point.y, Math.Clamp(which, 1, 20)
@@ -152,7 +152,7 @@ ToolTip(message := "", point := "", which := 1, relativeTo := "") {
 ;* WinGet((subCommand), (winTitle), (winText), (excludeTitle), (excludeText), (detectHiddenWindows))
 WinGet(subCommand := "", winTitle := "A", winText := "", excludeTitle := "", excludeText := "", detectHiddenWindows := "") {
 	if (detectHiddenWindows != "" && detectHiddenWindows != (detect := A_DetectHiddenWindows)) {
-		DetectHiddenWindows, % detectHiddenWindows  ;- No error handling.
+		DetectHiddenWindows, % detectHiddenWindows  ;~ No error handling.
 	}
 
 	if (winTitle == "A" || WinExist(winTitle, winText, excludeTitle, excludeText)) {
@@ -188,7 +188,7 @@ WinGet(subCommand := "", winTitle := "A", winText := "", excludeTitle := "", exc
 
 					out := DllCall("IsWindowVisible", "UInt", handle)  ;: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-iswindowvisible
 				default:
-					WinGet, out, % subCommand, % winTitle, % winText, % excludeTitle, % excludeText  ;- Native error handling.
+					WinGet, out, % subCommand, % winTitle, % winText, % excludeTitle, % excludeText  ;~ Native error handling.
 			}
 		}
 		else {
@@ -345,20 +345,20 @@ MCode(machineCode) {
 	;* rect:
 		;* *: An array containg x, y, width and height in that order.
 ClipCursor(confine := 0, rect := "") {
-	Static Rect := VarSetCapacity(Rect, 16, 0)
+	Static __Rect := VarSetCapacity(__Rect, 16, 0)
 
 	if (!confine) {
 		return (DllCall("user32\ClipCursor"))  ;: https://msdn.microsoft.com/en-us/library/ms648383.aspx
 	}
 
 	if (rect) {
-		NumPut(rect.x, Rect, 0, "Int"), NumPut(rect.y, Rect, 4, "Int"), NumPut(rect.x + rect.Width, Rect, 8, "Int"), NumPut(rect.y + rect.Height, Rect, 12, "Int")  ;: https://docs.microsoft.com/en-us/windows/win32/api/windef/ns-windef-rect
+		NumPut(rect.x, __Rect, 0, "Int"), NumPut(rect.y, __Rect, 4, "Int"), NumPut(rect.x + rect.Width, __Rect, 8, "Int"), NumPut(rect.y + rect.Height, __Rect, 12, "Int")  ;: https://docs.microsoft.com/en-us/windows/win32/api/windef/ns-windef-rect
 	}
 	else {
-		DllCall("GetWindowRect", "UPtr", WinExist(), "UPtr", &Rect)
+		DllCall("GetWindowRect", "UPtr", WinExist(), "UPtr", &__Rect)
 	}
 
-	if (!DllCall("user32\ClipCursor", "Ptr", &Rect))
+	if (!DllCall("user32\ClipCursor", "Ptr", &__Rect))
 		return (ErrorLevel := DllCall("kernel32\GetLastError"))
 
 	return (ErrorLevel := 0)
