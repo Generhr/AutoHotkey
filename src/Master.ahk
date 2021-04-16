@@ -79,7 +79,7 @@ Exit
 ;=============== Hotkey =======================================================;
 ;=======================================================  Mouse  ===============;
 
-#if ((WinActive("ahk_group Editor") || WinActive("ahk_group Browser")) && !WinActive("ahk_group Game"))
+#If ((WinActive("ahk_group Editor") || WinActive("ahk_group Browser")) && !WinActive("ahk_group Game"))
 
 	~$WheelDown::
 	~$WheelUp::
@@ -91,7 +91,7 @@ Exit
 
 #If
 
-#if (!WinActive("ahk_group Game"))
+#If (!WinActive("ahk_group Game"))
 
 	Media_Prev::
 	XButton1 & LButton::
@@ -185,7 +185,7 @@ AppsKey & LButton::
 
 ;====================================================== Keyboard ==============;
 
-#if (WinExist("Window Spy ahk_exe AutoHotkey.exe"))
+#If (WinExist("Window Spy ahk_exe AutoHotkey.exe"))
 
 	Esc::WinClose, Window Spy ahk_exe AutoHotkey.exe
 
@@ -200,7 +200,7 @@ AppsKey & LButton::
 
 #If
 
-#if (WinActive("ahk_group Editor"))
+#If (WinActive("ahk_group Editor"))
 
 	$!F1::
 		return
@@ -322,7 +322,7 @@ AppsKey & LButton::
 
 #If
 
-#if (WinActive("__Rename ahk_exe Explorer.EXE"))
+#If (WinActive("__Rename ahk_exe Explorer.EXE"))
 
 	$F9::
 		loop, % "C:\Users\Onimuru\OneDrive\__User\Pictures\__Rename\*.*" {
@@ -343,7 +343,7 @@ AppsKey & LButton::
 
 #If
 
-#if (WinActive("ahk_group Browser"))
+#If (WinActive("ahk_group Browser"))
 
 	$!F1::
 		return
@@ -370,7 +370,7 @@ AppsKey & LButton::
 
 #If
 
-#if (!WinActive("ahk_group Game"))
+#If (!WinActive("ahk_group Game"))
 
 	$Esc::
 		if (DoubleTap()) {
@@ -467,7 +467,7 @@ AppsKey & LButton::
 
 #If
 
-#if (WinActive(A_ScriptName))
+#If (WinActive(A_ScriptName))
 
 	$F10::
 		ListVars
