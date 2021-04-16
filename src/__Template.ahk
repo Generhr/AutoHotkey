@@ -33,7 +33,9 @@ SetWorkingDir, % A_ScriptDir . "\.."
 
 ;======================================================== Menu ================;
 
+;Menu, Tray, Color, 0xFFFFFF, Single
 ;Menu, Tray, Icon, % A_WorkingDir . "\res\Image\Icon\___.ico"
+;Menu, Tray, Tip, Text
 
 ;====================================================== Variable ==============;
 
@@ -49,6 +51,8 @@ GDIp.Startup()
 ;========================================================  Run  ================;
 
 ;======================================================== Hook ================;
+
+OnMessage(0xFF, "UpdateScript")
 
 OnExit("Exit")
 
@@ -77,17 +81,28 @@ Exit
 
 ;==============  Include  ======================================================;
 
-#Include, %A_ScriptDir%\..\lib\Color.ahk
+#Include, %A_ScriptDir%\..\lib\Color.lib
 #Include, %A_ScriptDir%\..\lib\GDIp.lib
 #Include, %A_ScriptDir%\..\lib\General.lib
-#Include, %A_ScriptDir%\..\lib\Geometry.ahk
-#Include, %A_ScriptDir%\..\lib\Math.ahk
-#Include, %A_ScriptDir%\..\lib\ObjectOriented.ahk
-#Include, %A_ScriptDir%\..\lib\String.ahk
+#Include, %A_ScriptDir%\..\lib\Geometry.lib
+#Include, %A_ScriptDir%\..\lib\Math.lib
+#Include, %A_ScriptDir%\..\lib\ObjectOriented.lib
+#Include, %A_ScriptDir%\..\lib\String.lib
 
 ;===============  Label  =======================================================;
 
 ;============== Function ======================================================;
+
+UpdateScript(wParam := 0, lParam := 0) {
+	switch (wParam) {
+		case -1:
+			IniRead, Debug, % A_WorkingDir . "\cfg\Settings.ini", Debug, Debug
+
+			return (0)
+	}
+
+	return (-1)
+}
 
 Exit() {
 	Critical, On
