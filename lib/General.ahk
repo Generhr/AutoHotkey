@@ -1,496 +1,547 @@
-﻿;=====           Function           =========================;
-;===============              AHK             ===============;
+;============== Function ======================================================;
+;========================================================  AHK  ================;
 
-;* KeyGet(KeyName)
+;* KeyGet(keyName)
 ;* Description:
 	;* Strip a key of modifiers.
-KeyGet(vKeyName := "") {
-	Return, (RegExReplace(vKeyName, "[~*$+^#! &]|AppsKey"))
+KeyGet(keyName) {
+	return (RegExReplace(keyName, "[~*$+^! &]|AppsKey"))
 }
 
-;* KeyWait(KeyName, Options)
+;* KeyWait(keyName, (options))
 ;* Description:
-	;* Waits for a key or mouse/joystick button to be released or pressed down.
+	;* Waits for any number of keys or mouse/joystick buttons to be released or pressed down.
 ;* Parameter:
-	;* vKeyName:
-		;* A single key or an array of multiple keys automatically stripped of modifiers, any of which fulling the condition (as set with a "D" in `vOptions`) will cause this function to terminate.
-	;* vOptions:
-		;* Same as docs for `KeyWait`.
-KeyWait(vKeyName, vOptions := "") {
-	Static __FuncObj := Func("__KeyWait")
-	k := [].Concat(vKeyName), s := !vOptions.Includes("D"), t := RegExReplace(vOptions, "iS)[^t]*t?([\d\.]*).*", "$1") + !QueryPerformanceCounter(0)
+	;* keyName:
+		;* A single key or an array of multiple keys automatically stripped of modifiers, any of which failing the condition (as set with a "D" in `options`) will cause this function to terminate.
+	;* options:
+		;* Same as the options in the docs for the `KeyWait` command.
+KeyWait(keyName, options := "") {
+	Static funcObj := Func("__KeyWait")
 
-	k.ForEach(Func("KeyGet"))
+	keys := [].Concat(keyName), state := !options.Includes("D")
+		, time := RegExReplace(options, "iS)[^t]*t?([\d\.]*).*", "$1")
 
-	While (k.Some(__FuncObj) == s) {
-		If (t && QueryPerformanceCounter(1) >= t) {  ;* `QueryPerformanceCounter()` is only called if `t` evaluates as true.
-			Return, (ErrorLevel := 1)
+	keys.ForEach(Func("KeyGet"))
+
+	QueryPerformanceCounter(0)
+
+	while (keys.Some(funcObj) == state) {
+		if (time && QueryPerformanceCounter(1) >= time) {
+			return (ErrorLevel := 1)
 		}
 
 		Sleep, -1  ;* Need this here to register a key up event or else potentially create a second thread if there is a return immediately after this function in the calling thread.
 	}
 
-	Return, (ErrorLevel := 0)
-}
-__KeyWait(vKeyName) {
-	Return, (GetKeyState(vKeyName, "P"))
+	return (ErrorLevel := 0)
 }
 
-;* MouseGet(SubCommand, RelativeTo, Flag)
-MouseGet(vSubCommand := "", vRelativeTo := "", vFlag := 0) {
-	If (vRelativeTo) {
-		CoordMode, Mouse, % vRelativeTo  ;- No error handling, no restore.
+__KeyWait(keyName) {
+	return (GetKeyState(keyName, "P"))
+}
+
+;* MouseGet((subCommand), (relativeTo), (flag))
+MouseGet(subCommand := "", relativeTo := "", flag := 0) {
+	if (relativeTo) {
+		CoordMode, Mouse, % relativeTo  ;~ No error handling, no restore.
 	}
 
-	If (vSubCommand != "") {
-		Switch (vSubCommand) {
-			Case "Control":
-				MouseGetPos, , , , r, % vFlag
-			Case "Pos":
-				MouseGetPos, x, y, , , % vFlag
+	if (subCommand != "") {
+		switch (subCommand) {
+			case "Control":
+				MouseGetPos, , , , out, % flag
+			case "Pos":
+				MouseGetPos, x, y, , , % flag
 
-				r := {"x": x
+				out := {"x": x
 					, "y": y}
-			Case "Window":
-				MouseGetPos, , , r, , % vFlag
-			Default:
-				Throw, (Exception("Invalid subcommand.", -1, Format("""{}"" is invalid.", vSubCommand)))
+			case "Window":
+				MouseGetPos, , , out, , % flag
+			default:
+				throw, (Exception("Invalid Parameter", -1, Format("""{}"" is invalid.", subCommand)))
 		}
-		Return, (r)
+
+		return (out)
 	}
 
-	MouseGetPos, x, y, w, c, % vFlag
-	Return, ({"Pos": {"x": x
+	MouseGetPos, x, y, window, control, % flag
+	return ({"Pos": {"x": x
 			, "y": y}
-		, "Control": c
-		, "Window": w})
+		, "Control": control
+		, "Window": window})
 }
 
-;* MsgBox(Text, Options, Title, Timeout)
-MsgBox(vText := "", vOptions := 0, vTitle := "Beep boop.", vTimeout := 0) {
-	MsgBox, % vOptions, % vTitle, % (vText == "") ? ("""""") : (vText), % vTimeout
+;* MsgBox((message), (options), (title), (timeOut))
+MsgBox(message := "", options := 0, title := "Beep Boop", timeOut := 0) {
+	MsgBox, % options, % title, % (message == "") ? ("""""") : ((message.Base.HasKey("Print")) ? (message.Print()) : (message)), % timeOut
 }
 
-;* PostMessage(Msg, wParam, lParam, WinTitle, ExcludeTitle, Control, DetectHiddenWindows)
-PostMessage(vMsg, vParameter1 := 0, vParameter2 := 0, vWinTitle := "", vExcludeTitle := "", vControl := "", vDetectHiddenWindows := "") {
-	If (vDetectHiddenWindows != "" && vDetectHiddenWindows != (z := A_DetectHiddenWindows)) {
-		DetectHiddenWindows, % vDetectHiddenWindows  ;- No error handling.
+;* PostMessage(msg, (wParam), (lParam), (winTitle), (excludeTitle), (control), (detectHiddenWindows))
+PostMessage(msg, wParam := 0, lParam := 0, winTitle := "", excludeTitle := "", control := "", detectHiddenWindows := "") {
+	if (detectHiddenWindows != "" && detectHiddenWindows != (detect := A_DetectHiddenWindows)) {
+		DetectHiddenWindows, % detectHiddenWindows  ;~ No error handling.
 	}
 
-	PostMessage, vMsg, vParameter1, vParameter2, % vControl, % vWinTitle, , % vExcludeTitle
+	PostMessage, msg, wParam, lParam, % control, % winTitle, , % excludeTitle
 
-	If (z) {
-		DetectHiddenWindows, % z
+	if (detect) {
+		DetectHiddenWindows, % detect
 	}
-	Return, (ErrorLevel)  ;* ErrorLevel is set to 1 if there was a problem such as the target window or control not existing. Otherwise, it is set to 0.
+
+	return (ErrorLevel)  ;* ErrorLevel is set to 1 if there was a problem such as the target window or control not existing. Otherwise, it is set to 0.
 }
 
-;* RunActivate(WinTitle, Target, Options, Timeout, {"x": x, "y": y, "Width": Width, "Height": Height})
+;* RunActivate(winTitle, target, (options), (timeOut), ([Rect] position))
 ;* Parameter:
-	;* oPos:
-		;* *: An object containg x, y, width and height.
-RunActivate(vWinTitle, vTarget, vOptions := "", vTimeout := "", oPos := "") {
-	If (!WinExist(vWinTitle)) {
-		Run, % vTarget, , % vOptions  ;- Native error handling.
-		WinWait, % vWinTitle, , vTimeout
-		If (ErrorLevel) {
-			Return, (ErrorLevel)  ;* ErrorLevel is set to 1 if `WinWait` timed out.
+	;* rect:
+		;* *: An array containg x, y, width and height.
+RunActivate(winTitle, target, options := "", timeOut := 5000, rect := "") {
+	if (!WinExist(winTitle)) {
+		Run, % target, , % options  ;~ Native error handling.
+		WinWait, % winTitle, , timeOut/1000
+		if (ErrorLevel) {
+			return (ErrorLevel)  ;* ErrorLevel is set to 1 if `WinWait` timed out.
 		}
 
-		If (oPos) {
-			WinMove, % vWinTitle, , oPos.x, oPos.y, oPos.Width, oPos.Height
+		if (rect) {
+			WinMove, % winTitle, , rect[0], rect[1], rect[2], rect[3]
 		}
 	}
+
 	WinActivate
 	WinWaitActive, A  ;* Set "Last Found" window.
 
-	Return, (WinExist())
+	return (WinExist())
 }
 
-;* SendMessage(Msg, wParam, lParam, WinTitle, ExcludeTitle, Control, Timeout, DetectHiddenWindows)
-SendMessage(vMsg, vParameter1 := 0, vParameter2 := 0, vWinTitle := "", vExcludeTitle := "", vControl := "", vTimeout := 5000, vDetectHiddenWindows := "") {
-	If (vDetectHiddenWindows != "" && vDetectHiddenWindows != (z := A_DetectHiddenWindows)) {
-		DetectHiddenWindows, % vDetectHiddenWindows  ;- No error handling.
+;* SendMessage(msg, (wParam), (lParam), (winTitle), (excludeTitle), (control), (timeOut), (detectHiddenWindows))
+SendMessage(msg, wParam := 0, lParam := 0, winTitle := "", excludeTitle := "", control := "", timeOut := 5000, detectHiddenWindows := "") {
+	if (detectHiddenWindows != "" && detectHiddenWindows != (detect := A_DetectHiddenWindows)) {
+		DetectHiddenWindows, % detectHiddenWindows  ;~ No error handling.
 	}
 
-	SendMessage, vMsg, vParameter1, vParameter2, % vControl, % vWinTitle, , % vExcludeTitle, , vTimeout
+	SendMessage, msg, wParam, lParam, % control, % winTitle, , % excludeTitle, , timeOut
 
-	If (z) {
-		DetectHiddenWindows, % z
-	}
-	Return, (ErrorLevel)  ;* ErrorLevel is set to the word FAIL if there was a problem or the command timed out. Otherwise, it is set to the numeric result of the message, which might sometimes be a "reply" depending on the nature of the message and its target window.
-}
-
-;* SetTimer(Label, Period, Priority)
-SetTimer(vLabel, vPeriod := "", vPriority := 0) {
-	SetTimer, % vLabel, % vPeriod, % vPriority  ;* Parameters are evaluated before calling functions which means you can pass `FuncObj.Bind("Parameter")` directly to `SetTimer()`.
-}
-
-;* Sleep(Milliseconds)
-Sleep(vMilliseconds) {
-    Sleep, vMilliseconds
-}
-
-;* ToolTip(String, {"x": x, "y": y}, RelativeTo, WhichToolTip)
-ToolTip(vString := "", oPos := "", vRelativeTo := "Screen", vWhichToolTip := 1) {
-	If (vRelativeTo) {
-		CoordMode, ToolTip, % vRelativeTo  ;- No error handling.
+	if (detect) {
+		DetectHiddenWindows, % detect
 	}
 
-	ToolTip, % vString, oPos.x, oPos.y, vWhichToolTip
+	return (ErrorLevel)  ;* ErrorLevel is set to "FAIL" if there was a problem or the command timed out. Otherwise, it is set to the numeric result of the message, which might sometimes be a "reply" depending on the nature of the message and it's target window.
 }
 
-;* WinGet(SubCommand, WinTitle, WinText, ExcludeTitle, ExcludeText, DetectHiddenWindows)
-WinGet(vSubCommand := "", vWinTitle := "A", vWinText := "", vExcludeTitle := "", vExcludeText := "", vDetectHiddenWindows := "") {
-	If (vDetectHiddenWindows != "" && vDetectHiddenWindows != (z := A_DetectHiddenWindows)) {
-		DetectHiddenWindows, % vDetectHiddenWindows  ;- No error handling.
+;* SetTimer(label, (period), (priority))
+SetTimer(label, period := "", priority := 0) {
+	SetTimer, % label, % period, % priority  ;* Parameters are evaluated before calling functions which means you can pass `FuncObj.Bind("Function")` directly to `SetTimer()`.
+}
+
+;* Sleep(milliseconds)
+Sleep(milliseconds) {
+    Sleep, milliseconds
+}
+
+;* ToolTip((message), ([Point2] point), (which), (relativeTo))
+ToolTip(message := "", point := "", which := 1, relativeTo := "") {
+	if (relativeTo) {
+		CoordMode, ToolTip, % relativeTo  ;- No error handling.
 	}
 
-	If (vWinTitle == "A" || WinExist(vWinTitle, vWinText, vExcludeTitle, vExcludeText)) {
-		If (vSubCommand != "") {
-			Switch (vSubCommand) {
-				Case "Class":
-					WinGetClass, r, % vWinTitle, % vWinText, % vExcludeTitle, % vExcludeText
-				Case "Extension":
-					WinGet, n, ProcessName, % vWinTitle, % vWinText, % vExcludeTitle, % vExcludeText
+	ToolTip, % (message.Base.HasKey("Print")) ? (message.Print()) : (message), point.x, point.y, Math.Clamp(which, 1, 20)
+}
 
-					r := RegExReplace(n, "i).*\.([a-z]+).*", "$1")
-				Case "List":
-					WinGet, h, List, % vWinTitle, % vWinText, % vExcludeTitle, % vExcludeText
-					r := []
+;* WinGet((subCommand), (winTitle), (winText), (excludeTitle), (excludeText), (detectHiddenWindows))
+WinGet(subCommand := "", winTitle := "A", winText := "", excludeTitle := "", excludeText := "", detectHiddenWindows := "") {
+	if (detectHiddenWindows != "" && detectHiddenWindows != (detect := A_DetectHiddenWindows)) {
+		DetectHiddenWindows, % detectHiddenWindows  ;- No error handling.
+	}
 
-					Loop, % h {
-						r.Push(h%A_Index%)
+	if (winTitle == "A" || WinExist(winTitle, winText, excludeTitle, excludeText)) {
+		if (subCommand != "") {
+			switch (subCommand) {
+				case "Class":
+					WinGetClass, out, % winTitle, % winText, % excludeTitle, % excludeText
+				case "Extension":
+					WinGet, name, ProcessName, % winTitle, % winText, % excludeTitle, % excludeText
+
+					out := RegExReplace(name, "i).*\.([a-z]+).*", "$1")
+				case "List":
+					WinGet, handles, List, % winTitle, % winText, % excludeTitle, % excludeText
+					out := []
+
+					loop, % handles {
+						out.Push(handles%A_Index%)
 					}
-				Case "Pos":
-					WinGetPos, x, y, w, h, % vWinTitle, % vWinText, % vExcludeTitle, % vExcludeText
+				case "Pos":
+					WinGetPos, x, y, width, height, % winTitle, % winText, % excludeTitle, % excludeText
 
-					r := {"x": x
-						, "y": y
-						, "Width": w
-						, "Height": h}
-				Case "Text":
-					WinGetText, r, % vWinTitle, % vWinText, % vExcludeTitle, % vExcludeText
-				Case "Title":
-					WinGetTitle, r, % vWinTitle, % vWinText, % vExcludeTitle, % vExcludeText
-				Case "Transparent":
-					WinGet, a, Transparent, % vWinTitle, % vWinText, % vExcludeTitle, % vExcludeText
+					out := {"x": x, "y": y, "Width": width, "Height": height}
+				case "Text":
+					WinGetText, out, % winTitle, % winText, % excludeTitle, % excludeText
+				case "Title":
+					WinGetTitle, out, % winTitle, % winText, % excludeTitle, % excludeText
+				case "Transparent":
+					WinGet, alpha, Transparent, % winTitle, % winText, % excludeTitle, % excludeText
 
-					r := (a != "") ? (a) : (255)
-				Case "Visible":
-					WinGet, h, ID, % vWinTitle, % vWinText, % vExcludeTitle, % vExcludeText
+					out := (alpha != "") ? (alpha) : (255)
+				case "Visible":
+					WinGet, handle, ID, % winTitle, % winText, % excludeTitle, % excludeText
 
-					r := DllCall("IsWindowVisible", "UInt", h)  ;: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-iswindowvisible
-				Default:
-					WinGet, r, % vSubCommand, % vWinTitle, % vWinText, % vExcludeTitle, % vExcludeText  ;- Native error handling.
+					out := DllCall("IsWindowVisible", "UInt", handle)  ;: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-iswindowvisible
+				default:
+					WinGet, out, % subCommand, % winTitle, % winText, % excludeTitle, % excludeText  ;- Native error handling.
 			}
 		}
-		Else {
-			r := {}
+		else {
+			out := {}
 
-			For i, v in ["Class", "ControlList", "ControlListHwnd", "Count", "ExStyle", "Extension", "ID", "IDLast", "List", "MinMax", "PID", "Pos", "ProcessName", "ProcessPath", "Style", "Text", "Title", "TransColor", "Transparent", "Visible"] {
-				r[v] := WinGet(v, vWinTitle, vWinText, vExcludeTitle, vExcludeText)  ;* No need to pass `vDetectHiddenWindows` as that setting is not instanced.
+			for i, v in ["Class", "ControlList", "ControlListHwnd", "Count", "ExStyle", "Extension", "ID", "IDLast", "List", "MinMax", "PID", "Pos", "ProcessName", "ProcessPath", "Style", "Text", "Title", "TransColor", "Transparent", "Visible"] {
+				out[v] := WinGet(v, winTitle, winText, excludeTitle, excludeText)  ;* No need to pass `detectHiddenWindows` as that setting is persistent for any given thread.
 			}
 		}
 
-		If (z) {
-			DetectHiddenWindows, % z
+		if (detect) {
+			DetectHiddenWindows, % detect
 		}
-		Return, (r)
+
+		return (out)
 	}
 
-	Throw, (Exception("Invalid title.", -1, Format("""{}"" is invalid or doesn't exist.", vWinTitle)))
+	throw, (Exception("Invalid title.", -1, Format("""{}"" is invalid or doesn't exist.", winTitle)))
 }
 
-;===============           Clipboard          ===============;
+;=====================================================  Clipboard  =============;
 
 ;* CloseClipboard()
 CloseClipboard() {
-    If (!DllCall("user32\CloseClipboard")) {  ;: https://github.com/jNizM/AHK_DllCall_WinAPI/tree/master/src/Clipboard%20Functions
-        Return, (ErrorLevel := DllCall("kernel32\GetLastError"))
+    if (!DllCall("user32\CloseClipboard")) {  ;: https://github.com/jNizM/AHK_DllCall_WinAPI/tree/master/src/Clipboard%20Functions
+        return (ErrorLevel := DllCall("kernel32\GetLastError"))
 	}
 
-    Return, (ErrorLevel := 0)
+    return (ErrorLevel := 0)
 }
 
 ;* EmptyClipboard()
 EmptyClipboard() {
-    If (!DllCall("user32\EmptyClipboard")) {  ;: https://msdn.microsoft.com/en-us/library/ms649037.aspx
-        Return, (ErrorLevel := DllCall("kernel32\GetLastError"))
+    if (!DllCall("user32\EmptyClipboard")) {  ;: https://msdn.microsoft.com/en-us/library/ms649037.aspx
+        return (ErrorLevel := DllCall("kernel32\GetLastError"))
 	}
 
-    Return, (ErrorLevel := 0)
+    return (ErrorLevel := 0)
 }
 
-;* OpenClipboard(NewOwner)
-OpenClipboard(vNewOwner := 0) {
-    If (!DllCall("user32\OpenClipboard", "Ptr", vNewOwner)) {  ;: https://msdn.microsoft.com/en-us/library/ms649048.aspx
-        Return, (ErrorLevel := DllCall("kernel32\GetLastError"))
+;* OpenClipboard((newOwner))
+OpenClipboard(newOwner := 0) {
+    if (!DllCall("user32\OpenClipboard", "Ptr", newOwner)) {  ;: https://msdn.microsoft.com/en-us/library/ms649048.aspx
+        return (ErrorLevel := DllCall("kernel32\GetLastError"))
 	}
 
-    Return, (ErrorLevel := 0)
+    return (ErrorLevel := 0)
 }
 
-;===============           Keyboard           ===============;
+;====================================================== Keyboard ==============;
 
-;* BlockInput(Mode)
+;* BlockInput((mode))
 ;* Note:
 	;* Note that only the thread that blocked input can successfully unblock input.
-BlockInput(vMode := 0) {
-    If (!DllCall("user32\BlockInput", "UInt", vMode)) {  ;: https://msdn.microsoft.com/en-us/library/ms646290.aspx
-        Return, (ErrorLevel := DllCall("kernel32\GetLastError"))
+BlockInput(mode := 0) {
+    if (!DllCall("user32\BlockInput", "UInt", mode)) {  ;: https://msdn.microsoft.com/en-us/library/ms646290.aspx
+        return (ErrorLevel := DllCall("kernel32\GetLastError"))
 	}
 
-    Return, (ErrorLevel := 0)
+    return (ErrorLevel := 0)
 }
 
-DoubleTap(){
-    Return, ((A_ThisHotkey == A_PriorHotkey) && (A_TimeSincePriorHotkey <= 300))
+DoubleTap(wait := 0, delay := 300) {
+	if (!wait) {
+		return ((A_ThisHotkey == A_PriorHotkey) && (A_TimeSincePriorHotkey <= 300))
+	}
+
+    KeyWait, % A_ThisHotkey
+    KeyWait, % A_ThisHotkey, % Format("DT{}", delay/1000)
+
+	return (!ErrorLevel)
 }
 
-;==============         Date and Time        ===============;
+;===================================================  Date and Time  ===========;
 
-;* QueryPerformanceCounter(Mode)
+;* QueryPerformanceCounter((mode))
 ;* Description:
 	;* Returns accurately how many seconds have passed between `QueryPerformanceCounter(0)` and `QueryPerformanceCounter(1)`.
-QueryPerformanceCounter(vMode := 0) {
-	Static __Frequency,  __Previous := !DllCall("QueryPerformanceFrequency", "Int64P", __Frequency)  ;: https://msdn.microsoft.com/en-us/library/ms644905.aspx
+QueryPerformanceCounter(mode := 0) {
+	Static Frequency,  Previous := !DllCall("QueryPerformanceFrequency", "Int64P", Frequency)  ;: https://msdn.microsoft.com/en-us/library/ms644905.aspx
 
-	Return, (!DllCall("QueryPerformanceCounter", "Int64P", c) + ((vMode) ? (c - __Previous) : (__Previous := c))/__Frequency)  ;: https://msdn.microsoft.com/en-us/library/ms644904.aspx
+	return (!DllCall("QueryPerformanceCounter", "Int64P", current) + ((mode) ? (current - Previous) : (Previous := current))/Frequency)  ;: https://msdn.microsoft.com/en-us/library/ms644904.aspx
+}
+
+__QueryPerformanceCounter(fps := 20) {
+	Static Frequency, Previous := !DllCall("QueryPerformanceFrequency", "Int64P", Frequency)
+
+	target := 1000/fps
+
+	return (!DllCall("QueryPerformanceCounter", "Int64P", current) + ((Previous) ? (((delta := (current - Previous)*1000/Frequency) >= target) ? (!(Previous := current - Mod(delta, target)) + 1) : (0)) : (!(Previous := current) - 1)))
 }
 
 Class Date {
 
-	;* Date.IsLeapYear(Year)
-	IsLeapYear(vYear) {
-		Return, (!Mod(vYear, 4) && (!Mod(vYear, 400) || Mod(vYear, 100)))
+	;* Date.IsLeapYear(year)
+	IsLeapYear(year) {
+		return (!Mod(year, 4) && (!Mod(year, 400) || Mod(year, 100)))
 	}
 
-	;* Date.ToJulian(YYYYMMDDHHMMSS)
+	;* Date.ToJulian(date [yyyyMMddHHmmss])
 	;* Description:
 		;* Convert a Gregorian date to a Julian date (https://en.wikipedia.org/wiki/Julian_day).
 	;* Credit:
-		;* SKAN: https://autohotkey.com/board/topic/19644-julian-date-converter-for-google-daterange-search/#entry129225.
-	ToJulian(vDate) {
-		FormatTime, vDate, % vDate, yyyyMMddHHmmss
+		;* SKAN  ;: https://autohotkey.com/board/topic/19644-julian-date-converter-for-google-daterange-search/#entry129225.
+	ToJulian(date) {
+		FormatTime, date, % date, yyyyMMddHHmmss
 
-		y := vDate[0, 4] + 0, m := vDate[4, 6] + 0
-		If (m <= 2) {
+		y := date[0, 4] + 0, m := date[4, 6] + 0
+		if (m <= 2) {
 			m += 12, y -= 1
 		}
 
-		Return, Round(2 - ~~(y/100) + ~~(~~(y/100)/4) + ~~(365.25*(y + 4716)) + ~~(30.6001*(m + 1)) + (vDate[6, 8] + 0) - 1524.5 + ((vDate[8, 10] + 0) + ((vDate[10, 12] + 0)/60.0) + ((vDate[12, 14] + 0)/3600.0))/24.0)
+		return Round(2 - ~~(y/100) + ~~(~~(y/100)/4) + ~~(365.25*(y + 4716)) + ~~(30.6001*(m + 1)) + (date[6, 8] + 0) - 1524.5 + ((date[8, 10] + 0) + ((date[10, 12] + 0)/60.0) + ((date[12, 14] + 0)/3600.0))/24.0)
 	}
 }
 
 Clock() {
-    Return, (DllCall("msvcrt\clock"))
+    return (DllCall("msvcrt\clock"))
 }
 
-;==============         Machine Code         ===============;
+;==================================================== Machine Code ============;
 
 ;* Bentschi's version.
-MCode(vMachineCode) {
+MCode(machineCode) {
 	Static e := {1: 4, 2: 1}, c := ((A_PtrSize == 8) ? ("x64") : ("x86"))
 
-	If (!RegExMatch(vMachineCode, "^([0-9]+),(" c ":|.*?," c ":)([^,]+)", m)) {
+	if (!RegExMatch(machineCode, "^([0-9]+),(" c ":|.*?," c ":)([^,]+)", m)) {
 		Return
 	}
 
 	DllCall("Crypt32\CryptStringToBinaryW", "Str", m3, "UInt", 0, "UInt", e[m1], "Ptr", 0, "UIntP", s, "Ptr", 0, "Ptr", 0)  ;? e[m1] = 4 (Hex) || 1 (Base64)
 
 	p := DllCall("Kernel32\GlobalAlloc", "UInt", 0, "Ptr", s, "Ptr")
-    If (A_PtrSize == 8) {
+    if (A_PtrSize == 8) {
         DllCall("Kernel32\VirtualProtect", "Ptr", p, "Ptr", s, "UInt", 0x40, "UIntP", 0)
 	}
 
-	If (DllCall("Crypt32\CryptStringToBinaryW", "str", m3, "UInt", 0, "UInt", e[m1], "Ptr", p, "UIntP", s, "Ptr", 0, "Ptr", 0)) {
-		Return, (p)
+	if (DllCall("Crypt32\CryptStringToBinaryW", "str", m3, "UInt", 0, "UInt", e[m1], "Ptr", p, "UIntP", s, "Ptr", 0, "Ptr", 0)) {
+		return (p)
 	}
 
 	DllCall("GlobalFree", "Ptr", p)
 }
 
-;==============             Mouse            ===============;
+;=======================================================  Mouse  ===============;
 
-;* ClipCursor(Confine, {"x": x, "y": y, "Width": Width, "Height": Height})
+;* ClipCursor((confine), ([Array] rect))
 ;* Description:
 	;* Confines the cursor to a rectangular area on the screen. If a subsequent cursor position (set by the SetCursorPos function or the mouse) lies outside the rectangle, the system automatically adjusts the position to keep the cursor inside the rectangular area.
 ;* Parameter:
-	;* vConfine:
-		;* 1: The cursor is confined to the `oPos` or the window that is currently active if no position object is passed.
+	;* confine:
+		;* 1: The cursor is confined to the rect defined in `rect` or the window that is currently active if no position object is passed.
 		;* 0: The cursor is free to move anywhere on the screen.
-	;* oPos:
-		;* *: An object containg x, y, width and height.
-ClipCursor(vConfine := 0, oPos := "") {
-	Static __Rect := VarSetCapacity(__Rect, 16, 0)
+	;* rect:
+		;* *: An array containg x, y, width and height in that order.
+ClipCursor(confine := 0, rect := "") {
+	Static Rect := VarSetCapacity(Rect, 16, 0)
 
-	If (!vConfine) {
-		Return, (DllCall("user32\ClipCursor"))  ;: https://msdn.microsoft.com/en-us/library/ms648383.aspx
+	if (!confine) {
+		return (DllCall("user32\ClipCursor"))  ;: https://msdn.microsoft.com/en-us/library/ms648383.aspx
 	}
 
-	If (Math.IsNumeric(oPos.x) && Math.IsNumeric(oPos.y) && Math.IsNumeric(oPos.Width) && Math.IsNumeric(oPos.Height)) {
-		NumPut(oPos.x, __Rect, 0, "Int"), NumPut(oPos.y, __Rect, 4, "Int"), NumPut(oPos.x + oPos.Width, __Rect, 8, "Int"), NumPut(oPos.y + oPos.Height, __Rect, 12, "Int")  ;: https://docs.microsoft.com/en-us/windows/win32/api/windef/ns-windef-rect
+	if (rect) {
+		NumPut(rect.x, Rect, 0, "Int"), NumPut(rect.y, Rect, 4, "Int"), NumPut(rect.x + rect.Width, Rect, 8, "Int"), NumPut(rect.y + rect.Height, Rect, 12, "Int")  ;: https://docs.microsoft.com/en-us/windows/win32/api/windef/ns-windef-rect
 	}
-	Else {
-		DllCall("GetWindowRect", "UPtr", WinExist(), "UPtr", &__Rect)
+	else {
+		DllCall("GetWindowRect", "UPtr", WinExist(), "UPtr", &Rect)
 	}
 
-	If (!DllCall("user32\ClipCursor", "Ptr", &__Rect))
-		Return, (ErrorLevel := DllCall("kernel32\GetLastError"))
+	if (!DllCall("user32\ClipCursor", "Ptr", &Rect))
+		return (ErrorLevel := DllCall("kernel32\GetLastError"))
 
-	Return, (ErrorLevel := 0)
+	return (ErrorLevel := 0)
 }
 
 ;* GetDoubleClickTime()
 GetDoubleClickTime() {
-    Return, (DllCall("user32\GetDoubleClickTime"))  ;: https://msdn.microsoft.com/en-us/library/ms646258.aspx
+    return (ErrorLevel := DllCall("user32\GetDoubleClickTime"))  ;: https://msdn.microsoft.com/en-us/library/ms646258.aspx
 }
 
 ;* GetCapture()
 GetCapture() {
-    Return, (DllCall("user32\GetCapture"))  ;: https://msdn.microsoft.com/en-us/library/ms646262.aspx
+    return (ErrorLevel := DllCall("user32\GetCapture"))  ;: https://msdn.microsoft.com/en-us/library/ms646262.aspx
+}
+
+;* GetCapture([Point2] stop, (speed))
+MouseMove(stop, speed := 0.5) {
+	start := MouseGet("Pos")
+		, distance := Sqrt((stop.x - start.x)**2 + (stop.y - start.y)**2), difference := {x: (stop.x - start.x)/distance, y: (stop.y - start.y)/distance}
+
+	loop, % distance/speed {
+		ratio := A_Index*speed
+
+		MouseMove, start.x + difference.x*ratio, start.y + difference.y*ratio
+	}
+}
+
+MouseWheel(delta := 120) {
+	CoordMode, Mouse, Screen
+
+	MouseGetPos, x, y
+	modifiers := 0x8*GetKeyState("Ctrl") | 0x1*GetKeyState("LButton") | 0x10*GetKeyState("MButton") | 0x2*GetKeyState("RButton") | 0x4*GetKeyState("Shift") | 0x20*GetKeyState("XButton1") | 0x40*GetKeyState("XButton2")
+
+	PostMessage, 0x20A, delta << 16 | modifiers, y << 16 | x , , A ;: http://msdn.microsoft.com/en-us/library/windows/desktop/ms645617(v=vs.85).aspx
 }
 
 ;* ReleaseCapture()
 ReleaseCapture() {
-    If (!DllCall("user32\ReleaseCapture")) {  ;: https://msdn.microsoft.com/en-us/library/ms646261.aspx
-        Return, (ErrorLevel := DllCall("kernel32\GetLastError"))
+    if (!DllCall("user32\ReleaseCapture")) {  ;: https://msdn.microsoft.com/en-us/library/ms646261.aspx
+        return (ErrorLevel := DllCall("kernel32\GetLastError"))
 	}
 
-    Return, (ErrorLevel := 0)
+    return (ErrorLevel := 0)
 }
 
-;* SetDoubleClickTime()
-SetDoubleClickTime(vInterval := 500) {
-    If (!DllCall("user32\SetDoubleClickTime", "UInt", vInterval)) {  ;: https://msdn.microsoft.com/en-us/library/ms646263.aspx
-        Return, (ErrorLevel := DllCall("kernel32\GetLastError"))
+;* SetDoubleClickTime((interval))
+SetDoubleClickTime(interval := 500) {
+    if (!DllCall("user32\SetDoubleClickTime", "UInt", interval)) {  ;: https://msdn.microsoft.com/en-us/library/ms646263.aspx
+        return (ErrorLevel := DllCall("kernel32\GetLastError"))
 	}
 
-    Return, (ErrorLevel := 0)
+    return (ErrorLevel := 0)
 }
 
-;* SwapMouseButton()
-SwapMouseButton(vMode := 0) {
-    DllCall("user32\SwapMouseButton", "UInt", vMode)  ;: https://msdn.microsoft.com/en-us/library/ms646264.aspx
+;* SwapMouseButton((mode))
+SwapMouseButton(mode := 0) {
+    DllCall("user32\SwapMouseButton", "UInt", mode)  ;: https://msdn.microsoft.com/en-us/library/ms646264.aspx
 }
 
-;==============             Type             ===============;
+;======================================================== Type ================;
 
-;* Type(Variable)
-Type(vVariable) {
-	Static __RegExMatchObject := NumGet(&(m, RegExMatch("", "O)", m))), __BoundFuncObject := NumGet(&(f := Func("Func").Bind())), __FileObject := NumGet(&(f := FileOpen("*", "w"))), __EnumeratorObject := NumGet(&(e := ObjNewEnum({})))
+;* Type(variable)
+Type(variable) {
+	Static RegExMatchObject := NumGet(&(m, RegExMatch("", "O)", m))), BoundFuncObject := NumGet(&(f := Func("Func").Bind())), FileObject := NumGet(&(f := FileOpen("*", "w"))), EnumeratorObject := NumGet(&(e := ObjNewEnum({}))), hHeap := DllCall("GetProcessHeap", "Ptr")
 
-    If (IsObject(vVariable)) {
-        Return, ((ObjGetCapacity(vVariable) != "") ? ((vVariable.Base.__Class == "__Array") ? ("Array") : ("Object")) : ((IsFunc(vVariable)) ? ("FuncObject") : ((ComObjType(vVariable) != "") ? ("ComObject") : ((NumGet(&vVariable) == __BoundFuncObject) ? ("BoundFuncObject ") : ((NumGet(&vVariable) == __RegExMatchObject) ? ("RegExMatchObject") : ((NumGet(&vVariable) == __FileObject) ? ("FileObject") : ((NumGet(&vVariable) == __EnumeratorObject) ? ("EnumeratorObject") : ("Property"))))))))
+    if (IsObject(variable)) {
+        return ((ObjGetCapacity(variable) != "") ? (RegExReplace(variable.__Class, "S)(.*?\.|_*)(?!.*?\..*?)")) : ((IsFunc(variable)) ? ("FuncObject") : ((ComObjType(variable) != "") ? ("ComObject") : ((NumGet(&variable) == BoundFuncObject) ? ("BoundFuncObject ") : ((NumGet(&variable) == RegExMatchObject) ? ("RegExMatchObject") : ((NumGet(&variable) == FileObject) ? ("FileObject") : ((NumGet(&variable) == EnumeratorObject) ? ("EnumeratorObject") : ("Property"))))))))
 	}
-	Else If (Math.IsNumeric(vVariable)) {
-		Return, ((vVariable == Round(vVariable)) ? ("Integer") : ("Float"))
+	else if (Math.IsNumeric(variable)) {
+		return ((variable == Round(variable)) ? ("Integer") : ("Float"))
 	}
-	Else {
-		Return, ((ObjGetCapacity([vVariable], 0) > 0) ? ("String") : (""))
+	else {
+		return ((ObjGetCapacity([variable], 0) > 0) ? ("String") : (""))
 	}
 }
 
-;==============           Variable           ===============;
+;====================================================== Variable ==============;
 
-;* DownloadContent(Url)
-DownloadContent(vUrl) {
-	Static __ComObj := ComObjCreate("MSXML2.XMLHTTP")
+;* DownloadContent(url)
+DownloadContent(url) {
+	Static ComObj := ComObjCreate("MSXML2.XMLHTTP")
 
-	__ComObj.Open("Get", vUrl, 0)
-	__ComObj.Send()
+	ComObj.Open("Get", url, 0)
+	ComObj.Send()
 
-	Return, (__ComObj.ResponseText)
+	return (ComObj.ResponseText)
 }
 
-;* VarExist(Variable)
+;* VarExist([ByRef] Variable)
 ;* Description:
-	;* Returns a value to indicate whether the variable exists.
+	;* Indicates whether a variable exists or not.
 ;* Return:
 	;* 0: The variable does not exist.
 	;* 1: The variable does exist and contains data.
 	;* 2: The variable does exist and is empty.
 ;* Credit:
-	;* SKAN: https://autohotkey.com/board/topic/7984-ahk-functions-incache-cache-list-of-recent-items/://autohotkey.com/board/topic/7984-ahk-functions-incache-cache-list-of-recent-items/page-3?&#entry78387.
-VarExist(ByRef vVariable) {
-	Return, ((&vVariable == &v) ? (0) : ((vVariable == "") ? (2) : (1)))
+	;* SKAN  ;: https://autohotkey.com/board/topic/7984-ahk-functions-incache-cache-list-of-recent-items/://autohotkey.com/board/topic/7984-ahk-functions-incache-cache-list-of-recent-items/page-3?&#entry78387.
+VarExist(ByRef variable) {
+	return ((&variable == &v) ? (0) : ((variable == "") ? (2) : (1)))
 }
 
-;* Swap(Variable1, Variable2)
-Swap(ByRef vVariable1, ByRef vVariable2) {
-	t := vVariable1, vVariable1 := vVariable2, vVariable2 := t
+;* Swap([ByRef] Variable1, [ByRef] Variable2)
+Swap(ByRef Variable1, ByRef Variable2) {
+	temp := Variable1
+		, Variable1 := Variable2, Variable2 := temp
 }
 
-;==============            Window            ===============;
+;======================================================= Window ===============;
 
-;* Fade(Mode, Alpha, Time, TargetWindow)
+Desktop() {
+	WinGet, style, Style, A
+
+	if (Debug && (!(style & 0x02000000) || !(style & 0x80000000)) && (style & 0x00020000 || style & 0x00010000)) {
+		MsgBox(((!(style & 0x02000000)) ? ("0x02000000 (WS_CLIPCHILDREN)") : ("0x80000000 (WS_POPUP)")) . " && " . ((style & 0x00020000) ? ("0x00020000 (WS_MINIMIZEBOX || WS_GROUP)") : ("0x00010000 (WS_MAXIMIZEBOX || WS_TABSTOP)")))
+	}
+
+	return (((style & 0x02000000) || (style & 0x80000000)) && !(style & 0x00020000 || style & 0x00010000))
+	;! return ((style & 0x00C00000) ? (style & 0x80000000) : (!(style & 0x00020000 || style & 0x00010000)))
+
+	MsgBox(!(style & 0x00800000) . " (WS_BORDER)`n"
+		. !(style & 0x00C00000) . " (WS_CAPTION)`n"
+		. !(style & 0x40000000) . " (WS_CHILD || WS_CHILDWINDOW)`n"
+;		. !(style & 0x02000000) . " (WS_CLIPCHILDREN)`n"  ;! Desktop
+;		. !(style & 0x04000000) . " (WS_CLIPSIBLINGS)`n"  ;! Desktop
+		. !(style & 0x08000000) . " (WS_DISABLED)`n"
+		. !(style & 0x00400000) . " (WS_DLGFRAME)`n"  ;*** Use WS_DLGFRAME as a potential alternative to WS_CAPTION.
+		. !(style & 0x00020000) . " (WS_MINIMIZEBOX || WS_GROUP)`n"
+		. !(style & 0x00100000) . " (WS_HSCROLL)`n"
+		. !(style & 0x20000000) . " (WS_ICONIC || WS_MINIMIZE)`n"
+		. !(style & 0x01000000) . " (WS_MAXIMIZE)`n"
+		. !(style & 0x00010000) . " (WS_MAXIMIZEBOX || WS_TABSTOP)`n"
+		. !(style & 0x00000000) . " (WS_OVERLAPPED || WS_TILED)`n"
+;		. !(style & 0x80000000) . " (WS_POPUP)`n"  ;! Desktop
+		. !(style & 0x00040000) . " (WS_SIZEBOX || WS_THICKFRAME)`n"
+		. !(style & 0x00080000) . " (WS_SYSMENU)`n"
+;		. !(style & 0x10000000) . " (WS_VISIBLE)`n"  ;! Desktop
+		. !(style & 0x00200000) . " (WS_VSCROLL)`n`n")
+}
+
+;* Fade(mode, (alpha), (time), (targetWindow))
 ;* Description:
-	;* Gradually fade a target window to a target alpha over a period of time.
-Fade(vMode, vAlpha := "", vTime := 5000, vTargetWindow := "A") {
-	a := t := ((t := WinGet("Transparent", (w := (vTargetWindow == "A") ? ("ahk_id" . WinExist()) : (vTargetWindow)))) == "") ? (255*(vMode = "In")) : (t), s := A_TickCount  ;* Safety check for `WinGet("Transparent")` returning `""` because I'm unsure how to test for the fourth exception mentioned in the docs.
+	;* Gradually fade the target window to a target alpha over a period of time.
+FadeWindow(mode, alpha := "", time := 5000, targetWindow := "A") {
+	a := t := ((t := WinGet("Transparent", (w := (targetWindow == "A") ? ("ahk_id" . WinExist()) : (targetWindow)))) == "") ? (255*(mode == "In")) : (t), s := A_TickCount  ;* Safety check for `WinGet("Transparent")` returning `""` because I'm unsure how to test for the fourth exception mentioned in the docs.
 
-	Switch (vMode) {  ;- No error handling.
-		Case "In":
-			v := (z := Math.Clamp(vAlpha, 0, 255)) - t
+	switch (mode) {  ;~ No error handling.
+		case "In":
+			v := (z := Math.Clamp(alpha, 0, 255)) - t
 
-			While (a < z) {
-				WinSet, Transparent, % a := ((A_TickCount - s)/vTime)*v + t, % w
+			while (a < z) {
+				WinSet, Transparent, % a := ((A_TickCount - s)/time)*v + t, % w
 			}
-		Case "Out":
-			v := t - (z := Math.Clamp(vAlpha, 0, 255))
+		case "Out":
+			v := t - (z := Math.Clamp(alpha, 0, 255))
 
-			While (a > z) {
-				WinSet, Transparent, % a := (1 - ((A_TickCount - s)/vTime))*v + z, % w
+			while (a > z) {
+				WinSet, Transparent, % a := (1 - ((A_TickCount - s)/time))*v + z, % w
 			}
 	}
 }
 
-Desktop() {
-	v := WinGet("Style")
-
-	Return, ((v & 0xC00000) ? (v & 0x80000000) : (!(v & 0x00020000 || v & 0x00010000)))  ;? 0xC00000 = WS_CAPTION, 0x80000000 = WS_POPUP, 0x00020000 = WS_MINIMIZEBOX, 0x00010000 = WS_MAXIMIZEBOX
-	Return, (["", "NotifyIconOverflowWindow", "Progman", "Shell_TrayWnd", "Windows.UI.Core.CoreWindow", "WorkerW"].Includes(WinGet("Class")))  ;HwndWrapper[ExpressVPN.exe;;4aa35596-23e0-414b-8d79-42598d67db97]
-
-	MsgBox(!(v & 0x00800000) . " (WS_BORDER)`n"
-		. !(v & 0x00C00000) . " (WS_CAPTION)`n"
-		. !(v & 0x40000000) . " (WS_CHILD || WS_CHILDWINDOW)`n"
-;		. !(v & 0x02000000) . " (WS_CLIPCHILDREN)`n"  ;! Desktop
-;		. !(v & 0x04000000) . " (WS_CLIPSIBLINGS)`n"  ;! Desktop
-		. !(v & 0x08000000) . " (WS_DISABLED)`n"
-		. !(v & 0x00400000) . " (WS_DLGFRAME)`n"
-		. !(v & 0x00020000) . " (WS_MINIMIZEBOX || WS_GROUP)`n"
-		. !(v & 0x00100000) . " (WS_HSCROLL)`n"
-		. !(v & 0x20000000) . " (WS_ICONIC || WS_MINIMIZE)`n"
-		. !(v & 0x01000000) . " (WS_MAXIMIZE)`n"
-		. !(v & 0x00010000) . " (WS_MAXIMIZEBOX || WS_TABSTOP)`n"
-		. !(v & 0x00000000) . " (WS_OVERLAPPED || WS_TILED)`n"
-;		. !(v & 0x80000000) . " (WS_POPUP)`n"  ;! Desktop
-		. !(v & 0x00040000) . " (WS_SIZEBOX || WS_THICKFRAME)`n"
-		. !(v & 0x00080000) . " (WS_SYSMENU)`n"
-;		. !(v & 0x10000000) . " (WS_VISIBLE)`n"  ;! Desktop
-		. !(v & 0x00200000) . " (WS_VSCROLL)`n`n"
-		. "Test: " . Desktop())  ;*** Use WS_DLGFRAME as a potential alternative to WS_CAPTION.
+GetActiveExplorerPath() {
+	if (hWnd := WinActive("ahk_class CabinetWClass")) {
+		for window in ComObjCreate("Shell.Application").Windows {
+			if (window.hWnd == hWnd) {
+				return (window.Document.Folder.Self.Path)
+			}
+		}
+	}
 }
 
-;* ScriptCommand(ScriptName, Command)
-ScriptCommand(vScript, vCommand) {
-    Static __Command := {"Open": 65300, "Help": 65301, "Spy": 65302, "Reload": 65303, "Edit": 65304, "Suspend": 65305, "Pause": 65306, "Exit": 65307}
+;* ScriptCommand(scriptName, message)
+ScriptCommand(scriptName, message) {
+    Static commands := {"Open": 65300, "Help": 65301, "Spy": 65302, "Reload": 65303, "Edit": 65304, "Suspend": 65305, "Pause": 65306, "Exit": 65307}
 
-	PostMessage(0x111, __Command[vCommand], , vScript . " - AutoHotkey", , , "On")
-}
-
-;==============             Other            ===============;
-
-InternetConnection() {
-	Return, (ErrorLevel := DllCall("Wininet\InternetGetConnectedState", "Str", "", "Int", 0))  ;: https://docs.microsoft.com/en-us/windows/win32/api/wininet/nf-wininet-internetgetconnectedstate
+	PostMessage(0x111, commands[message], , scriptName . " - AutoHotkey", , , 1)
 }
 
 ;* ShowDesktop()
 ShowDesktop() {
-	Static __ComObj := ComObjCreate("shell.application")
+	Static comObj := ComObjCreate("shell.application")
 
-	__ComObj.ToggleDesktop()
+	comObj.ToggleDesktop()
 }
 
 ;* ShowStartMenu()
@@ -498,11 +549,154 @@ ShowStartMenu() {
 	DllCall("User32\PostMessage", "Ptr", WinExist(), "UInt", 0x112, "Ptr", 0xF130, "Ptr", 0)
 }
 
-;* Speak(String)
+;=======================================================  Other  ===============;
+
+InternetConnection() {
+	return (ErrorLevel := DllCall("Wininet\InternetGetConnectedState", "Str", "", "Int", 0))  ;: https://docs.microsoft.com/en-us/windows/win32/api/wininet/nf-wininet-internetgetconnectedstate
+}
+
+;* Speak(message)
 ;* Note:
 	;* This is not ideal for active use as it will halt the thread that makes the request, better to call it from a second script or compile a dedicated executable.
-Speak(vString) {
-	Static __ComObj := ComObjCreate("SAPI.SpVoice")
+Speak(message) {
+	Static comObj := ComObjCreate("SAPI.SpVoice")
 
-	__ComObj.Speak(vString)
+	comObj.Speak(message)
+}
+
+;===============  Class  =======================================================;
+
+Class Spotify {
+	Static Handle := 0
+
+    Pause() {
+		PostMessage(0x319, , 0xD0000, this.GetWindow(1), , , 1)  ;? 0x319 = WM_APPCOMMAND
+    }
+
+    PlayPause() {
+		PostMessage(0x319, , 0xE0000, this.GetWindow(1), , , 1)
+    }
+
+    Play() {
+		Local
+
+		detect := A_DetectHiddenWindows
+		DetectHiddenWindows, On
+
+		window := this.GetWindow(1)
+
+		PostMessage, 0x319, , 0xD0000, , % window
+		PostMessage, 0x319, , 0xE0000, , % window
+
+		DetectHiddenWindows, % detect
+    }
+
+    Prev() {
+		PostMessage(0x319, , 0xC0000, this.GetWindow(1), , , 1)
+    }
+
+    Next() {
+		PostMessage(0x319, , 0xB0000, this.GetWindow(1), , , 1)
+    }
+
+    GetWindow(prefix := true) {
+		Local
+
+		detect := A_DetectHiddenWindows
+		DetectHiddenWindows, On
+
+		if (WinExist("ahk_exe Spotify.exe")) {
+			if (this.Handle && WinGet("Class", "ahk_ID" . this.Handle) == "Chrome_WidgetWin_0" && WinGet("Title", "ahk_ID" . this.Handle) ~= "^(Spotify.*|.* - .*)$") {
+				window := (prefix) ? ("ahk_ID" . this.Handle) : (this.Handle)
+			}
+			else {
+				for i, hWnd in WinGet("List", "ahk_exe Spotify.exe") {
+					if (WinGet("Class", "ahk_ID" . hWnd) == "Chrome_WidgetWin_0" && WinGet("Title", "ahk_ID" . hWnd) ~= "^(Spotify.*|.* - .*)$") {
+						this.Handle := hWnd
+							, window := (prefix) ? ("ahk_ID" . hWnd) : (hWnd)
+
+						break
+					}
+				}
+			}
+		}
+
+		DetectHiddenWindows, % detect  ;* Avoid leaving `DetectHiddenWindows` on for the calling thread.
+
+        return (window)
+    }
+}
+
+Class Timer {
+	Static Instances := []
+
+	__New(callback, interval := 0, priority := 0) {
+		Local
+
+		instance := {"Callback": callback, "Interval": interval, "Priority": priority
+			, "State": -1
+
+			, "Base": this.__Timer}
+
+		pointer := &instance
+			, this.Instances[pointer] := instance, ObjRelease(pointer)  ;* Decrease this object's reference count to allow `__Delete()` to be called while still keeping a copy in `Timer.Instances`.
+
+		return (instance)
+	}
+
+	StartAll(interval := "") {
+		Local
+
+		for pointer, object in this.Instances {
+			object.Start(interval)
+		}
+	}
+
+	StopAll() {
+		Local
+
+		for pointer, object in this.Instances {
+			object.Stop()
+		}
+	}
+
+	Class __Timer {
+
+		__Delete() {
+			if (this.State != -1) {
+				SetTimer(this.Callback, "Delete")
+			}
+
+			if (Debug) {
+				MsgBox("__Timer.__Delete(): " Timer.Instances.Count)
+			}
+
+			pointer := &this
+				, ObjAddRef(pointer), Timer.Instances.Delete(pointer)  ;* Increase this object's reference count before deleting the copy stored in `Timer.Instances` to avoid crashing the calling script.
+		}
+
+		Start(interval := "") {
+			Local
+
+			if (this.State != 1) {
+				this.State := 1
+
+				if (interval != "") {
+					this.Interval := interval
+				}
+
+				SetTimer(this.Callback, this.Interval, this.Priority)
+			}
+		}
+
+		Stop() {
+			Local
+
+			if (this.State == 1) {
+				this.State := 0
+
+				SetTimer(this.Callback, "Off")
+			}
+		}
+	}
 }
