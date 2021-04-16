@@ -1,420 +1,539 @@
-﻿;=====         Auto-execute         =========================;
-;===============            Admin             ===============;
+;============ Auto-execute ====================================================;
+;=======================================================  Admin  ===============;
 
-If (!(A_IsAdmin || RegExMatch(DllCall("GetCommandLine", "Str"), " /restart(?!\S)"))) {
-    Try
-		Run, % "*RunAs " . v := [A_ProgramFiles . "\AutoHotkey\AutoHotkey.exe /restart " . A_ScriptFullPath, A_ScriptFullPath . " /restart"][Round(A_IsCompiled)]
-    ExitApp
+if (!A_IsAdmin || !(DllCall("GetCommandLine", "Str") ~= " /restart(?!\S)")) {
+	try {
+		Run, % Format("*RunAs {}", (A_IsCompiled) ? (A_ScriptFullPath . " /restart") : (A_AhkPath . " /restart " . A_ScriptFullPath))
+	}
+
+	ExitApp
 }
 
-;===============           Setting            ===============;
-
-#Include, %A_ScriptDir%\..\lib\General.ahk
-#Include, %A_ScriptDir%\..\lib\Math.ahk
-#Include, %A_ScriptDir%\..\lib\ObjectOriented.ahk
-#Include, %A_ScriptDir%\..\lib\String.ahk
+;======================================================  Setting  ==============;
 
 #InstallKeybdHook
 #InstallMouseHook
-#KeyHistory, 0
-#NoEnv  ;* #NoEnv is recommended for all scripts, it disables environment variables.
+#NoEnv
 #SingleInstance, Force
+#Warn, ClassOverwrite, MsgBox
 #WinActivateForce
 
-AutoTrim, Off
 CoordMode, Mouse, Screen
-ListLines, Off
-Process, Priority, , R
+CoordMode, ToolTip, Screen
+Process, Priority, , High
 SendMode, Input
 SetBatchLines, -1
 SetCapsLockState, AlwaysOff
-SetControlDelay, -1
-SetDefaultMouseSpeed, 0
-SetKeyDelay, -1, -1  ;* Even though `SendInput` ignores `SetKeyDelay`, `SetMouseDelay` and `SetDefaultMouseSpeed`, having these delays at -1 improves `SendEvent` speed just in case `SendInput` is not available and falls back to `SendEvent`. ;? Default = 10.
-SetMouseDelay, -1
+SetKeyDelay, -1, -1
 SetNumlockState, AlwaysOn
 SetScrollLockState, AlwaysOff
 SetTitleMatchMode, 2
 SetWinDelay, -1
 SetWorkingDir, % A_ScriptDir . "\.."
 
-;===============            Group             ===============;
+;======================================================== Menu ================;
 
-For k, v in {"Browser": [["Google Chrome", "chrome"]], "Editor" : [["Notepad++", "notepad++"], ["", "Code"]], "Escape": [["", "ApplicationFrameHost", "Calculator"], ["AutoHotkey Help", "hh"]]} {
-	For i, v in v {
-		GroupAdd, % k, % v[0] . (v[1] ? " ahk_exe " . RegExReplace(v[1], "i)\.exe") . ".exe" : ""), , , % v[2]
-	}
-}
-
-;===============             Menu             ===============;
-
-Menu, Tray, Tip, Text
-Menu, Tray, Color, 0xFFFFFF, Single
-Menu, Tray, Icon, mstscax.dll, 10, 1  ;: https://diymediahome.org/windows-icons-reference-list-with-details-locations-images/.
+Menu, Tray, Icon, mstscax.dll, 10, 1  ;: https://diymediahome.org/windows-icons-reference-list-with-details-locations-images/
 Menu, Tray, NoStandard
-For k, v in {"Case": ["", "[&1] lowercase", "[&2] UPPERCASE", "[&3] Sentence case", "[&4] Title Case", "", "[&5] iNVERSE", "[&6] Reverse", ""], "Tray": ["", "[&1] Edit", "[&2] Open Script Folder", "[&3] Window Spy", "[&4] List Lines", "[&5] List Vars", "[&6] List Hotkeys", "[&7] KeyHistory", "", "[&8] Pause", "[&9] Suspend", "", "[10] Restore All", "[11] Exit", ""]} {
-	For i, v in v {
+for k, v in {"Case": ["", "[&1] lowercase", "[&2] UPPERCASE", "[&3] Sentence case", "[&4] Title Case", "", "[&5] iNVERSE", "[&6] Reverse", ""], "Tray": ["", "[&1] Edit", "[&2] Open Script Folder", "[&3] Window Spy", "[&4] List Lines", "[&5] List Vars", "[&6] List Hotkeys", "[&7] KeyHistory", "", "[&8] Pause", "[&9] Suspend", "", "[10] Restore All", "[11] Exit", ""]} {
+	for i, v in v {
 		Menu, % k, Add, % v, Menu
 	}
 }
 
-;===============             Run              ===============;
+;====================================================== Variable ==============;
 
-For i, v in ["AutoCorrect", "Connection", "QuickTest", "Window"] {
-	Run, % "*RunAs " . A_ScriptDir . "/" . v . ".ahk"
+IniRead, Debug, % A_WorkingDir . "\cfg\Settings.ini", Debug, Debug
+Global Debug
+	, DetectHiddenWindows := A_DetectHiddenWindows, CapsLockState := 0
+	, SavedClipboard
+	, HiddenWindows := []
+
+;=======================================================  Group  ===============;
+
+for k, v in {"Browser": [["Google Chrome", "chrome"]]
+	, "Editor" : [["Notepad++", "notepad++"], ["", "Code"], ["Microsoft Visual Studio", "devenv"]]
+	, "Escape": [["", "ApplicationFrameHost", "Calculator"], ["AutoHotkey Help", "hh"], ["", "mpc-hc64"], ["Windows Photo Viewer", "DllHost"]]} {
+	for i, v in v {
+		GroupAdd, % k, % v[0] . (v[1] ? " ahk_exe " . RegExReplace(v[1], "i)\.exe") . ".exe" : ""), , , % v[2]  ;? v[0], v[1] = WinTitle, v[2] = ExcludeTitle
+	}
 }
 
-;===============           Variable           ===============;
+;========================================================  Run  ================;
 
-IniRead, vDebug, % A_WorkingDir . "\cfg\Settings.ini", Debug, Debug
-Global vDebug
-	, vDetectHiddenWindows := A_DetectHiddenWindows, vKeyDelay := A_KeyDelay, vIsSuspended := A_IsSuspended
-	, vClipboard
+for i, v in ["AutoCorrect", "Connection", "Window"] {
+	Run, % A_ScriptDir . "\" . v . ".ahk"
+}
+for i, v in ["QuickTest"] {
+	Run, % A_WorkingDir . "\test\" . v . ".ahk"
+}
 
-oHiddenWindows := []
+;======================================================== Hook ================;
 
-;===============            Other             ===============;
+OnExit("Exit"), OnMessage(0xFF, "UpdateScript")
 
-OnExit("Exit"), OnMessage(0xFF, "StatusReport")
+;=======================================================  Other  ===============;
 
 Exit
 
-;=====            Hotkey            =========================;
-;===============            Mouse             ===============;
+;=============== Hotkey =======================================================;
+;=======================================================  Mouse  ===============;
 
-#If (WinActive("ahk_group Editor") || WinActive("ahk_group Browser"))
+#if ((WinActive("ahk_group Editor") || WinActive("ahk_group Browser")) && !WinActive("ahk_group Game"))
 
 	~$WheelDown::
 	~$WheelUp::
-		If (A_TimeSincePriorHotkey >= 50 && MouseGet("Pos", "Window").y <= 80 + 30*(WinActive("ahk_group Browser") > 0)) {
-			Send, % "^{" . {"~$WheelUp": "PgUp", "~$WheelDown": "PgDn"}[A_ThisHotkey] . "}"
+		if (A_TimeSincePriorHotkey >= 50 && MouseGet("Pos", "Window").y <= 80 + 30*(WinActive("ahk_group Browser") > 0)) {
+			Send, % "^{" . {"WheelUp": "PgUp", "WheelDown": "PgDn"}[KeyGet(A_ThisHotkey)] . "}"
 		}
-		Return
+
+		return
 
 #If
 
-#If (WinActive("ahk_group Browser"))
+#if (!WinActive("ahk_group Game"))
 
-	$RButton::
-		v := MouseGet("Pos")
-		If (Math.IsBetween(v.x, 320, 390) && Math.IsBetween(v.y, 70, 97)) {
-			Send, ^l
-			Sleep, 100
+	Media_Prev::
+	XButton1 & LButton::
+		Spotify.Prev()
+		return
 
-			v := String.Clipboard.Copy()
+	Media_Next::
+	XButton1 & RButton::
+		Spotify.Next()
+		return
 
-			Run, https://ripsave.com
-			Sleep, 2000
+	Media_Play_Pause::
+	XButton1 & MButton::
+		Spotify.PlayPause()
+		return
 
-			Send, % "{Tab 6}" . v . "{Enter}"
+	*$XButton1::
+		KeyWait, XButton1
 
-			Return
+		switch (WinGet("ProcessName")) {
+			case "7zFM.exe":
+				Send, {Backspace}
+			case "Spotify.exe":
+				Send, !{Left}
+			Default:
+				Send, {XButton1}
 		}
-		Else
-			MsgBox(v.x ", " v.y)
 
-		MouseClick, Right
-		Return
+		return
+
+	XButton2 & MButton::
+		Send, {Volume_Mute}
+		return
+
+	XButton2 & WheelUp::
+		Send, {Volume_Up}
+		return
+
+	XButton2 & WheelDown::
+		Send, {Volume_Down}
+		return
+
+	$XButton2::
+		KeyWait, XButton2
+
+		switch (WinGet("ProcessName")) {
+			case "Spotify.exe":
+				Send, !{Right}
+			Default:
+				Send, {XButton2}
+		}
+
+		return
 
 #If
 
 AppsKey & LButton::
-	If (!WinGet("MinMax")) {
-		oMouseGet := [{"x": (v := [WinGet("Pos"), MouseGet("Pos")])[0].x, "y": v[0].x}, {"x": v[1].x, "y": v[1].y}]
+	if (!WinGet("MinMax")) {
+		before := [WinGet("Pos"), MouseGet("Pos")]  ;~ before
 
 		UpdateWindow:
-			If (GetKeyState("Escape", "P")) {
-				WinMove, A, , % oMouseGet[0].x, % oMouseGet[0].y
+			if (GetKeyState("Escape", "P")) {
+				WinMove, A, , % before[0].x, % before[0].y
 			}
-			Else If (GetKeyState("LButton", "P")) {
-				WinMove, A, , (v := [WinGet("Pos"), MouseGet("Pos")])[0].x - oMouseGet[1].x + oMouseGet[1].x := v[1].x, v[0].y - oMouseGet[1].y + oMouseGet[1].y := v[1].y
+			else if (GetKeyState("LButton", "P")) {
+				current := [WinGet("Pos"), MouseGet("Pos")]  ;~ current
+
+				WinMove, A, , current[0].x - before[1].x + (before[1].x := current[1].x), current[0].y - before[1].y + (before[1].y := current[1].y)
 
 				SetTimer("UpdateWindow", -25)
 			}
-			Return
+
+			return
 	}
 
 	KeyWait("LButton")
-	Return
+	return
 
-NumLock::
-XButton1 & LButton::
-NumpadMult::
-XButton1 & RButton::
-NumpadDiv::
-XButton1 & MButton::PostMessage(0x0319, , {"NumLock": 0xC0000, "XButton1 & LButton": 0xC0000, "NumpadMult": 0xB0000, "XButton1 & RButton": 0xB0000, "NumpadDiv": 0xE0000, "XButton1 & MButton": 0xE0000}[A_ThisHotkey], "ahk_exe Spotify.exe", , , "On")  ;* You have to record and use the PID if you don't disable Hardware Media Key Handling (chrome://flags/#hardware-media-key-handling) because there is no way to discriminate between Chrome and Spotify with Class, Exe or Title since Spotify is an Electron application.
-$XButton1::
-	Switch (WinGet("ProcessName")) {
-		Case "7zFM.exe":
-			Send, {Backspace}
-		Case "Spotify.exe":
-			Send, !{Left}
-		Default:
-			Send, {XButton1}
+~$LButton::
+	while (GetKeyState("LButton", "P")) {
+		if (k := ((GetKeyState("Up", "P")) ? ("Up") : ((GetKeyState("Left", "P")) ? ("Left") : ((GetKeyState("Down", "P")) ? ("Down") : ((GetKeyState("Right", "P")) ? ("Right") : (0)))))) {
+			MouseMove, % Round({"Left": -1, "Right": 1}[k]), % Round({"Up": -1, "Down": 1}[k]), 0, R
+
+			KeyWait(k)
+		}
+
+		Sleep, -1
 	}
-	Return
 
-NumpadDot::
-XButton2 & MButton::Send, {Volume_Mute}
-NumpadSub::
-XButton2 & WheelUp::Send, {Volume_Up}
-NumpadAdd::
-XButton2 & WheelDown::Send, {Volume_Down}
-$XButton2::
-	Switch (WinGet("ProcessName")) {
-		Case "Spotify.exe":
-			Send, !{Right}
-		Default:
-			Send, {XButton2}
-	}
-	Return
+	return
 
-;===============           Keyboard           ===============;
+;====================================================== Keyboard ==============;
 
-#If (WinActive(A_ScriptName))
-
-	~$^s::
-		Critical
-
-		Sleep, 200
-		Reload
-		Return
-
-	$F10::ListVars
-
-#If
-
-#If (WinExist("Window Spy ahk_exe AutoHotkey.exe"))
+#if (WinExist("Window Spy ahk_exe AutoHotkey.exe"))
 
 	Esc::WinClose, Window Spy ahk_exe AutoHotkey.exe
 
 	$^c::
-		vClipboard := ClipboardAll
+		SavedClipboard := ClipboardAll
 
 		ControlGetText, Clipboard, Edit1, Window Spy ahk_exe AutoHotkey.exe
 		Clipboard := "/*`n`t" . StrReplace(Clipboard, "`n", "`n`t") . "`n*/"
 
 		HotKey, ~$^v, SinglePaste, On
-		Return
-
-	SinglePaste:
-		Sleep, 25
-		Clipboard := vClipboard
-
-		HotKey, ~$^v, SinglePaste, Off
-		Return
+		return
 
 #If
 
-#If (WinActive("ahk_group Browser"))
+#if (WinActive("ahk_group Editor"))
 
-	$!F1::Return
+	$!F1::
+		return
 
-	$1::
-	$2::
-	$3::
-	$4::
-	$5::
-	$6::
-	$7::
-	$8::
-	$9::
-	$0::
-		If (KeyWait(k := KeyGet(A_ThisHotkey), "T0.25")) {
-			Send, % "^" . k
-
-			KeyWait(k)
-			Return
-		}
-
-		Send, % k
-		Return
-
-	$^q::
-	$^e::Send, % "^" . ["+"][A_ThisHotkey == "$^e"] . "g"
-
-	$t::
-		If (KeyWait("t", "T0.25")) {
-			Send, ^+t
-
-			KeyWait("t")
-			Return
-		}
-
-		Send, % ["+"][!vSetCapsLockState] . "t"
-		Return
-
-	$^f::Send, % "^f" . String.Clipboard.Copy(1)
-
-	$n::
-		If (KeyWait("n", "T0.25")) {
-			;! ControlGet, vControlGet, HWND, , Chrome_RenderWidgetHostHWND1, % (vWinGet := Winget("ID"))
-
-			Send, ^l
-			Sleep, 50
-			vString := String.Clipboard.Copy(1)
-
-			Send, ^w
-
-			Run, % A_ProgramFiles . " (x86)\Google\Chrome\Application\chrome.exe --new-window " . vString
-
-			;! ControlFocus, , % "ahk_id" . vControlGet
-			;! ControlSend, Chrome_RenderWidgetHostHWND1, ^w, % "ahk_id" . vWinGet
-
-			KeyWait("n")
-			Return
-		}
-
-		Send, % ["+"][!vSetCapsLockState] . "n"
-		Return
-
-#If
-
-#If (WinActive("ahk_group Editor"))
-
-	$!F1::Return
 	$F1::
 		KeyWait("F1", "T0.25")
-		If (ErrorLevel) {
-			If (RegExReplace(WinGet("Title"), "iS).*\.([a-z]+).*", "$1") == "ahk") {
-				If (vString := RegExReplace(String.Clipboard.Copy(0, 1), "iSs)[^a-z_]*((?<!#(?=[a-z]))[#a-z_]*).*", "$1")) {  ;: https://regex101.com/r/7CuCdU/1
-					RunActivate("AutoHotkey Help ahk_exe hh.exe", A_ProgramFiles . "\AutoHotkey\AutoHotkey.chm", , , {"x": -7, "y": 730, "Width": 894, "Height": 357})  ;* Force the position here to avoid flickering with `Window.ahk`
+		if (ErrorLevel) {
+			RegExMatch(WinGet("Title"), "\w+$", extension)  ;~ extension
 
-					;! SetKeyDelay, 100
+			if (extension ~= "ahk.*|lib") {
+				if (text := RegExReplace(String.Clipboard.Copy(0, 1), "iSs)[^a-z_]*((?<!#(?=[a-z]))[#a-z_]*).*", "$1")) {
+					if (extension == "ahk_v2") {
+						append := " v2"  ;~ append
+					}
+
+					RunActivate("AutoHotkey" . append . " Help ahk_exe hh.exe", A_ProgramFiles . "\AutoHotkey" . append . "\AutoHotkey.chm", , , [-7, 730, 894, 357])  ;* Force the position here to avoid flickering with Window.ahk.
 
 					Send, !n
 					Sleep, 200
 					Send, ^a
-					SendRaw, % vString  ;* `SendRaw` to handle `{#}` and `{_}`.
+					SendRaw, % text
 					Send, {Enter}
-
-					;! SetKeyDelay, vKeyDelay
 				}
-				Else {
-					Run, % A_WorkingDir . "\bin\Nircmd.exe speak text ""No text."""
+				else {
+					Run, % Format("{}\bin\Nircmd.exe speak text ""No text.""", A_WorkingDir)
 				}
 			}
 
 			KeyWait("F1")
-			Return
+		}
+		else {
+			Send, {F1}
 		}
 
-		Send, {F1}
-		Return
-
-	$1::
-	$2::
-	$3::
-	$4::
-	$5::
-	$6::
-	$7::
-	$8::
-	$9::
-	$0::
-		If (KeyWait(k := KeyGet(A_ThisHotkey), "T0.25")) {
-			Send, % "!" . k
-
-			KeyWait(k)
-			Return
-		}
-
-		Send, % k
-		Return
+		return
 
 	$^q::
-	$^e::Send, % ["+"][A_ThisHotkey == "$^e"] . "{F3}"
+	$^e::
+		Send, % (A_ThisHotkey == "$^q") ? ("+{F2}") : ("+{F3}")
+		return
 
 	$\::
-		If (KeyWait("\", "T0.25")) {
-			IniWrite, % vDebug := {"On": "Off", "Off": "On"}[vDebug], % A_WorkingDir . "\cfg\Settings.ini", Debug, Debug
-			Run, % A_WorkingDir . "\bin\Nircmd.exe speak text " . Format("""Debug {}.""", vDebug)
+		if (KeyWait("\", "T0.25")) {
+			IniWrite, % Debug := !Debug, % A_WorkingDir . "\cfg\Settings.ini", Debug, Debug
+
+			for i, v in WinGet("List", "ahk_class AutoHotkey", , A_ScriptName, , "On") {
+				SendMessage(0xFF, -1, , "ahk_id" . v, , , , "On")  ;* Tell other running scripts to update their `Debug` value.
+			}
+
+			Run, % A_WorkingDir . "\bin\Nircmd.exe speak text " . Format("""Debug {}.""", (Debug) ? ("On") : ("Off"))
 
 			KeyWait("\")
-			Return
+			return
 		}
 
 		Send, \
-		Return
+		return
 
 	$w::
 	$s::
-		If (KeyWait(k := KeyGet(A_ThisHotkey), "T0.25")) {
-			Send, % "^{" . {"$s": "End", "$w": "Home"}[A_ThisHotkey] . "}"
+		k := KeyGet(A_ThisHotkey)
+
+		if (KeyWait(k, "T0.25")) {
+			Send, % (k == "s") ? ("^{End}") : ("^{Home}")
 
 			KeyWait(k)
-			Return
+			return
 		}
 
-		Send, % ["+"][!vSetCapsLockState] . k
-		Return
+		Send, % (CapsLockState) ? (Format("{:U}", k)) : (k)
+		return
 
 	$t::
-		If (KeyWait("t", "T0.25")) {
+		if (KeyWait("t", "T0.25")) {
 			Send, ^+t
 
 			KeyWait("t")
-			Return
+			return
 		}
 
-		Send, % ["+"][!vSetCapsLockState] . "t"
-		Return
+		Send, % (CapsLockState) ? ("T") : ("t")
+		return
 
 	$a::
 	$d::
-		If (KeyWait(k := KeyGet(A_ThisHotkey), "T0.25")) {
-			Send, % "^{" . {"$a": "Left", "$d": "Right"}[A_ThisHotkey] . "}"
+		k := KeyGet(A_ThisHotkey)
 
-			If (KeyWait(k, "T0.25")) {
-				Send, % "{" . {"$a": "Home 2", "$d": "End"}[A_ThisHotkey] . "}"
+		if (KeyWait(k, "T0.25")) {
+			Send, % (k == "a") ? ("^{Left}") : ("^{Right}")
+
+			if (KeyWait(k, "T0.5")) {
+				Send, % (k == "a") ? ("{Home 2}") : ("{End}")
 			}
 
 			KeyWait(k)
-			Return
+			return
 		}
 
-		Send, % ["+"][!vSetCapsLockState] . k
-		Return
-
-	$k::
-		If (KeyWait("k", "T0.25")) {
-			Send, % {"pde": "+^b", "py": "!^k"}[RegExReplace(WinGet("Title"), "iS).*\.([a-z]+).*", "$1")]
-
-			KeyWait("k")
-			Return
-		}
-
-		Send, % ["+"][!vSetCapsLockState] . "k"
-		Return
+		Send, % (CapsLockState) ? (Format("{:U}", k)) : (k)
+		return
 
 	$c::
-		If (KeyWait("c", "T0.25")) {
-			If ((vString := String.Clipboard.Copy()) && (v := {"ahk": ";", "cs": "//", "elm": "--", "js": "//", "json": "//", "pde": "//", "py": "#"}[RegExReplace(WinGet("Title"), "iS).*\.([a-z]+).*", "$1")])) {
-				String.Clipboard.Paste((SubStr(vString, 1, StrLen(v)) == v ? RegExReplace(vString, "`am)^" . v) : RegExReplace(vString, "`am)^", v)))
+		if (KeyWait("c", "T0.25")) {
+			text := String.Clipboard.Copy()  ;~ text
+
+			if (text && (v := {"ahk": ";", "lib": ";", "cs": "//", "js": "//", "json": "//", "pde": "//", "elm": "--", "py": "#"}[RegExReplace(WinGet("Title"), "iS).*\.([a-z]+).*", "$1")])) {
+				String.Clipboard.Paste((SubStr(text, 1, StrLen(v)) == v ? RegExReplace(text, "`am)^" . v) : RegExReplace(text, "`am)^", v)))
 			}
-			Else {
+			else {
 				Run, % A_WorkingDir . "\bin\Nircmd.exe speak text ""No text."""
 			}
 
 			KeyWait("c")
-			Return
+			return
 		}
 
-		Send, % ["+"][!vSetCapsLockState] . "c"
-		Return
+		Send, % (CapsLockState) ? ("C") : ("c")
+		return
 
-	$^v::
-		If (RegExReplace(WinGet("Title"), "iS).*\.([a-z]+).*", "$1") == "ahk" && Math.IsEven(String.Count(Clipboard, Chr(39)))) {  ;* This is a very basic test. "I'll go get the money we're owed." passes for instance.
-			Clipboard := StrReplace(Clipboard, Chr(39), Chr(34))
+#If
+
+#if (WinActive("__Rename ahk_exe Explorer.EXE"))
+
+	$F9::
+		loop, % "C:\Users\Onimuru\OneDrive\__User\Pictures\__Rename\*.*" {
+			extension := RegExReplace(A_LoopFileName, "i).*(\.\w+).*", "$1")  ;~ extension
+
+			loop, % 10 + 5*(extension ~= "gif|mov|mp4|webm" != 0) {
+				extension := Math.Random.Uniform(0, 9) . extension
+			}
+
+			if (Debug) {
+				MsgBox(A_LoopFileName . " --> " . extension . " (" . 10 + 5*(extension ~= "gif|mov|mp4|webm" != 0) . ")")
+			}
+
+			FileMove, % A_LoopFilePath, % A_LoopFileDir . "\" . extension
 		}
 
-		Send, ^v
-		Return
+		return
+
+#If
+
+#if (WinActive("ahk_group Browser"))
+
+	$!F1::
+		return
+
+	$^q::
+	$^e::
+		Send, % (A_ThisHotkey == "$^q") ? ("+^g") : ("^g")
+		return
+
+	$t::
+		if (KeyWait("t", "T0.25")) {
+			Send, ^+t
+
+			KeyWait("t")
+			return
+		}
+
+		Send, % (CapsLockState) ? ("T") : ("t")
+		return
+
+	$^f::
+		Send, % "^f" . String.Clipboard.Copy(1)
+		return
+
+#If
+
+#if (!WinActive("ahk_group Game"))
+
+	$Esc::
+		if (DoubleTap()) {
+			if (!window && !Desktop()) {
+				window := "ahk_id" . WinGet("ID")  ;~ window
+			}
+
+			ShowDesktop()
+
+			Sleep, 500
+
+			WinWaitNotActive, window
+			if (window && !Desktop()) {
+				WinActivate, % window
+				WinWaitActive, % window
+
+				window := ""
+			}
+
+			KeyWait("Esc")
+			return
+		}
+
+		if (KeyWait("Esc", "T1")) {
+			Run, % A_WorkingDir . "\bin\Nircmd.exe speak text ""Kill screen."""
+
+			KeyWait("Esc")
+			BlockInput, On
+			SendMessage(0x112, 0xF170, 2, "Off", "Program Manager")  ;? 0x112 = WM_SYSCOMMAND, 0xF170 = SC_MONITORPOWER.
+
+			Input, v, , {Space}
+
+			KeyWait("Space")
+			BlockInput, Off
+		}
+		else if (WinActive("ahk_group Escape") && !WinGet("MinMax")) {
+			winTitle := [WinGet("Class"), "ahk_id" . WinGet("ID"), WinGet("Title")]  ;~ winTitle
+
+			WinClose, % winTitle[1]
+
+			WinWaitNotActive, % winTitle[1], , 1
+			if (ErrorLevel && winTitle[0] != "#32770") {
+				Process, Close, % winTitle[1]
+
+				MsgBox(Format("{} FORCED: {}", Clipboard := A_ThisHotkey, winTitle[2]))
+			}
+		}
+		else {
+			Send, {Esc}
+		}
+
+		return
+
+	$Space::
+		if (KeyWait("Space", "T0.5") && !Desktop()) {
+			winTitle := ["ahk_id" . WinGet("ID"), WinGet("Transparent") == 255]  ;~ winTitle
+
+			if (winTitle[1]) {
+				FadeWindow("Out", 35, 500, winTitle[0])
+			}
+
+			KeyWait("Space")
+			if (winTitle[1]) {  ;* This will fail if the window was not initially hidden with this hotkey.
+				FadeWindow("In", 255, 500, winTitle[0])
+			}
+			return
+		}
+
+		Send, {Space}
+		return
+
+	$Delete::
+		if (KeyWait("Del", "T0.5")) {
+			RunActivate("Recycle Bin ahk_exe Explorer.exe", "::{645FF040-5081-101B-9F08-00AA002F954E}")
+
+			if (KeyWait("Del", "T2")) {
+				FileRecycleEmpty
+
+				if (KeyWait("Del", "T2")) {
+					WinClose, Recycle Bin ahk_exe Explorer.exe
+				}
+			}
+
+			KeyWait("Del")
+			return
+		}
+
+		Send, {Del}
+		return
+
+	Insert::
+		Run, % A_WinDir . "\System32\SndVol.exe"
+		return
+
+#If
+
+#if (WinActive(A_ScriptName))
+
+	$F10::
+		ListVars
+		return
+
+	~$^s::
+		Critical, On
+
+		Sleep, 200
+		Reload
+
+		return
 
 #If
 
 AppsKey & F1::
-	If (!WinExist("ahk_class CabinetWClass")) {
+	RunActivate("ahk_exe Discord.exe", "C:\Users\Onimuru\AppData\Local\Discord\Update.exe --processStart Discord.exe")
+
+	KeyWait("F1")
+	return
+
+AppsKey & F2::
+	RunActivate("ahk_exe Spotify.exe", "C:\Users\Onimuru\AppData\Local\Microsoft\WindowsApps\Spotify.exe")
+
+	KeyWait("F2")
+	return
+
+AppsKey & F4::
+	if (!Desktop()) {
+		if (WinActive("Google Chrome ahk_exe chrome.exe")) {
+			Send, ^w
+
+			if (!KeyWait("F4", "T0.5")) {
+				return
+			}
+		}
+
+		winTitle := [WinGet("Class"), "ahk_id" . WinGet("ID"), WinGet("Title")]  ;~ winTitle
+
+		WinClose, % winTitle[1]
+
+		WinWaitNotActive, % winTitle[1], , 1
+		if (ErrorLevel && winTitle[0] != "#32770") {
+			Process, Close, % winTitle[1]
+
+			MsgBox(Format("{} FORCED: {}", Clipboard := A_ThisHotkey, winTitle[2]))
+		}
+	}
+
+	KeyWait("F4")
+	return
+
+AppsKey & F5::
+	RunActivate("ahk_exe chrome.exe", Format("{} (x86)\Google\Chrome\Application\chrome.exe", A_ProgramFiles))
+
+	KeyWait("F5")
+	return
+
+AppsKey & F7::
+	RunActivate("ahk_exe Code.exe", Format("{}\Microsoft VS Code\Code.exe", A_ProgramFiles))
+
+	KeyWait("F7")
+	return
+
+AppsKey & F8::
+	if (!WinExist("ahk_class CabinetWClass")) {
 		Run, ::{20d04fe0-3aea-1069-a2d8-08002b30309d}
 		WinWait, This PC ahk_class CabinetWClass
 	}
@@ -422,499 +541,480 @@ AppsKey & F1::
 	GroupActivate, Explorer, R
 	GroupAdd, Explorer, ahk_class CabinetWClass
 
-	KeyWait("F1")
-	Return
+	KeyWait("F8")
+	return
 
-AppsKey & F2::
-AppsKey & F3::
-	RunActivate("ahk_exe" . ({"F2": "Code", "F3": "chrome"}[k := KeyGet(A_ThisHotkey)]) . ".exe", A_ProgramFiles . ({"F2": "\Microsoft VS Code\Code", "F3": " (x86)\Google\Chrome\Application\chrome"}[k]) . ".exe", "Max")
+AppsKey & F11::
+	RunActivate("Notepad++ ahk_exe notepad++.exe", Format("{} (x86)\Notepad++\notepad++.exe", A_ProgramFiles))
 
-	KeyWait(k)
-	Return
+	KeyWait("F11")
+	return
 
-AppsKey & F4::
-	If (!Desktop()) {
-		If (WinActive("Google Chrome ahk_exe chrome.exe")) {
-			Send, ^w
+AppsKey & F12::
+	Menu("WindowSpy")
 
-			If (!KeyWait("F4", "T0.5")) {
-				Return
-			}
-		}
-		WinClose, % (vWinGet := [WinGet("Class"), "ahk_id" . WinGet("ID"), WinGet("Title")])[1]
-
-		WinWaitNotActive, % vWinGet[1], , 1
-		If (ErrorLevel && vWinGet[0] != "#32770") {
-			Process, Close, % vWinGet[1]
-
-			MsgBox("$F4- FORCED: " . vWinGet[2])
-		}
-	}
-
-	KeyWait("F4")
-	Return
-
-$F11::
-	If (KeyWait("F11", "T0.5")) {
-		RunActivate("Notepad++ ahk_exe notepad++.exe", A_ProgramFiles . " (x86)\Notepad++\notepad++.exe")
-
-		KeyWait("F11")
-		Return
-	}
-
-	Send, {F11}
-	Return
-
-$F12::
-	If (KeyWait("F12", "T0.5")) {
-		Menu("WindowSpy")
-
-		KeyWait("F12")
-		Return
-	}
-
-	Send, {F12}
-	Return
+	KeyWait("F12")
+	return
 
 AppsKey & 1::
 AppsKey & 2::
 AppsKey & 9::
 AppsKey & [::
-	If ((v := {1: [Chr(39), Chr(39)], 2: [Chr(34), Chr(34)], 9: [Chr(40), Chr(41)], "[" : [Chr(91), Chr(93)]}[SubStr(A_ThisHotkey, 0)])[2] := String.Clipboard.Copy()) {
-		String.Clipboard.Paste(v[0] . v[2] . v[1], 1)
-	}
-	Return
+	v := {1: [Chr(39), Chr(39)], 2: [Chr(34), Chr(34)], 9: [Chr(40), Chr(41)], "[" : [Chr(91), Chr(93)]}[SubStr(A_ThisHotkey, 0)]
 
-$Esc::
-	If (DoubleTap()) {
-		If (!vShowDesktop && !Desktop()) {
-			vShowDesktop := "ahk_id" . WinGet("ID")
-		}
-
-		ShowDesktop()
-
-		WinWaitNotActive, vShowDesktop
-		If (vShowDesktop && !Desktop()) {
-			WinActivate, % vShowDesktop
-			WinWaitActive, % vShowDesktop
-
-			vShowDesktop := ""
-		}
-
-		KeyWait("Esc")
-		Return
+	if (text := String.Clipboard.Copy()) {  ;~ text
+		String.Clipboard.Paste(v[0] . text . v[1], 1)
 	}
 
-	If (KeyWait("Esc", "T1")) {
-		Run, % A_WorkingDir . "\bin\Nircmd.exe speak text " . """Kill screen."""
-
-		KeyWait("Esc")
-		BlockInput, On
-		SendMessage(0x112, 0xF170, 2, "Program Manager")  ;? 0x112 = WM_SYSCOMMAND, 0xF170 = SC_MONITORPOWER.
-
-		Input, v, , {Space}
-
-		KeyWait("Space")
-		BlockInput, Off
-	}
-	Else If (WinActive("ahk_group Escape")) {
-		WinClose, % (vWinGet := [WinGet("Class"), "ahk_id" . WinGet("ID"), WinGet("Title")])[1]
-
-		WinWaitNotActive, % vWinGet[1], , 1
-		If (ErrorLevel && vWinGet[0] != "#32770") {
-			Process, Close, % vWinGet[1]
-
-			MsgBox("$Esc- FORCED: " . vWinGet[2])
-		}
-	}
-	Else {
-		Send, {Esc}
-	}
-	Return
+	return
 
 AppsKey & `::SetSystemCursor()
-$`::
-	If (KeyWait("``", "T0.5")) {
-		DllCall("SystemParametersInfo", "UInt", 0x70, "UInt", 0, "UIntP", vOriginalSpeed, "UInt", 0)  ;? 0x70 = SPI_GETMOUSESPEED.
-		DllCall("SystemParametersInfo", "UInt", 0x71, "UInt", 0, "Ptr", 2, "UInt", 0)  ;? 0x71 = SPI_SETMOUSESPEED (range is 1-20, default is 10).
 
-		KeyWait("``")
-		DllCall("SystemParametersInfo", "UInt", 0x71, "UInt", 0, "Ptr", vOriginalSpeed, "UInt", 0)
-		Return
+$`::
+	if (DoubleTap()) {
+		if (KeyWait("``", "T0.5")) {
+			DllCall("SystemParametersInfo", "UInt", 0x70, "UInt", 0, "UIntP", originalSpeed, "UInt", 0)  ;~ originalSpeed  ;? 0x70 = SPI_GETMOUSESPEED.
+			DllCall("SystemParametersInfo", "UInt", 0x71, "UInt", 0, "Ptr", 2, "UInt", 0)  ;? 0x71 = SPI_SETMOUSESPEED (range is 1-20, default is 10).
+
+			KeyWait("``")
+			DllCall("SystemParametersInfo", "UInt", 0x71, "UInt", 0, "Ptr", originalSpeed, "UInt", 0)
+
+			return
+		}
 	}
 
-	Send, ``
-	Return
+	Send, {``}
+	KeyWait("``")
 
-AppsKey & Tab::String.Clipboard.Paste("`t")
+	return
+
+AppsKey & Tab::
+	String.Clipboard.Paste("`t")
+	return
 
 $+CapsLock::
-$^CapsLock::Send, % A_ThisHotkey[1] . "{Home}"
+$^CapsLock::
+	Send, % SubStr(A_ThisHotkey, 2, 1) . "{Home}"
+	return
+
 AppsKey & CapsLock::
-	SetCapsLockState, % ((vSetCapsLockState := !vSetCapsLockState) ? "On" : "AlwaysOff")
-	SetTimer(A_ThisHotkey, (vSetCapsLockState ? -30000 : "Delete"))
-$!CapsLock::Return
+	SetCapsLockState, % (CapsLockState := !CapsLockState) ? ("On") : ("AlwaysOff")
+	SetTimer(A_ThisHotkey, (CapsLockState) ? (-30000) : ("Delete"))
+$!CapsLock::
+	return
+
 $CapsLock::
-	If (KeyWait("CapsLock", "T0.25")) {
-		If (String.Clipboard.Copy(1)) {
-			Menu, Case, Show
+	if (KeyWait("CapsLock", "T0.25")) {
+		if (String.Clipboard.Copy(1)) {
+			Menu, Case, Show  ; ** Need a different script to handle hiding this menu, the thread is locked up. **
 		}
 
-		KeyWait("CapsLock")  ;*** Could use a timer to hide the menu.
-		Return
+		KeyWait("CapsLock")
+		return
 	}
 
 	Send, {Home}
-	Return
+	return
 
 AppsKey & Space::
-	If (!Desktop()) {
-		If ((v := ["ahk_id" . WinGet("ID"), WinGet("Transparent") == 255])[1]) {
-			Fade("Out", 35, 1000, v[0])
+	if (!Desktop()) {
+		if (WinGet("Transparent") == 255) {
+			FadeWindow("Out", 35, 1000, "ahk_id" . WinGet("ID"))
 		}
-		Else {
-			Fade("In", 255, 1500, v[0])
+		else {
+			FadeWindow("In", 255, 1500, "ahk_id" . WinGet("ID"))
 		}
 	}
-	Return
-$Space::
-	If (KeyWait("Space", "T0.5") && !Desktop()) {
-		If ((vWinGet := ["ahk_id" . WinGet("ID"), WinGet("Transparent") == 255])[1]) {
-			Fade("Out", 35, 500, vWinGet[0])
-		}
+	return
 
-		KeyWait("Space")
-		If (vWinGet[1]) {  ;* This will fail if the window was not initially hidden with this hotkey.
-			Fade("In", 255, 500, vWinGet[0])
-		}
-		Return
-	}
+AppsKey & Enter::
+	String.Clipboard.Paste("`r`n")
+	return
 
-	Send, {Space}
-	Return
+;$!q::
+;	return
 
-AppsKey & Enter::String.Clipboard.Paste("`r`n")
-
-$!q::Run, % A_WorkingDir . "\bin\Nircmd.exe speak text " . Format("""{}.""", String.Clipboard.Copy(1))
 AppsKey & q::
-	If (vCoordinates == "Delete") {
-		vCoordinates := !(Clipboard := vClipboard)  ;*** OUTSOURCE: PostMessage, 0x111, 65307, , , % "ahk_id" . v
+	if (coordinates == "Delete") {
+		Clipboard := SavedClipboard
+		coordinates := ""
 
-		GUI, gCoordinates: Destroy
+		Gui, Coordinates: Destroy
 	}
-	Else If (vCoordinates := !vCoordinates) {
-		GUI, gCoordinates: New, -Caption +AlwaysOnTop +ToolWindow +LastFound +E0x20
-		GUI, Color, 0xFFFFFF
+	else if (coordinates := !coordinates) {  ;~ coordinates
+		Gui, Coordinates: New, -Caption +AlwaysOnTop +ToolWindow +LastFound +E0x20
+		Gui, Color, 0xFFFFFF
 		WinSet, TransColor, 0xFFFFFF 255
-		GUI, Font, s30
-		GUI, Add, Text, c0x3FFEFF, XXXXX YY
-		GUI, Show, x5 y5 NA
+		Gui, Font, s30
+		Gui, Add, Text, c0x3FFEFF, XXXX YYYY (CxCCCCCC)
+		ControlSetText, Static1  ;* Set the text to "XXXX YYYY (CxCCCCCC)" in order to size the control properly and then reset it to avoid flickering.
+		Gui, Show, x5 y5 NA
 
-		UpdateGUI:
-			ControlSetText, Static1, % (vString := (v := MouseGet("Pos")).x . ", " . v.y), % A_ScriptName
+		UpdateGui:
+			v := MouseGet("Pos")
+			Pixelgetcolor, c, v.x, v.y
 
-			SetTimer("UpdateGUI", -25)
-			Return
+			ControlSetText, Static1, % text := Format("{}, {}", v.x, v.y) . ((GetKeyState("Ctrl", "P")) ? (Format(" ({})", c)) : ("")), % A_ScriptName  ;~ text
+
+			SetTimer("UpdateGui", -25)
+			return
 	}
-	Else If (!vCoordinates) {
-		vClipboard := ClipboardAll
-		Clipboard := vString
+	else if (!coordinates) {
+		SavedClipboard := ClipboardAll
+		Clipboard := text
 
-		SetTimer("UpdateGUI", (vCoordinates := "Delete"))
+		SetTimer("UpdateGui", (coordinates := "Delete"))
 	}
 
 	KeyWait("q")
-	Return
+	return
 
 AppsKey & t::
-	If (!Desktop()) {
+	if (!Desktop()) {
 		WinSet, AlwaysOnTop, Toggle, A
 
 		WinGetTitle, v, A
-		WinSetTitle, A, , % ((SubStr(v, 1, 2) != "▲ ") ? "▲ " . v : SubStr(v, 3))  ;*** Need a better way to identify a window as AoT.
+		WinSetTitle, A, , % ((SubStr(v, 1, 2) != "▲ ") ? "▲ " . v : SubStr(v, 3))  ; ** Need a better way to identify a window as AoT. **
 	}
 
 	KeyWait("t")
-	Return
+	return
 
 AppsKey & s::
-	SplashImage, , B1C01 CWFFFFFF CT000000, [R] Restart`n[S] Shutdown`n[L] Log Off`n`n[H] Hibernate`n[P] Sleep, Press a key:, , Courier New  ;! Arial
+	SplashImage, , % "B1C01 CWFFFFFF CT000000", % "[R] Restart`n[S] Shutdown`n[L] Log Off`n`n[H] Hibernate`n[P] Sleep", % "Press a key:", , Courier New
 
 	Input, v, L1T5
 	SplashImage, Off
-	Switch (v) {
-		Case "R":
-			ShutDown, 2
-		Case "S":
-			ShutDown, 8
-		Case "L":
-			ShutDown, 0
-		Case "H":
-			DllCall("PowrProf\SetSuspendState", "Int", 1, "Int", 0, "Int", 0)
-		Case "P":
-			DllCall("PowrProf\SetSuspendState", "Int", 0, "Int", 0, "Int", 0)
+
+	if (v ~= "r|s|l|h|p") {
+		switch (v) {
+			case "r":
+				ShutDown, 2
+			case "s":
+				ShutDown, 8
+			case "l":
+				ShutDown, 0
+			case "h":
+				DllCall("PowrProf\SetSuspendState", "Int", 1, "Int", 0, "Int", 0)
+			case "p":
+				DllCall("PowrProf\SetSuspendState", "Int", 0, "Int", 0, "Int", 0)
+		}
 	}
-	Return
+
+	return
 
 AppsKey & g::
-	If (vString := String.Clipboard.Copy(1, 1))
-		Run, % A_ProgramFiles . " (x86)\Google\Chrome\Application\chrome.exe " . (vString ~= "i)(http|ftp)s?:\/\/|w{3}\." ? RegExReplace(vString, "iS).*?(((http|ftp)s?|w{3})[a-z0-9-+&./?=#_%@:]+)(.|\s)*", "$1") : "www.google.com/search?&q=" . StrReplace(vString, A_Space, "+"))
+	if (text := String.Clipboard.Copy(1, 1)) {  ;~ text
+		Run, % Format("{}\Google\Chrome\Application\chrome.exe {}", A_ProgramFiles, (text ~= "i)(http|ftp)s?:\/\/|w{3}\.") ? (RegExReplace(text, "iS).*?(((http|ftp)s?|w{3})[a-z0-9-+&./?=#_%@:]+)(.|\s)*", "$1")) : ("www.google.com/search?&q=" . StrReplace(text, A_Space, "+")))
+	}
 
 	KeyWait("g")
-	Return
+	return
 
 AppsKey & h::
-	If (oHiddenWindows.Length < 50) {
-		If (Desktop()) {
+	if (HiddenWindows.Length < 50) {
+		if (Desktop()) {
 			MsgBox("The desktop and taskbar may not be hidden.")
-			Return
+
+			return
 		}
 
 		WinWaitActive, A
-		If (WinExist("ahk_id" . RegExReplace((v := "        " . ((v := WinGet("Title")) ? v : WinGet("ProcessName")) . " (" . WinGet("ID") . ")"), ".*?\((0x.*?)\)", "$1"))) {
-			Send, !{Esc}  ;* Because hiding the window won"t deactivate it, activate the window beneath this one.
+		v := "        " . ((v := WinGet("Title")) ? (v) : (WinGet("ProcessName"))) . " (" . WinGet("ID") . ")"
+
+		if (WinExist("ahk_id" . RegExReplace(v, ".*?\((0x.*?)\)", "$1"))) {
+			Send, !{Esc}  ;* Because hiding the window won't deactivate it, activate the window beneath this one.
 			WinHide
 
-			If (!oHiddenWindows.Includes(v)) {  ;* Ensure that this window doesn"t already exist in the array.
-				Menu, Tray, Delete, % 15 + oHiddenWindows.Length . "&"  ;* Move the "Exit" menu item to the bottom.
-				Menu, Tray, Delete, % 14 + oHiddenWindows.Length . "&"
+			if (!HiddenWindows.Includes(v)) {  ;* Ensure that this window doesn't already exist in the array.
+				Menu, Tray, Delete, % 15 + HiddenWindows.Length . "&"  ;* Move the "Exit" menu item to the bottom.
+				Menu, Tray, Delete, % 14 + HiddenWindows.Length . "&"
 
-				oHiddenWindows.Push(v)
+				HiddenWindows.Push(v)
 
 				Menu, Tray, Add, % v, Menu
 				Menu, Tray, Add, [11] Exit, Menu
 				Menu, Tray, Add, , Menu
 			}
 		}
-		Else {
-			Throw, (Exception("!!!!!", -1, Format("""{}"" is invalid.", v)))
+		else {
+			throw (Exception("!!!!!", -1, Format("""{}"" is invalid.", v)))
 		}
 	}
-	Else {
-		Throw, (Exception("Limit.", -1, "No more than 50 windows may be hidden simultaneously."))
+	else {
+		throw (Exception("Limit.", -1, "No more than 50 windows may be hidden simultaneously."))
 	}
 
 	KeyWait("h")
-	Return
+	return
 
 AppsKey & u::
-	If (v := oHiddenWindows.Length) {
-		Menu(oHiddenWindows[--v])
+	if (v := HiddenWindows.Length) {
+		Menu(HiddenWindows[--v])
 	}
 
 	KeyWait("u")
-	Return
+	return
 
 AppsKey & c::
-	RunActivate("Calculator ahk_exe ApplicationFrameHost.exe", "calc.exe", "Max")
+	RunActivate("Calculator ahk_exe ApplicationFrameHost.exe", "calc.exe")
 
 	KeyWait("c")
-	Return
+	return
 
 AppsKey & v::
-	If (Clipboard) {
+	if (Clipboard) {
 		String.Clipboard.Paste(Clipboard)
 	}
 
 	KeyWait("v")
-	Return
+	return
 
-AppsKey & PrintScreen::Send, +#s
+AppsKey & PrintScreen::
+	Send, +#s
+	return
 
-ScrollLock::Run, % A_WorkingDir . "\bin\Camera"
+AppsKey & ScrollLock::
+	Run, % Format("{}\bin\Camera", A_WorkingDir)
+	return
 
-Pause::Run, % "*RunAs " A_WinDir . "\System32\WindowsPowerShell\v1.0\powershell.exe"
-
-Insert::Run, % A_WinDir . "\System32\SndVol.exe"
-
-$Delete::
-	If (KeyWait("Del", "T0.5")) {
-		If (!WinExist("Recycle Bin ahk_exe Explorer.exe")) {
-			Run, ::{645FF040-5081-101B-9F08-00AA002F954E}  ;*** CLSID List --> RunActivate.
-			WinWait, Recycle Bin ahk_exe Explorer.exe
-		}
-		WinActivate, Recycle Bin ahk_exe Explorer.exe
-
-		If (KeyWait("Del", "T2")) {
-			FileRecycleEmpty
-
-			If (KeyWait("Del", "T2")) {
-				WinClose, Recycle Bin ahk_exe Explorer.exe
-			}
-		}
-
-		KeyWait("Del")
-		Return
-	}
-
-	Send, {Del}
-	Return
+Pause::
+	Run, % Format("*RunAs {}\System32\WindowsPowerShell\v1.0\powershell.exe", A_WinDir)
+	return
 
 AppsKey & Up::
 AppsKey & Left::
 AppsKey & Down::
-AppsKey & Right::MouseMove, % Round({"Left": -1, "Right": 1}[k := KeyGet(A_ThisHotkey)]), % Round({"Up": -1, "Down": 1}[k]), 0, R
+AppsKey & Right::
+	k := KeyGet(A_ThisHotkey)
 
-;=====           Function           =========================;
+	MouseMove, % Round({"Left": -1, "Right": 1}[k]), % Round({"Up": -1, "Down": 1}[k]), 0, R
+	return
 
-Exit(vExitReason := "", vExitCode := "") {  ;? ExitReason: Close || Error || Exit || Logoff || Menu || Reload || Restart || ShutDown || Single
-	Critical
+*$Up::
+*$Left::
+*$Down::
+*$Right::
+	if (GetKeyState("LButton", "P")) {
+		KeyWait(KeyGet(A_ThisHotkey))
+		return
+	}
+
+	Send, % "{" . KeyGet(A_ThisHotkey) . "}"
+	return
+
+;==============  Include  ======================================================;
+
+#Include, %A_ScriptDir%\..\lib\Color.lib
+#Include, %A_ScriptDir%\..\lib\GDIp.lib
+#Include, %A_ScriptDir%\..\lib\General.lib
+#Include, %A_ScriptDir%\..\lib\Geometry.lib
+#Include, %A_ScriptDir%\..\lib\Math.lib
+#Include, %A_ScriptDir%\..\lib\ObjectOriented.lib
+#Include, %A_ScriptDir%\..\lib\String.lib
+
+;===============  Label  =======================================================;
+
+;============== Function ======================================================;
+
+UpdateScript(wParam := 0, lParam := 0) {
+	switch (wParam) {
+		case -1:
+			IniRead, Debug, % A_WorkingDir . "\cfg\Settings.ini", Debug, Debug
+
+			return (Debug)
+
+		case 2:
+			Menu, Tray, ToggleCheck, [&9] Suspend
+			if (!A_IsPaused) {
+				Menu, Tray, Icon, % ((!A_IsSuspended) ? ("mstscax.dll") : ("wmploc.dll")), % ((!A_IsSuspended) ? (10) : (136)), 1
+			}
+
+			Run, % A_WorkingDir . "\bin\Nircmd.exe speak text " . Format("""{}.""", ((A_IsSuspended) ? ("You're suspended young lady!") : ("Carry on...")))
+
+			return, (A_IsSuspended)
+	}
+
+	return (0)
+}
+
+Exit(exitReason := "", exitCode := "") {  ;? ExitReason: Close || Error || Exit || Logoff || Menu || Reload || Restart || ShutDown || Single
+	Critical, On
 
 	SetSystemCursor("Restore")
 	Menu("RestoreAll")
 
-	If (vExitReason && vExitReason ~= "Close|Error|Exit|Menu|Restart") {  ;* Need this check to avoid double calling when `ExitApp` is called internally for script close. It isn't a big deal, only to avoid throwing an error with `WinGet()`.
-		For i, v in WinGet("List", "ahk_class AutoHotkey", , A_ScriptName, , "On") {  ;* Close all AutoHotkey processes.
-			PostMessage(0x111, 65307, , "ahk_id" . v, , , "On")
+	if (exitReason && exitReason ~= "Close|Error|Exit|Menu|Restart") {  ;* Need this check to avoid double calling when `ExitApp` is called internally for script close. It isn't a big deal, only to avoid throwing an error with `WinGet()`.
+		DetectHiddenWindows, On
+
+		for i, v in WinGet("List", "ahk_class AutoHotkey", , A_ScriptName) {  ;* Close all AutoHotkey processes.
+			PostMessage(0x111, 65307, , "ahk_id" . v)
 		}
 	}
 
 	ExitApp
 }
 
-StatusReport(wParam := "") {
-	If (wParam == 1) {
-		Menu, Tray, ToggleCheck, [&9] Suspend
-		If (!A_IsPaused) {
-			Menu, Tray, Icon, % (!A_IsSuspended ? "mstscax.dll" : "wmploc.dll"), % (!A_IsSuspended ? 10 : 136), 1
-		}
-
-		Run, % A_WorkingDir . "\bin\Nircmd.exe speak text " . Format("""{}.""", A_IsSuspended ? "You're suspended young lady!" : "Carry on...")
-	}
-
-	Return, (A_IsSuspended)
-}
-
-Menu(vThisMenuItem := "", vThisMenuItemPos := 0, vThisMenu := "Tray") {
-	Global oHiddenWindows
-
-	Switch (vThisMenu) {
-		Case "Case":
+Menu(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := "Tray") {
+	switch (thisMenu) {
+		case "Case":
 			s := String.Clipboard.Copy()
 
-			Switch (RegExReplace(vThisMenuItem, "iS).*?([a-z])", "$1")) {
-				Case "Sentencecase":
+			switch (RegExReplace(thisMenuItem, "iS).*?([a-z])", "$1")) {
+				case "Sentencecase":
 					s := RegExReplace(Format("{:L}", s), "S)((?:^|[.!?]\s*)[a-z])", "$U1")
 
-					For i, v in ["I", "Dr", "Mr", "Ms", "Mrs"] {
+					for i, v in ["I", "Dr", "Mr", "Ms", "Mrs"] {
 						s := RegExReplace(s, "i)\b" . v . "\b", v)
 					}
-				Case "iNVERSE":
+
+				case "iNVERSE":
 					s := String.Inverse(s)
-				Case "Reverse":
+
+				case "Reverse":
 					s := String.Reverse(s)
+
 				Default:
-					s := Format("{:" . SubStr(vThisMenuItem, 6, 1) . "}", s)
+					s := Format("{:" . SubStr(thisMenuItem, 6, 1) . "}", s)
 			}
 
 			String.Clipboard.Paste(s)
 
-		Case "Tray":
-			Switch (RegExReplace(vThisMenuItem, "iS).*?([a-z])", "$1")) {
-				Case "Edit":
+		case "Tray":
+			switch (RegExReplace(thisMenuItem, "iS).*?([a-z])", "$1")) {
+				case "Edit":
 					Edit, % A_ScriptName
-				Case "OpenScriptFolder":
+
+				case "OpenScriptFolder":
 					Run, % "explorer.exe /select," . A_ScriptDir . "\" . A_ScriptName
-				Case "WindowSpy":
+
+				case "WindowSpy":
 					w := "ahk_id" . WinGet("ID")
 
-					RunActivate("Window Spy ahk_exe AutoHotkey.exe", A_ProgramFiles . "\AutoHotkey\WindowSpy.ahk", , , {"x": 50, "y": 35})
+					RunActivate("Window Spy ahk_exe AutoHotkey.exe", A_ProgramFiles . "\AutoHotkey\WindowSpy.ahk", , , [50, 35])
 
-					If (WinExist(w)) {
+					if (WinExist(w)) {
 						WinActivate, % w
 					}
-					Else {  ;* Launched with script menu.
-						Send, !{Esc}
+					else {  ;* Launched with script menu.
+						Send, !{Esc}  ;* Restore focus away from the taskbar.
 					}
-				Case "ListLines":
+
+				case "ListLines":
 					ListLines
 
 					Sleep, 100
 					Send, ^{End}
-				Case "ListVars":
+
+				case "ListVars":
 					ListVars
-				Case "ListHotkeys":
+
+				case "ListHotkeys":
 					ListHotkeys
-				Case "KeyHistory":
+
+				case "KeyHistory":
 					KeyHistory
 
 					Sleep, 100
 					Send, ^{End}
-				Case "Pause":
+
+				case "Pause":
 					Menu, Tray, ToggleCheck, [&8] Pause
-					If (!A_IsSuspended) {
-						Menu, Tray, Icon, % (A_IsPaused ? "mstscax.dll" : "wmploc.dll"), % (A_IsPaused ? 10 : 136), 1
+					if (!A_IsSuspended) {
+						Menu, Tray, Icon, % (A_IsPaused) ? ("mstscax.dll") : ("wmploc.dll"), % (A_IsPaused) ? (10) : (136), 1
 					}
 
 					Pause, -1, 1
-					Run, % A_WorkingDir . "\bin\Nircmd.exe speak text " . Format("""{}.""", A_IsPaused ? "Paused" : "Unpaused")
-				Case "Suspend":
+					Run, % Format("{}\bin\Nircmd.exe speak text ""{}.""", A_WorkingDir, (A_IsPaused) ? ("Paused") : ("Unpaused"))
+
+				case "Suspend":
 					w := "ahk_id" . WinGet("ID")
 
 					Menu, Tray, ToggleCheck, [&9] Suspend
-					If (!A_IsPaused)
-						Menu, Tray, Icon, % (A_IsSuspended ? "mstscax.dll" : "wmploc.dll"), % (A_IsSuspended ? 10 : 136), 1
+					if (!A_IsPaused)
+						Menu, Tray, Icon, % (A_IsSuspended) ? ("mstscax.dll") : ("wmploc.dll"), % (A_IsSuspended) ? (10) : (136), 1
 
 					Suspend, -1
-					Run, % A_WorkingDir . "\bin\Nircmd.exe speak text " . Format("""{}.""", A_IsSuspended ? "You're suspended young lady!" : "Carry on...")
+					Run, %  Format("{}\bin\Nircmd.exe speak text ""{}.""", A_WorkingDir, A_IsSuspended ? "You're suspended young lady!" : "Carry on...")
 
-					If (WinExist(w)) {
+					if (WinExist(w)) {
 						WinActivate, % w
 					}
-					Else {
+					else {
 						Send, !{Esc}
 					}
-				Case "RestoreAll":
+
+				case "RestoreAll":
 					w := "ahk_id" . WinGet("ID")
 
-					Loop, % s := oHiddenWindows.Length {
-						Menu(oHiddenWindows[--s])
+					loop, % s := HiddenWindows.Length {
+						Menu(HiddenWindows[--s])
 					}
 
 					WinActivate, % w
-				Case "Exit": Exit()
+
+				case "Exit":
+					Exit()
+
 				Default:
-					WinShow, % w := "ahk_id" . RegExReplace(vThisMenuItem, ".*?\((0x.*?)\)", "$1")
+					w := "ahk_id" . RegExReplace(thisMenuItem, ".*?\((0x.*?)\)", "$1")
+
+					WinShow, % w
 					WinActivate, % w
 
 					DetectHiddenWindows, Off
 
-					If (!WinExist(w)) {
-						MsgBox("There was an error unhiding this window (" . vThisMenuItem . "). Please contact your system administrator.")
+					if (!WinExist(w)) {
+						MsgBox(Format("There was an error unhiding this window ({}). Please contact your system administrator.", thisMenuItem))
 					}
 
-					DetectHiddenWindows, % vDetectHiddenWindows
+					DetectHiddenWindows, % DetectHiddenWindows
 
-					Menu, Tray, Delete, % vThisMenuItem
-					oHiddenWindows.RemoveAt(oHiddenWindows.IndexOf(vThisMenuItem))
+					Menu, Tray, Delete, % thisMenuItem
+					HiddenWindows.RemoveAt(HiddenWindows.IndexOf(thisMenuItem))
 			}
 	}
 }
 
-SetSystemCursor(_Mode := "") {
-	Static oDefault := [], vHide := [], vShow := [], vMode, oMouseGet
-	If (!oDefault.Length) {
-		VarSetCapacity(v1, 128, 0xFF), VarSetCapacity(v2, 128, 0)
-		For i, v in (oDefault := [32512, 32513, 32514, 32515, 32516, 32642, 32643, 32644, 32645, 32646, 32648, 32649, 32650]) {
-			vHide[i] := DllCall("CreateCursor", "Ptr", 0, "Int", 0, "Int", 0, "Int", 32, "Int", 32, "Ptr", &v1, "Ptr", &v2)
-			vShow[i] := DllCall("CopyImage", "Ptr", DllCall("LoadCursor", "Ptr", 0, "Ptr", v), "UInt", 2, "Int", 0, "Int", 0, "UInt", 0)
-		}
-	}
+SetSystemCursor(mode := "") {
+	Static default := (v := __GetSystemCursors()).Default, hide := v.Hide, show := v.Show
+		, internal, mouse
 
-	If (_Mode == "Timer" && (v := MouseGet("Pos")).x == oMouseGet.x && v.y == oMouseGet.y) {
-		If (vMode == "Hide") {
+	if (mode == "Timer" && MouseGet("Pos").Print() == mouse.Print()) {
+		if (internal == "Hide") {
 			SetTimer(Func(A_ThisFunc).Bind("Timer"), -50)
 		}
-		Return
+
+		return
 	}
 
-	If ((vMode := ["Show", "Hide"][vMode != "Hide" && _Mode != "Restore"]) == "Hide") {
-		oMouseGet := MouseGet("Pos")
+	internal := ["Show", "Hide"][internal != "Hide" && mode != "Restore"]
+
+	if (internal == "Hide") {
+		mouse := MouseGet("Pos")
 
 		SetTimer(Func(A_ThisFunc).Bind("Timer"), -50)
 	}
 
-	For i, v in oDefault {
-		DllCall("SetSystemCursor", "Ptr", DllCall("CopyImage", "Ptr", v%vMode%[i], "UInt", 2, "Int", 0, "Int", 0, "UInt", 0), "UInt", v)
+	for i, v in default {
+		DllCall("SetSystemCursor", "Ptr", DllCall("CopyImage", "Ptr", %internal%[i], "UInt", 2, "Int", 0, "Int", 0, "UInt", 0), "UInt", v)
 	}
+}
+
+__GetSystemCursors() {
+	default := [], hide := [], show := []
+
+	VarSetCapacity(v1, 128, 0xFF), VarSetCapacity(v2, 128, 0)
+	for i, v in (default := [32512, 32513, 32514, 32515, 32516, 32642, 32643, 32644, 32645, 32646, 32648, 32649, 32650]) {
+		hide[i] := DllCall("CreateCursor", "Ptr", 0, "Int", 0, "Int", 0, "Int", 32, "Int", 32, "Ptr", &v1, "Ptr", &v2), show[i] := DllCall("CopyImage", "Ptr", DllCall("LoadCursor", "Ptr", 0, "Ptr", v), "UInt", 2, "Int", 0, "Int", 0, "UInt", 0)
+	}
+
+	return {"Default": default, "Hide": hide, "Show": show}
+}
+
+SinglePaste() {
+	Sleep, 50
+	Clipboard := SavedClipboard
+
+	HotKey, ~$^v, SinglePaste, Off
 }
