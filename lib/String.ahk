@@ -1,129 +1,158 @@
-﻿;=====         Auto-execute         =========================;
-;===============           Variable           ===============;
-
-Global String := new String
-
-;=====            Class             =========================;
+;===============  Class  =======================================================;
 
 Class String {
-    Static CaseSensitive := 1, ThrowException := 1
+    Static StringCaseSense := 1
+		, ThrowException := 1
 
-	;-----           Property           -------------------------;
+	;--------------- Method -------------------------------------------------------;
 
-	__Set(vKey, vValue) {
-		Switch (vKey) {
+	IsPalindrome(string) {
+		Local
 
-			;* String.StringCaseSense := (1 || 0)
-			Case "StringCaseSense":
-				ObjRawSet(String, "StringCaseSense", vValue)
+		string := Format("{:U}", RegExReplace(string, "[\s.,?!;']"))
 
-			;* String.ThrowException := (1 || 0)
-			Case "ThrowException":
-				ObjRawSet(String, "ThrowException", vValue)
+		return (string == this.Reverse(string))
+	}
+
+	IsUrl(url) {
+		Static needle := "S)((([A-Za-z]{3,9}:(?:\/\/)?)(?:[\-;:&=\+\$,\w]+@)?[A-Za-z0-9\.\-]+|(?:www\.|[\-;:&=\+\$,\w]+@)[A-Za-z0-9\.\-]+)((?:\/[\+~%\/\.\w\-_]*)?\??(?:[\-\+=&;%@\.\w_]*)#?(?:[\.\!\/\\\w]*))?)"
+
+		return (url ~= needle)
+	}
+
+	Buffer(string, commentCharacter, bufferCharacter, bufferLength, offset := "", specialBuffer := 0) {
+		Local
+
+		if (offset == "") {
+			offset := bufferLength//2
 		}
+
+		stringLength := StrLen(string)
+			, subtract := Ceil(stringLength/2) + StrLen(commentCharacter) + 1, isOdd := stringLength & 1
+
+		leftOffset := 0, rightOffset := 0
+
+		if (!specialBuffer && isOdd) {
+			if (offset <= bufferLength//2) {
+				rightOffset := 1
+			}
+			else {
+				leftOffset := 1
+			}
+		}
+
+		return (commentCharacter
+			. StrReplace(Format("{:0" . offset - subtract + leftOffset . "}", 0), "0", bufferCharacter)
+			. ((specialBuffer && isOdd) ? (Format("  {}  ", string)) : (Format(" {} ", string)))
+			. StrReplace(Format("{:0" . bufferLength - offset - subtract + rightOffset . "}", 0), "0", bufferCharacter)
+			. commentCharacter)
 	}
 
-	;-----            Method            -------------------------;
-
-	;* String.Count(vString, vNeedle)
+	;* String.Count(string, needle)
 	;* Description:
-		;* Count the number of times `vNeedle` exists within a string.
-	Count(vString, vNeedle) {
-		StringReplace, vString, vString, % vNeedle, % vNeedle, UseErrorLevel
+		;* Count the number of times `needle` exists within a string.
+	Count(string, needle) {
+		StringReplace, string, string, % needle, % needle, UseErrorLevel
 
-		Return, (ErrorLevel)
+		return (ErrorLevel)
 	}
 
-	;* String.Reverse(vString)
-	Reverse(vString) {
+	;* String.Inverse(string)
+	Inverse(string) {
+		return (RegExReplace(string, "([A-Z])|([a-z])", "$L1$U2"))
+	}
+
+	;* String.Repeat(string, times)
+	Repeat(string, times) {
+		return (StrReplace(Format("{:0" . times . "}", 0), "0", string))
+	}
+
+	;* String.Reverse(string)
+	Reverse(string) {
 		d := Chr(959)
 
-		Loop, Parse, % StrReplace(vString, d, "`r`n")
-			s := A_LoopField . s
+		for i, v in StrSplit(StrReplace(string, d, "`r`n")) {
+			s := v . s
+		}
 
-		Return, (StrReplace(s, "`r`n", d))
+		return (StrReplace(s, "`r`n", d))
 	}
 
-	;* String.Strip(vString, vCharacter)
+	;* String.Strip(string, characters)
 	;* Description:
-		;* Remove all occurrences from a string.
-	Strip(vString, vCharacter) {
-		Return, (RegExReplace(vString, "[" RegExReplace(vCharacter, "[\\\]]", "\$0") "]"))
+		;* Remove all occurrences of `Characters` from a string.
+	Strip(string, characters) {
+		return (RegExReplace(string, "[" . characters . "]"))
 	}
 
-	;* String.Split(vString, $vDelimiter, $vOmitChars, $vMaxParts)
+	;* String.Split(string, (delimiter), (omitChars), (maxParts))
 	;* Description:
 		;* Separates a string into an array of substrings using the specified delimiters.
-	Split(vString, vDelimiter := "", vOmitChars := "", vMaxParts := "-1") {
+	Split(string, delimiter := "", omitChars := "", maxParts := "-1") {
 		d := Chr(959), r := []
 
-		Loop, Parse, % StrReplace(vString, vDelimiter, d), % d, % vOmitChars
+		loop, Parse, % StrReplace(string, delimiter, d), % d, % omitChars
 			r.Push(A_LoopField)
 
-		Return, (r)
+		return (r)
 	}
 
-	StrTrim(String, TrimChars) {  ;* Removes specified leading and trailing characters from a string.
-		if !(DllCall("shlwapi.dll\StrTrim", "Ptr", &String, "Ptr", &TrimChars))  ;StrTrim("_!ABCDEFG#", "#A!_\0")    ; ==> BCDEFG
-			return FALSE
-		return StrGet(&String)
+	;* String.Split(String, (characters))
+	;* Description:
+		;* Removes leading and trailing `characters` from a string.
+	Trim(string, characters := "") {
+		return ((characters) ? (Trim(string, characters)) : (Trim(string)))
 	}
 
-	;-----         Nested Class         -------------------------;
+	;------------ Nested Class ----------------------------------------------------;
 
 	Class Clipboard {
 
-		;-----           Property           -------------------------;
-
-		__Set() {
-			Return
-		}
-
-		;-----            Method            -------------------------;
-
-		;* String.Clipboard.Copy($vTrim, $vLine)
+		;* String.Clipboard.Copy((trim), (getLine))
 		;* Description:
 			;* Copies and returns the selected text or optionally the whole line if no text is selected while preserving the clipboard content.
-		Copy(vTrim := 0, vLine := 0) {
+		Copy(trim := 0, getLine := 0) {
 			c := ClipboardAll
 			Clipboard := ""
 
 			Send, ^c
-			ClipWait, 0.1
-			If (ErrorLevel && vLine) {
+			ClipWait, 0.2
+			if (ErrorLevel && getLine) {
 				Send, {Home}+{End}^c
-				ClipWait, 0.1
+				ClipWait, 0.2
 
-				If (Clipboard)
+				if (Clipboard) {
 					Send, {Right}
+				}
 			}
 
-			s := ((vTrim) ? (Trim(Clipboard)) : (Clipboard))  ;! RegExReplace(Clipboard, "^\h*(.*?)\h*$", "$1")
+			s := (trim) ? (Trim(Clipboard)) : (Clipboard)
 			Clipboard := c
 
-			Return, (s)
+			return (s)
 		}
 
-		;* String.Clipboard.Paste(vString, $vSelect)
+		;* String.Clipboard.Paste(string, (select))
 		;* Description:
 			;* Paste the provided text while preserving the clipboard content and optionally select the text that was pasted.
-		Paste(vString, vSelect := 0) {
+		Paste(string, select := 0) {
 			c := ClipboardAll
 			Clipboard := ""
 
 			Sleep, 25
-			Clipboard := vString
+			Clipboard := string
 			Send, ^v
 
 			Sleep, 25
 			Clipboard := c
 
-			If (vSelect) {
-				If (InStr(vString, "`n"))
-					Loop, Parse, vString, `n, `r
+			if (select) {
+				if (InStr(string, "`n")) {
+					loop, Parse, string, `n, `r
 						s += StrLen(A_LoopField) + (A_Index > 1)
+				}
 
-				Send, % "+{Left " . Math.Max(s, StrLen(vString)) . "}"
+				Send, % "+{Left " . Math.Max(s, StrLen(string)) . "}"
 			}
 		}
 	}
