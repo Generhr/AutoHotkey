@@ -3,24 +3,14 @@
 
 #NoEnv
 #SingleInstance, Force
+#Warn, ClassOverwrite, MsgBox
 
 Process, Priority, , Normal
 SetTitleMatchMode, 2
 
-;======================================================== Hook ================;
-
-OnExit("Exit")
-
 ;======================================================== Test ================;
 
 Assert.SetGroup("Function")  ;--------- Function ------------------------------;
-
-;array := [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-;Variadic(array*)
-;
-;Variadic(a1, a2, a3, a4, a5) {
-;	MsgBox(a1 ", " a2 ", " a3 ", " a4 ", " a5)
-;}
 
 For i, v in [[[10], "[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]"], [[1, 20], "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]"], [[5, 20], "[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]"], [[0, 30, 3], "[0, 3, 6, 9, 12, 15, 18, 21, 24, 27]"], [[0, 50, 5], "[0, 5, 10, 15, 20, 25, 30, 35, 40, 45]"], [[2, 25, 2], "[2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]"], [[0, 30, 4], "[0, 4, 8, 12, 16, 20, 24, 28]"], [[15, 25, 3], "[15, 18, 21, 24]"], [[25, 2, -2], "[25, 23, 21, 19, 17, 15, 13, 11, 9, 7, 5, 3]"], [[30, 1, -4], "[30, 26, 22, 18, 14, 10, 6, 2]"], [[25, -6, -3], "[25, 22, 19, 16, 13, 10, 7, 4, 1, -2, -5]"]] {
 	Assert.IsEqual((Range(v[0, 0], v[0, 1], Round(v[0, 2] - 1) + 1).Print()), v[1])
@@ -210,9 +200,11 @@ ExitApp
 
 ;=============== Hotkey =======================================================;
 
-#If (WinActive(A_ScriptName) || WinActive(SubStr(A_ScriptName, 1, -3) . "lib"))
+#If (WinActive(A_ScriptName))
 
-	~*$Esc::ExitApp
+	~*$Esc::
+		ExitApp
+		return
 
 	~$^s::
 		Critical, On
@@ -226,20 +218,12 @@ ExitApp
 
 ;==============  Include  ======================================================;
 
-#Include, %A_ScriptDir%\..\lib\Assert.lib
-#Include, %A_ScriptDir%\..\lib\General.lib
-#Include, %A_ScriptDir%\..\lib\Math.lib
-#Include, %A_ScriptDir%\..\lib\ObjectOriented.lib
-
-;===============  Label  =======================================================;
+#Include, <Assert>
+#Include, <General>
+#Include, <Math>
+#Include, <ObjectOriented>
 
 ;============== Function ======================================================;
-
-Exit() {
-	Critical, On
-
-	ExitApp
-}
 
 IsPrime(number) {
 	if (number < 2 || number != Round(number)) {
