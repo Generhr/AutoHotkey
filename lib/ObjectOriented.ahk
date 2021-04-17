@@ -1,9 +1,7 @@
 ;============== Function ======================================================;
 
 Array(parameters*) {
-	r := new __Array
-
-	loop, % parameters.Length() {
+	loop, % (parameters.Length(), r := new __Array) {
 		r[A_Index - 1] := parameters[A_Index]
 	}
 
@@ -11,9 +9,7 @@ Array(parameters*) {
 }
 
 Object(parameters*) {
-	r := new __Object
-
-	loop, % parameters.MaxIndex()//2 {
+	loop, % (parameters.MaxIndex()//2, r := new __Object) {
 		i := A_Index*2
 
 		r[parameters[i - 1]] := parameters[i]
@@ -26,9 +22,7 @@ Print(object) {
 	switch (Type(object)) {
 		case "Array":
 			if (s := this.Length) {
-				r := "["
-
-				for i, v in this {
+				for i, v in (this, r := "[") {
 					r .= ((IsObject(v)) ? (Print(v)) : ((Math.IsNumeric(v)) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v)))) . ((A_Index < s) ? (", ") : ("]"))
 				}
 			}
@@ -37,9 +31,7 @@ Print(object) {
 			}
 		case "Object":
 			if (s := this.Length) {
-				r := "["
-
-				for i, v in this {
+				for i, v in (this, r := "[") {
 					r .= ((IsObject(v)) ? (Print(v)) : ((Math.IsNumeric(v)) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v)))) . ((A_Index < s) ? (", ") : ("]"))
 				}
 			}
@@ -60,9 +52,7 @@ Range(start := 0, stop := "", step := 1) {
 	}
 
 	if (Math.IsInteger(start) && Math.IsInteger(stop)) {
-		r := []
-
-		loop, % Math.Max(Math.Ceil((stop - start)/step), 0) {
+		loop, % (Math.Max(Math.Ceil((stop - start)/step), 0), r := []) {
 			r.Push(start), start += step
 		}
 
@@ -136,9 +126,7 @@ Class __Array {
 		;* array.Length := value
 		Set {
 			if (Math.IsPositiveInteger(value)) {
-				o := value - (s := this.Length)
-
-				loop, % Math.Abs(o) {
+				loop, % Math.Abs(o := value - (s := this.Length)) {
 					(o < 0) ? this.RemoveAt(--s) : this[s++] := ""
 				}
 
@@ -158,9 +146,7 @@ Class __Array {
 	;* Description:
 		;* Remove all falsy values from an array.
 	Compact(recursive := 0) {
-		r := []
-
-		for i, v in this {
+		for i, v in (this, r := []) {
 			if (v) {
 				r.Push((recursive && v.__Class == "__Array") ? (v.Compact(recursive)) : (v))
 			}
@@ -174,9 +160,7 @@ Class __Array {
 		;* Converts the array into a string to more easily see the structure.
 	Print() {
 		if (s := this.Length) {
-			r := "["
-
-			for i, v in this {
+			for i, v in (this, r := "[") {
 				r .= ((IsObject(v)) ? (v.Print()) : ((Math.IsNumeric(v)) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v)))) . ((A_Index < s) ? (", ") : ("]"))  ;! RegExReplace(v, "S)^0*(\d+(?:\.(?:(?!0+$)\d)+)?).*", "$1")
 			}
 		}
@@ -211,9 +195,7 @@ Class __Array {
 	;* Description:
 		;* Fisher–Yates shuffle.  ;: https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
 	Shuffle() {
-		m := this.MaxIndex()
-
-		for i, v in this {
+		for i, v in (this, m := this.MaxIndex()) {
 			u := Math.Random.Uniform(i, m)
 				, t := this[i], this[i] := this[u], this[u] := t
 		}
@@ -227,7 +209,7 @@ Class __Array {
 	Swap(index1, index2) {
 		m := this.MaxIndex()
 
-		if (Math.IsBetween(index1, 0, m) && Math.IsBetween(index2, 0, m)) {  ;- No error handling.
+		if (Math.IsBetween(index1, 0, m) && Math.IsBetween(index2, 0, m)) {  ;~ No error handling.
 			t := this[index1], this[index1] := this[index2], this[index2] := t
 		}
 
@@ -240,9 +222,7 @@ Class __Array {
 	;* Description:
 		;* Merges two or more arrays. This method does not change the existing arrays, but instead returns a new array.
 	Concat(values*) {
-		r := this.Clone()
-
-		for i, v in [values*] {
+		for i, v in ([values*], r := this.Clone()) {
 			if (v.__Class == "__Array") {
 				for i, v in v {
 					r.Push(v)
@@ -289,9 +269,7 @@ Class __Array {
 	;* Description:
 		;* Creates a new array with all elements that pass the test implemented by the provided function.
 	Filter(callback) {
-		r := []
-
-		for i, v in this {
+		for i, v in (this, r := []) {
 			if (callback.Call(v, i, this)) {
 				r.Push(v)
 			}
@@ -330,9 +308,7 @@ Class __Array {
 	;* Description:
 		;* Creates a new array with all sub-array elements concatenated into it recursively up to the specified depth.
 	Flat(depth := 1) {
-		r := []
-
-		for i, v in this {
+		for i, v in (this, r := []) {
 			if (v.__Class == "__Array" && depth > 0) {
 				r := r.Concat(v.Flat(depth - 1))
 			}
@@ -393,9 +369,7 @@ Class __Array {
 	;* Description:
 		;* Creates and returns a new string by concatenating all of the elements in an array (or an array-like object), separated by commas or a specified separator string. If the array has only one item, then that item will be returned without using the separator.
 	Join(delimiter := ", ") {
-		m := Round(this.MaxIndex())
-
-		for i, v in this {
+		for i, v in (this, m := Round(this.MaxIndex())) {
 			r .= ((IsObject(v)) ? ((v.__Class == "__Array") ? (v.Join(delimiter)) : ("[object Object]")) : (v))
 
 			if (i < m) {
@@ -438,9 +412,7 @@ Class __Array {
 	;* Description:
 		;* Creates a new array populated with the results of calling a provided function on every element in the calling array.
 	Map(callback) {
-		r := []
-
-		for i, v in this {
+		for i, v in (this, r := []) {
 			r.Push(callback.Call(v, i, this))
 		}
 
@@ -458,9 +430,7 @@ Class __Array {
 	;* Description:
 		;* Adds one or more elements to the end of an array and returns the new length of the array.
 	Push(elements*) {
-		s := this.Length
-
-		for i, v in [elements*] {
+		for i, v in ([elements*], s := this.Length) {
 			this.InsertAt(s++, v)
 		}
 
@@ -471,9 +441,7 @@ Class __Array {
 	;* Description:
 		;* Reverses an array in place. The first array element becomes the last, and the last array element becomes the first.
 	Reverse() {
-		m := this.MaxIndex()
-
-		for i in this {
+		for i in (this, m := this.MaxIndex()) {
 			this.InsertAt(m, this.RemoveAt(m - i))
 		}
 
@@ -494,9 +462,7 @@ Class __Array {
 		s := this.Length
 			, start := ((start >= 0) ? (Math.Min(s, start)) : (Math.Max(s + start, 0)))
 
-		r := []
-
-		loop, % ((end != "") ? ((end >= 0) ? (Math.Min(s, end)) : (Math.Max(s + end, 0))) : s) - start {
+		loop, % (((end != "") ? ((end >= 0) ? (Math.Min(s, end)) : (Math.Max(s + end, 0))) : s) - start, r := []) {
 			r.Push(this[start++])
 		}
 
@@ -529,9 +495,7 @@ Class __Array {
 		m := this.MaxIndex()
 
 		while (c != 0) {
-			c := 0
-
-			loop, % m {
+			loop, % (m, c := 0) {
 				i := A_Index - 1
 
 				if (%compareFunction%(this[i], this[A_Index]) > 0) {
@@ -554,9 +518,7 @@ Class __Array {
 		s := this.Length, m := elements.MaxIndex()
 			, start := (start >= 0) ? (Math.Min(s, start)) : (Math.Max(s + start, 0))
 
-		r := []
-
-		loop, % ((deleteCount != "") ? (Math.Max((s <= start + deleteCount) ? (s - start) : (deleteCount), 0)) : ((m) ? (0) : (s))) {
+		loop, % (((deleteCount != "") ? (Math.Max((s <= start + deleteCount) ? (s - start) : (deleteCount), 0)) : ((m) ? (0) : (s))), r := []) {
 			r.InsertAt(A_Index - 1, this.RemoveAt(start))
 		}
 
@@ -590,9 +552,7 @@ Class __Object {
 		;* Converts an object into a string to more easily see the structure.
 	Print() {
 		if (c := this.Count()) {
-			r := "{"
-
-			for k, v in this {
+			for k, v in (this, r := "{") {
 				r .= k . ": " . ((IsObject(v)) ? (v.Print()) : (((Math.IsNumeric(v)) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v))))) . ((A_Index < c) ? (", ") : ("}"))
 			}
 		}
