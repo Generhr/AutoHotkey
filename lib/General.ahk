@@ -132,7 +132,12 @@ SendMessage(msg, wParam := 0, lParam := 0, winTitle := "", excludeTitle := "", c
 
 ;* SetTimer(label, (period), (priority))
 SetTimer(label, period := "", priority := 0) {
-	SetTimer, % label, % period, % priority  ;* Parameters are evaluated before calling functions which means you can pass `FuncObj.Bind("Function")` directly to `SetTimer()`.
+	try {
+		SetTimer, % label, % period, % priority  ;* Parameters are evaluated before calling functions which means you can pass `FuncObj.Bind("Function")` directly to `SetTimer()`.
+	}
+	catch {
+		return (0)
+	}
 }
 
 ;* Sleep(milliseconds)
@@ -140,13 +145,13 @@ Sleep(milliseconds) {
     Sleep, milliseconds
 }
 
-;* ToolTip((message), ([Point2] point), (which), (relativeTo))
+;* ToolTip((message), ([Array] point), (which), (relativeTo))
 ToolTip(message := "", point := "", which := 1, relativeTo := "") {
 	if (relativeTo) {
 		CoordMode, ToolTip, % relativeTo  ;~ No error handling.
 	}
 
-	ToolTip, % (message.Base.HasKey("Print")) ? (message.Print()) : (message), point.x, point.y, Math.Clamp(which, 1, 20)
+	ToolTip, % (message.Base.HasKey("Print")) ? (message.Print()) : (message), point[0], point[1], Math.Clamp(which, 1, 20)
 }
 
 ;* WinGet((subCommand), (winTitle), (winText), (excludeTitle), (excludeText), (detectHiddenWindows))
@@ -392,7 +397,7 @@ MouseWheel(delta := 120) {
 	MouseGetPos, x, y
 	modifiers := 0x8*GetKeyState("Ctrl") | 0x1*GetKeyState("LButton") | 0x10*GetKeyState("MButton") | 0x2*GetKeyState("RButton") | 0x4*GetKeyState("Shift") | 0x20*GetKeyState("XButton1") | 0x40*GetKeyState("XButton2")
 
-	PostMessage, 0x20A, delta << 16 | modifiers, y << 16 | x , , A ;: http://msdn.microsoft.com/en-us/library/windows/desktop/ms645617(v=vs.85).aspx
+	PostMessage, 0x20A, delta << 16 | modifiers, y << 16 | x , , A  ;: http://msdn.microsoft.com/en-us/library/windows/desktop/ms645617(v=vs.85).aspx
 }
 
 ;* ReleaseCapture()
