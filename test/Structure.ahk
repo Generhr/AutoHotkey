@@ -3,13 +3,10 @@
 
 #NoEnv
 #SingleInstance, Force
+#Warn, ClassOverwrite, MsgBox
 
 Process, Priority, , Normal
 SetTitleMatchMode, 2
-
-;======================================================== Hook ================;
-
-OnExit("Exit")
 
 ;======================================================== Test ================;
 
@@ -79,9 +76,11 @@ ExitApp
 
 ;=============== Hotkey =======================================================;
 
-#If (WinActive(A_ScriptName) || WinActive(SubStr(A_ScriptName, 1, -3) . "lib"))
+#If (WinActive(A_ScriptName))
 
-	~*$Esc::ExitApp
+	~*$Esc::
+		ExitApp
+		return
 
 	~$^s::
 		Critical, On
@@ -95,31 +94,25 @@ ExitApp
 
 ;==============  Include  ======================================================;
 
-#Include, %A_ScriptDir%\..\lib\Assert.lib
-#Include, %A_ScriptDir%\..\lib\Structure.lib
+#Include, <Assert>
+#Include, <Structure>
 
 ;============== Function ======================================================;
-
-Exit() {
-	Critical, On
-
-	ExitApp
-}
 
 Header(number1, number2) {
 	header := new Structure(8)
 	header.NumPut(0, "Int", number1, "Int", number2)
 
-    return, (header)
+	return (header)
 }
 
 Body(number1, number2, number3, number4) {
 	body := new Structure(16)
 	body.NumPut(0, "Int", number1, "Int", number2, "Int", number3, "Int", number4)
 
-	return, (body)
+	return (body)
 }
 
 Primary(header, body) {
-    return, (new Structure(header, body))
+	return (new Structure(header, body))
 }
