@@ -1,4 +1,6 @@
-﻿Class Structure {
+; ** Data Type Cpnversion ** ;: http://ahkscript.org/ursrc/Windows_Data_Types.html
+
+Class Structure {
 	Static ProcessHeap := DllCall("Kernel32\GetProcessHeap", "Ptr")
 		, ThrowException := 1
 
@@ -50,7 +52,7 @@
 
 			Set {
 				if (pointer := DllCall("Kernel32\HeapReAlloc", "Ptr", Structure.ProcessHeap, "UInt", (zero) ? (0x00000008) : (0), "Ptr", this.Pointer, "Ptr", value, "Ptr")) {
-					this.Pointer := pointer  ;*** If HeapReAlloc fails, the original memory is not freed, and the original handle and pointer are still valid.
+					this.Pointer := pointer  ; ** If HeapReAlloc fails, the original memory is not freed, and the original handle and pointer are still valid. **
 				}
 				else if (Structure.ThrowException) {
 					throw, (Exception("Critical Failue", -1, Format("Kernel32\HeapReAlloc failed to allocate memory.")))
@@ -70,7 +72,7 @@
 						return (struct)
 					}
 
-					return  ;- No error handling.
+					return  ;~ No error handling.
 				}
 
 				return (NumGet(this.Pointer + offset, type))
