@@ -1,3 +1,7 @@
+;==============  Include  ======================================================;
+
+#Include, <Structure>
+
 ;============== Function ======================================================;
 ;========================================================  AHK  ================;
 
@@ -20,14 +24,14 @@ KeyWait(keyName, options := "") {
 	Static funcObj := Func("__KeyWait")
 
 	keys := [].Concat(keyName), state := !options.Includes("D")
-		, time := RegExReplace(options, "iS)[^t]*t?([\d\.]*).*", "$1")
+		, time := (RegExReplace(options, "iS)[^t]*t?([\d\.]*).*", "$1")*1000)
 
 	keys.ForEach(Func("KeyGet"))
 
 	QueryPerformanceCounter(0)
 
 	while (keys.Some(funcObj) == state) {
-		if (time && QueryPerformanceCounter(1) >= time) {
+		if (time && time <= QueryPerformanceCounter(1)) {
 			return (ErrorLevel := 1)
 		}
 
@@ -77,13 +81,13 @@ MsgBox(message := "", options := 0, title := "Beep Boop", timeOut := 0) {
 	MsgBox, % options, % title, % (message == "") ? ("""""") : ((message.Base.HasKey("Print")) ? (message.Print()) : (message)), % timeOut
 }
 
-;* PostMessage(msg, (wParam), (lParam), (winTitle), (excludeTitle), (control), (detectHiddenWindows))
-PostMessage(msg, wParam := 0, lParam := 0, winTitle := "", excludeTitle := "", control := "", detectHiddenWindows := "") {
-	if (detectHiddenWindows != "" && detectHiddenWindows != (detect := A_DetectHiddenWindows)) {
+;* PostMessage(msg, (wParam), (lParam), (winTitle), (excludeTitle), (detectHiddenWindows))
+PostMessage(msg, wParam := 0, lParam := 0, winTitle := "", excludeTitle := "", detectHiddenWindows := "") {
+	if (!(detectHiddenWindows == "") && !(detectHiddenWindows == (detect := A_DetectHiddenWindows))) {
 		DetectHiddenWindows, % detectHiddenWindows  ;~ No error handling.
 	}
 
-	PostMessage, msg, wParam, lParam, % control, % winTitle, , % excludeTitle
+	PostMessage, msg, wParam, lParam, , % winTitle, , % excludeTitle
 
 	if (detect) {
 		DetectHiddenWindows, % detect
@@ -115,13 +119,13 @@ RunActivate(winTitle, target, options := "", timeOut := 5000, rect := "") {
 	return (WinExist())
 }
 
-;* SendMessage(msg, (wParam), (lParam), (winTitle), (excludeTitle), (control), (timeOut), (detectHiddenWindows))
-SendMessage(msg, wParam := 0, lParam := 0, winTitle := "", excludeTitle := "", control := "", timeOut := 5000, detectHiddenWindows := "") {
-	if (detectHiddenWindows != "" && detectHiddenWindows != (detect := A_DetectHiddenWindows)) {
+;* SendMessage(msg, (wParam), (lParam), (winTitle), (excludeTitle), (timeOut), (detectHiddenWindows))
+SendMessage(msg, wParam := 0, lParam := 0, winTitle := "", excludeTitle := "", timeOut := 5000, detectHiddenWindows := "") {
+	if (!(detectHiddenWindows == "") && !(detectHiddenWindows == (detect := A_DetectHiddenWindows))) {
 		DetectHiddenWindows, % detectHiddenWindows  ;~ No error handling.
 	}
 
-	SendMessage, msg, wParam, lParam, % control, % winTitle, , % excludeTitle, , timeOut
+	SendMessage, msg, wParam, lParam, , % winTitle, , % excludeTitle, , timeOut
 
 	if (detect) {
 		DetectHiddenWindows, % detect
@@ -145,22 +149,22 @@ Sleep(milliseconds) {
     Sleep, milliseconds
 }
 
-;* ToolTip((message), ([Array] point), (which), (relativeTo))
-ToolTip(message := "", point := "", which := 1, relativeTo := "") {
+;* ToolTip((message), (x), (y), (which), (relativeTo))
+ToolTip(message := "", x := "", y := "", which := 1, relativeTo := "") {
 	if (relativeTo) {
 		CoordMode, ToolTip, % relativeTo  ;~ No error handling.
 	}
 
-	ToolTip, % (message.Base.HasKey("Print")) ? (message.Print()) : (message), point[0], point[1], Math.Clamp(which, 1, 20)
+	ToolTip, % (message.Base.HasKey("Print")) ? (message.Print()) : (message), x, y, Math.Clamp(which, 1, 20)
 }
 
-;* WinGet((subCommand), (winTitle), (winText), (excludeTitle), (excludeText), (detectHiddenWindows))
-WinGet(subCommand := "", winTitle := "A", winText := "", excludeTitle := "", excludeText := "", detectHiddenWindows := "") {
+;* WinGet((subCommand), (winTitle), (excludeTitle), (detectHiddenWindows))
+WinGet(subCommand := "", winTitle := "A", excludeTitle := "", detectHiddenWindows := "") {
 	if (detectHiddenWindows != "" && detectHiddenWindows != (detect := A_DetectHiddenWindows)) {
 		DetectHiddenWindows, % detectHiddenWindows  ;~ No error handling.
 	}
 
-	if (winTitle == "A" || WinExist(winTitle, winText, excludeTitle, excludeText)) {
+	if (winTitle == "A" || WinExist(winTitle, , excludeTitle)) {
 		if (subCommand != "") {
 			switch (subCommand) {
 				case "Class":
@@ -200,7 +204,7 @@ WinGet(subCommand := "", winTitle := "A", winText := "", excludeTitle := "", exc
 			out := {}
 
 			for i, v in ["Class", "ControlList", "ControlListHwnd", "Count", "ExStyle", "Extension", "ID", "IDLast", "List", "MinMax", "PID", "Pos", "ProcessName", "ProcessPath", "Style", "Text", "Title", "TransColor", "Transparent", "Visible"] {
-				out[v] := WinGet(v, winTitle, winText, excludeTitle, excludeText)  ;* No need to pass `detectHiddenWindows` as that setting is persistent for any given thread.
+				out[v] := WinGet(v, winTitle, excludeTitle)  ;* No need to pass `detectHiddenWindows` as that setting is persistent for any given thread.
 			}
 		}
 
@@ -271,19 +275,35 @@ DoubleTap(wait := 0, delay := 300) {
 
 ;* QueryPerformanceCounter((mode))
 ;* Description:
-	;* Returns accurately how many seconds have passed between `QueryPerformanceCounter(0)` and `QueryPerformanceCounter(1)`.
+	;* Returns accurately how many miliseconds have passed between `QueryPerformanceCounter(0)` and `QueryPerformanceCounter(1)`.
 QueryPerformanceCounter(mode := 0) {
-	Static Frequency,  Previous := !DllCall("QueryPerformanceFrequency", "Int64P", Frequency)  ;: https://msdn.microsoft.com/en-us/library/ms644905.aspx
+	Static frequency,  previous := !DllCall("QueryPerformanceFrequency", "Int64*", frequency)  ;: https://msdn.microsoft.com/en-us/library/ms644905.aspx
 
-	return (!DllCall("QueryPerformanceCounter", "Int64P", current) + ((mode) ? (current - Previous) : (Previous := current))/Frequency)  ;: https://msdn.microsoft.com/en-us/library/ms644904.aspx
+	DllCall("QueryPerformanceCounter", "Int64*", current)
+
+	return (((mode) ? (current - previous) : (previous := current))/10000)  ;: https://msdn.microsoft.com/en-us/library/ms644904.aspx
 }
 
-__QueryPerformanceCounter(fps := 20) {
-	Static Frequency, Previous := !DllCall("QueryPerformanceFrequency", "Int64P", Frequency)
+QueryPerformanceCounterPassive(fps := 20) {
+	Static frequency,  previous := !DllCall("QueryPerformanceFrequency", "Int64*", frequency)
 
-	target := 1000/fps
+	DllCall("QueryPerformanceCounter", "Int64*", current)
 
-	return (!DllCall("QueryPerformanceCounter", "Int64P", current) + ((Previous) ? (((delta := (current - Previous)*1000/Frequency) >= target) ? (!(Previous := current - Mod(delta, target)) + 1) : (0)) : (!(Previous := current) - 1)))
+	if (previous) {
+		if ((delta := (current - previous)/10000) >= (target := 1000/fps)) {
+			previous := current - Mod(delta, target)
+
+			return (delta)
+		}
+		else {
+			return (0)
+		}
+	}
+	else {
+		previous := current
+
+		return (1000/fps)
+	}
 }
 
 Class Date {
@@ -349,22 +369,23 @@ MCode(machineCode) {
 		;* 0: The cursor is free to move anywhere on the screen.
 	;* rect:
 		;* *: An array containg x, y, width and height in that order.
-ClipCursor(confine := 0, rect := "") {
-	Static __Rect := VarSetCapacity(__Rect, 16, 0)
+ClipCursor(confine := 0, x := "", y := "", width := "", height := "") {
+	Static rect := new Structure(16)
 
 	if (!confine) {
 		return (DllCall("user32\ClipCursor"))  ;: https://msdn.microsoft.com/en-us/library/ms648383.aspx
 	}
 
-	if (rect) {
-		NumPut(rect.x, __Rect, 0, "Int"), NumPut(rect.y, __Rect, 4, "Int"), NumPut(rect.x + rect.Width, __Rect, 8, "Int"), NumPut(rect.y + rect.Height, __Rect, 12, "Int")  ;: https://docs.microsoft.com/en-us/windows/win32/api/windef/ns-windef-rect
+	if (x == "" && y == "" && width == "" && height == "") {
+		DllCall("GetWindowRect", "Ptr", WinExist(), "Ptr", rect.Pointer)
 	}
 	else {
-		DllCall("GetWindowRect", "UPtr", WinExist(), "UPtr", &__Rect)
+		rect.NumPut(0, "Int", x, "Int", y, "Int", width, "Int", height)  ;: https://docs.microsoft.com/en-us/windows/win32/api/windef/ns-windef-rect
 	}
 
-	if (!DllCall("user32\ClipCursor", "Ptr", &__Rect))
+	if (!DllCall("user32\ClipCursor", "Ptr", rect.Pointer)) {
 		return (ErrorLevel := DllCall("kernel32\GetLastError"))
+	}
 
 	return (ErrorLevel := 0)
 }
@@ -476,9 +497,9 @@ Swap(ByRef Variable1, ByRef Variable2) {
 Desktop() {
 	WinGet, style, Style, A
 
-	if (Debug && (!(style & 0x02000000) || !(style & 0x80000000)) && (style & 0x00020000 || style & 0x00010000)) {
-		MsgBox(((!(style & 0x02000000)) ? ("0x02000000 (WS_CLIPCHILDREN)") : ("0x80000000 (WS_POPUP)")) . " && " . ((style & 0x00020000) ? ("0x00020000 (WS_MINIMIZEBOX || WS_GROUP)") : ("0x00010000 (WS_MAXIMIZEBOX || WS_TABSTOP)")))
-	}
+;	if (Debug && (!(style & 0x02000000) || !(style & 0x80000000)) && (style & 0x00020000 || style & 0x00010000)) {
+;		MsgBox(((!(style & 0x02000000)) ? ("0x02000000 (WS_CLIPCHILDREN)") : ("0x80000000 (WS_POPUP)")) . " && " . ((style & 0x00020000) ? ("0x00020000 (WS_MINIMIZEBOX || WS_GROUP)") : ("0x00010000 (WS_MAXIMIZEBOX || WS_TABSTOP)")))
+;	}
 
 	return (((style & 0x02000000) || (style & 0x80000000)) && !(style & 0x00020000 || style & 0x00010000))
 	;! return ((style & 0x00C00000) ? (style & 0x80000000) : (!(style & 0x00020000 || style & 0x00010000)))
@@ -539,7 +560,7 @@ GetActiveExplorerPath() {
 ScriptCommand(scriptName, message) {
     Static commands := {"Open": 65300, "Help": 65301, "Spy": 65302, "Reload": 65303, "Edit": 65304, "Suspend": 65305, "Pause": 65306, "Exit": 65307}
 
-	PostMessage(0x111, commands[message], , scriptName . " - AutoHotkey", , , 1)
+	PostMessage(0x111, commands[message], , scriptName . " - AutoHotkey", , 1)
 }
 
 ;* ShowDesktop()
@@ -575,11 +596,11 @@ Class Spotify {
 	Static Handle := 0
 
     Pause() {
-		PostMessage(0x319, , 0xD0000, this.GetWindow(1), , , 1)  ;? 0x319 = WM_APPCOMMAND
+		PostMessage(0x319, , 0xD0000, this.GetWindow(1), , 1)  ;? 0x319 = WM_APPCOMMAND
     }
 
     PlayPause() {
-		PostMessage(0x319, , 0xE0000, this.GetWindow(1), , , 1)
+		PostMessage(0x319, , 0xE0000, this.GetWindow(1), , 1)
     }
 
     Play() {
@@ -597,11 +618,11 @@ Class Spotify {
     }
 
     Prev() {
-		PostMessage(0x319, , 0xC0000, this.GetWindow(1), , , 1)
+		PostMessage(0x319, , 0xC0000, this.GetWindow(1), , 1)
     }
 
     Next() {
-		PostMessage(0x319, , 0xB0000, this.GetWindow(1), , , 1)
+		PostMessage(0x319, , 0xB0000, this.GetWindow(1), , 1)
     }
 
     GetWindow(prefix := true) {
