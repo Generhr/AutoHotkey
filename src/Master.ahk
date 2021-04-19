@@ -45,19 +45,26 @@ for k, v in {"Case": ["", "[&1] lowercase", "[&2] UPPERCASE", "[&3] Sentence cas
 
 IniRead, Debug, % A_WorkingDir . "\cfg\Settings.ini", Debug, Debug
 Global Debug
-	, DetectHiddenWindows := A_DetectHiddenWindows, CapsLockState := 0
-	, SavedClipboard
+	, WindowMessage := DllCall("RegisterWindowMessage", "Str", "WindowMessage", "UInt")
+
+	, DetectHiddenWindows := A_DetectHiddenWindows, SavedClipboard, CapsLockState := 0
 	, HiddenWindows := []
 
 ;=======================================================  Group  ===============;
 
-for k, v in {"Browser": [["Google Chrome", "chrome"]]
-	, "Editor" : [["Notepad++", "notepad++"], ["", "Code"], ["Microsoft Visual Studio", "devenv"]]
-	, "Escape": [["", "ApplicationFrameHost", "Calculator"], ["AutoHotkey Help", "hh"], ["", "mpc-hc64"], ["Windows Photo Viewer", "DllHost"]]} {
+for k, v in {"Browser": [["Google Chrome ahk_class Chrome_WidgetWin_1 ahk_exe chrome.exe"]]  ;? [["Title ahk_class Class ahk_exe ProcessName", "ExcludeTitle"], ...]
+	, "Editor" : [["Notepad++ ahk_class Notepad++ ahk_exe notepad++.exe"], ["ahk_class Chrome_WidgetWin_1 ahk_exe Code.exe"], ["Microsoft Visual Studio ahk_exe devenv.exe"]]
+	, "Escape": [["ahk_class ApplicationFrameWindow ahk_exe ApplicationFrameHost.exe", "Calculator"], ["AutoHotkey Help ahk_class HH Parent ahk_exe hh.exe"], ["ahk_class MediaPlayerClassicW ahk_exe mpc-hc64.exe"], ["Windows Photo Viewer ahk_class Photo_Lightweight_Viewer ahk_exe DllHost.exe"]]} {
 	for i, v in v {
-		GroupAdd, % k, % v[0] . (v[1] ? " ahk_exe " . RegExReplace(v[1], "i)\.exe") . ".exe" : ""), , , % v[2]  ;? v[0], v[1] = WinTitle, v[2] = ExcludeTitle
+		GroupAdd, % k, % v[0], , , % v[1]
 	}
 }
+
+;======================================================== Hook ================;
+
+OnMessage(WindowMessage, "WindowMessage")
+
+OnExit("Exit")
 
 ;========================================================  Run  ================;
 
@@ -68,13 +75,9 @@ for i, v in ["QuickTest"] {
 	Run, % A_WorkingDir . "\test\" . v . ".ahk"
 }
 
-;======================================================== Hook ================;
-
-OnExit("Exit"), OnMessage(0xFF, "UpdateScript")
-
 ;=======================================================  Other  ===============;
 
-Exit
+exit
 
 ;=============== Hotkey =======================================================;
 ;=======================================================  Mouse  ===============;
@@ -185,14 +188,14 @@ AppsKey & LButton::
 
 ;====================================================== Keyboard ==============;
 
-#If (WinExist("Window Spy ahk_exe AutoHotkey.exe"))
+#If (WinExist("Window Spy ahk_class AutoHotkeyGUI"))
 
-	Esc::WinClose, Window Spy ahk_exe AutoHotkey.exe
+	Esc::WinClose, Window Spy ahk_class AutoHotkeyGUI
 
 	$^c::
 		SavedClipboard := ClipboardAll
 
-		ControlGetText, Clipboard, Edit1, Window Spy ahk_exe AutoHotkey.exe
+		ControlGetText, Clipboard, Edit1, Window Spy ahk_class AutoHotkeyGUI
 		Clipboard := "/*`n`t" . StrReplace(Clipboard, "`n", "`n`t") . "`n*/"
 
 		HotKey, ~$^v, SinglePaste, On
@@ -246,8 +249,8 @@ AppsKey & LButton::
 		if (KeyWait("\", "T0.25")) {
 			IniWrite, % Debug := !Debug, % A_WorkingDir . "\cfg\Settings.ini", Debug, Debug
 
-			for i, v in WinGet("List", "ahk_class AutoHotkey", , A_ScriptName, , "On") {
-				SendMessage(0xFF, -1, , "ahk_id" . v, , , , "On")  ;* Tell other running scripts to update their `Debug` value.
+			for i, v in WinGet("List", "ahk_class AutoHotkey", A_ScriptName, "On") {
+				SendMessage(WindowMessage, -1, , "ahk_id" . v)  ;* Tell other running scripts to update their `Debug` value.
 			}
 
 			Run, % A_WorkingDir . "\bin\Nircmd.exe speak text " . Format("""Debug {}.""", (Debug) ? ("On") : ("Off"))
@@ -399,7 +402,7 @@ AppsKey & LButton::
 
 			KeyWait("Esc")
 			BlockInput, On
-			SendMessage(0x112, 0xF170, 2, "Off", "Program Manager")  ;? 0x112 = WM_SYSCOMMAND, 0xF170 = SC_MONITORPOWER.
+			SendMessage(0x112, 0xF170, 2, "Program Manager")  ;? 0x112 = WM_SYSCOMMAND, 0xF170 = SC_MONITORPOWER.
 
 			Input, v, , {Space}
 
@@ -805,19 +808,20 @@ AppsKey & Right::
 
 ;==============  Include  ======================================================;
 
-#Include, %A_ScriptDir%\..\lib\Color.lib
-#Include, %A_ScriptDir%\..\lib\GDIp.lib
-#Include, %A_ScriptDir%\..\lib\General.lib
-#Include, %A_ScriptDir%\..\lib\Geometry.lib
-#Include, %A_ScriptDir%\..\lib\Math.lib
-#Include, %A_ScriptDir%\..\lib\ObjectOriented.lib
-#Include, %A_ScriptDir%\..\lib\String.lib
+#Include, <Color>
+#Include, <GDIp>
+#Include, <General>
+#Include, <Geometry>
+#Include, <Math>
+#Include, <ObjectOriented>
+#Include, <String>
 
 ;===============  Label  =======================================================;
 
 ;============== Function ======================================================;
+;======================================================== Hook ================;
 
-UpdateScript(wParam := 0, lParam := 0) {
+WindowMessage(wParam := 0, lParam := 0) {
 	switch (wParam) {
 		case -1:
 			IniRead, Debug, % A_WorkingDir . "\cfg\Settings.ini", Debug, Debug
@@ -855,6 +859,8 @@ Exit(exitReason := "", exitCode := "") {  ;? ExitReason: Close || Error || Exit 
 	ExitApp
 }
 
+;======================================================== Menu ================;
+
 Menu(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := "Tray") {
 	switch (thisMenu) {
 		case "Case":
@@ -891,7 +897,7 @@ Menu(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := "Tray") {
 				case "WindowSpy":
 					w := "ahk_id" . WinGet("ID")
 
-					RunActivate("Window Spy ahk_exe AutoHotkey.exe", A_ProgramFiles . "\AutoHotkey\WindowSpy.ahk", , , [50, 35])
+					RunActivate("Window Spy ahk_class AutoHotkeyGUI", A_ScriptDir . "\WindowSpy.ahk", , , [50, 35])
 
 					if (WinExist(w)) {
 						WinActivate, % w
@@ -976,8 +982,12 @@ Menu(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := "Tray") {
 	}
 }
 
+;=======================================================  Other  ===============;
+
 SetSystemCursor(mode := "") {
-	Static default := (v := __GetSystemCursors()).Default, hide := v.Hide, show := v.Show
+	Local
+
+	Static default := (v := __SetSystemCursor()).Default, hide := v.Hide, show := v.Show
 		, internal, mouse
 
 	if (mode == "Timer" && MouseGet("Pos").Print() == mouse.Print()) {
@@ -996,17 +1006,19 @@ SetSystemCursor(mode := "") {
 		SetTimer(Func(A_ThisFunc).Bind("Timer"), -50)
 	}
 
-	for i, v in default {
-		DllCall("SetSystemCursor", "Ptr", DllCall("CopyImage", "Ptr", %internal%[i], "UInt", 2, "Int", 0, "Int", 0, "UInt", 0), "UInt", v)
+	for index, id in Default {
+		DllCall("SetSystemCursor", "Ptr", DllCall("CopyImage", "Ptr", %internal%[index], "UInt", 2, "Int", 0, "Int", 0, "UInt", 0), "UInt", id)
 	}
 }
 
-__GetSystemCursors() {
-	default := [], hide := [], show := []
+__SetSystemCursor() {
+	Local
 
-	VarSetCapacity(v1, 128, 0xFF), VarSetCapacity(v2, 128, 0)
-	for i, v in (default := [32512, 32513, 32514, 32515, 32516, 32642, 32643, 32644, 32645, 32646, 32648, 32649, 32650]) {
-		hide[i] := DllCall("CreateCursor", "Ptr", 0, "Int", 0, "Int", 0, "Int", 32, "Int", 32, "Ptr", &v1, "Ptr", &v2), show[i] := DllCall("CopyImage", "Ptr", DllCall("LoadCursor", "Ptr", 0, "Ptr", v), "UInt", 2, "Int", 0, "Int", 0, "UInt", 0)
+	VarSetCapacity(pvANDPlane, 128, 0xFF), VarSetCapacity(pvXORPlane, 128, 0)
+
+	for index, lpCursorName in (default := [32512, 32513, 32514, 32515, 32516, 32642, 32643, 32644, 32645, 32646, 32648, 32649, 32650], hide := [], show := []) {
+		hide[index] := DllCall("CreateCursor", "Ptr", 0, "Int", 0, "Int", 0, "Int", 32, "Int", 32, "Ptr", &pvANDPlane, "Ptr", &pvXORPlane)
+			, show[index] := DllCall("CopyImage", "Ptr", DllCall("LoadCursor", "Ptr", 0, "Ptr", lpCursorName), "UInt", 2, "Int", 0, "Int", 0, "UInt", 0)
 	}
 
 	return {"Default": default, "Hide": hide, "Show": show}
