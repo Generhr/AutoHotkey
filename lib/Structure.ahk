@@ -1,5 +1,23 @@
 ;============== Function ======================================================;  ;* ** Data Type Conversion: http://ahkscript.org/ursrc/Windows_Data_Types.html **
 
+;* CreateConsoleReadConsoleControl(length, initialChars, ctrlWakeupMask, controlKeyState)
+;* Description:
+	;* Contains information for a console read operation.
+CreateConsoleReadConsoleControl(initialChars := 0, ctrlWakeupMask := 0x0A, controlKeyState := 0) {  ;: https://docs.microsoft.com/en-us/windows/console/console-readconsole-control
+	(s := new Structure(16)).NumPut(0, "UInt", 16, "UInt", initialChars, "UInt", ctrlWakeupMask, "UInt", controlKeyState)  ;? ctrlWakeupMask: https://www.asciitable.com/
+
+    return (s)
+}  ;? CONSOLE_READCONSOLE_CONTROL, *PCONSOLE_READCONSOLE_CONTROL;
+
+;* CreateSmallRect((x), (y), (width), (height))
+;* Description:
+	;* Defines the coordinates of the upper left and lower right corners of a rectangle.
+CreateSmallRect(x := 0, y := 0, width := 0, height := 0) {  ;: https://docs.microsoft.com/en-us/windows/console/small-rect-str
+	(s := new Structure(8)).NumPut(0, "Short", x, "Short", y, "Short", x + width - 1, "Short", y + height - 1)
+
+    return (s)
+}  ;? SMALL_RECT;
+
 ;* CreateCoord((x), (y))
 ;* Description:
 	;* Defines the coordinates of a character cell in a console screen buffer. The origin of the coordinate system (0,0) is at the top, left cell of the buffer.
@@ -207,8 +225,12 @@ Class Structure {
 			return (offset)  ;* Similar to `Push()` returning position of the last inserted value.
 		}
 
-		StrGet(offset, length, encoding := "None") {
-			return (StrGet(this.Pointer, length, encoding))  ;? "UTF-8", "UTF-16", "CP936", "CP0"
+		StrGet(length := "", encoding := "None") {
+			if (length) {
+				return (StrGet(this.Pointer, length, encoding))
+			}
+
+			return (StrGet(this.Pointer))
 		}
 
 		ZeroMemory(bytes := 0) {
