@@ -1,6 +1,5 @@
-﻿;==============  Include  ======================================================;
+;==============  Include  ======================================================;
 
-#Include, <Math>
 #Include, <Structure>
 
 ;============== Function ======================================================;
@@ -18,7 +17,7 @@ __ConsoleCtrlHandler(ctrlType) {  ;: https://docs.microsoft.com/en-us/windows/co
 	}
 }
 
-__WindowsProc(nCode, wParam, lParam) {
+__WindowsProc(nCode, wParam, lParam) {  ;* ** GetAsyncKeyState ** ;: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getasynckeystate
 	Critical, On
 
 	if (WinActive("ahk_group Console")) {
@@ -54,7 +53,7 @@ Class Console {
 			WinGet, hWnd, ID, A
 
 			if (!DllCall("AllocConsole", "UInt")) {
-				throw (Exception("NotImplementedError", -1, Math.ToBase(DllCall("GetLastError", "UInt"), 10, 16)))
+				throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", DllCall("Kernel32\GetLastError"), "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(DllCall("Kernel32\GetLastError"))))
 			}
 
 			WinHide, % Format("ahk_id{}", DllCall("GetConsoleWindow"))
@@ -67,7 +66,7 @@ Class Console {
 			this.SetColor(0x0000, 0x000A)
 
 			if (!DllCall("SetConsoleCtrlHandler", "UInt", RegisterCallback("__ConsoleCtrlHandler"), "UInt", 1, "UInt")) {
-				throw (Exception("NotImplementedError", -1, Math.ToBase(DllCall("GetLastError", "UInt"), 10, 16)))
+				throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", DllCall("Kernel32\GetLastError"), "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(DllCall("Kernel32\GetLastError"))))
 			}
 
 			GroupAdd, Console, % Format("ahk_id{}", this.Handle)
@@ -80,7 +79,7 @@ Class Console {
 		this.Hide()
 
 		if (!DllCall("FreeConsole", "UInt")) {
-			throw (Exception("NotImplementedError", -1, Math.ToBase(DllCall("GetLastError", "UInt"), 10, 16)))
+			throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", DllCall("Kernel32\GetLastError"), "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(DllCall("Kernel32\GetLastError"))))
 		}
 
 		this.Handle := ""
@@ -88,7 +87,7 @@ Class Console {
 
 	GetColor() {
 		if (!DllCall("GetConsoleScreenBufferInfo", "Ptr", this.Output, "Ptr", (consoleScreenBufferInfo := new Structure(20)).Pointer)) {
-			throw (Exception("NotImplementedError", -1, Math.ToBase(DllCall("GetLastError", "UInt"), 10, 16)))
+			throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", DllCall("Kernel32\GetLastError"), "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(DllCall("Kernel32\GetLastError"))))
 		}
 
 		return ({"BackgroundColor": consoleScreenBufferInfo.NumGet(8, "Word") >> 4 & 0x0F, "ForegroundColor": consoleScreenBufferInfo.NumGet(8, "Word") & 0x0F})
@@ -96,13 +95,13 @@ Class Console {
 
 	SetColor(backgroundColor := 0x0, foregroundColor := 0xF) {
 		if (!DllCall("SetConsoleTextAttribute", "Int", this.Output, "Int", backgroundColor << 4 | foregroundColor)) {
-			throw (Exception("NotImplementedError", -1, Math.ToBase(DllCall("GetLastError", "UInt"), 10, 16)))
+			throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", DllCall("Kernel32\GetLastError"), "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(DllCall("Kernel32\GetLastError"))))
 		}
 	}
 
 	GetCursorPosition() {
 		if (!DllCall("GetConsoleScreenBufferInfo", "Ptr", this.Output, "Ptr", (consoleScreenBufferInfo := new Structure(20)).Pointer)) {
-			throw (Exception("NotImplementedError", -1, Math.ToBase(DllCall("GetLastError", "UInt"), 10, 16)))
+			throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", DllCall("Kernel32\GetLastError"), "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(DllCall("Kernel32\GetLastError"))))
 		}
 
 		return ({"x": consoleScreenBufferInfo.NumGet(4, "Short"), "y": consoleScreenBufferInfo.NumGet(6, "Short")})
@@ -110,13 +109,13 @@ Class Console {
 
 	SetCursorPosition(x, y) {
 		if (!DllCall("SetConsoleCursorPosition", "Ptr", this.Output, "UInt", x << 4 | y, "UInt")) {
-			throw (Exception("NotImplementedError", -1, Math.ToBase(DllCall("GetLastError", "UInt"), 10, 16)))
+			throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", DllCall("Kernel32\GetLastError"), "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(DllCall("Kernel32\GetLastError"))))
 		}
 	}
 
 	GetSize() {
 		if (!DllCall("GetConsoleScreenBufferInfo", "Ptr", this.Output, "Ptr", (consoleScreenBufferInfo := new Structure(20)).Pointer)) {
-			throw (Exception("NotImplementedError", -1, Math.ToBase(DllCall("GetLastError", "UInt"), 10, 16)))
+			throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", DllCall("Kernel32\GetLastError"), "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(DllCall("Kernel32\GetLastError"))))
 		}
 
 		return ({"Width": consoleScreenBufferInfo.NumGet(0, "Short"), "Height": consoleScreenBufferInfo.NumGet(2, "Short")})
@@ -124,11 +123,11 @@ Class Console {
 
 	SetSize(width, height) {
 		if (!DllCall("SetConsoleScreenBufferSize", "Ptr", this.Output, "Ptr", CreateCoord(width, height).Pointer)) {
-			throw (Exception("NotImplementedError", -1, Math.ToBase(DllCall("GetLastError", "UInt"), 10, 16)))
+			throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", DllCall("Kernel32\GetLastError"), "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(DllCall("Kernel32\GetLastError"))))
 		}
 
 		if (!DllCall("SetConsoleWindowInfo", "Ptr", this.Output, "UInt", True, "Ptr", CreateSmallRect(0, 0, width, height).Pointer)) {
-			throw (Exception("NotImplementedError", -1, Math.ToBase(DllCall("GetLastError", "UInt"), 10, 16)))
+			throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", DllCall("Kernel32\GetLastError"), "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(DllCall("Kernel32\GetLastError"))))
 		}
 
 		return (DllCall("SetConsoleScreenBufferSize", "Ptr", this.Output, "UInt", width | height << 16))
@@ -136,13 +135,13 @@ Class Console {
 
 	SetTitle(title) {
 		if (!DllCall("SetConsoleTitle", "Str", title, "UInt")) {
-			throw (Exception("NotImplementedError", -1, Math.ToBase(DllCall("GetLastError", "UInt"), 10, 16)))
+			throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", DllCall("Kernel32\GetLastError"), "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(DllCall("Kernel32\GetLastError"))))
 		}
 	}
 
 	FillOutputCharacter(character, length, x, y) {
 		if (!DllCall("FillConsoleOutputCharacter", "Ptr", this.Output, "Short", Asc(character), "UInt", length, "UInt", x | y << 4, "Ptr", (numberOfCharsWritten := new Structure(4)).Pointer, "UInt")) {
-			throw (Exception("NotImplementedError", -1, Math.ToBase(DllCall("GetLastError", "UInt"), 10, 16)))
+			throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", DllCall("Kernel32\GetLastError"), "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(DllCall("Kernel32\GetLastError"))))
 		}
 
 		return (numberOfCharsWritten.NumGet(0, "UInt"))
@@ -158,11 +157,11 @@ Class Console {
 	Hide(disable := 0) {
 		if (disable || this.IsVisible) {
 			if (!DllCall("UnhookWindowsHookEx", "Ptr", this.KeyboardHook, "UInt")) {
-				MsgBox(Math.ToBase(DllCall("GetLastError", "UInt"), 10, 16) . " (" . DllCall("GetLastError", "UInt") . ")")
+				throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", DllCall("Kernel32\GetLastError"), "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(DllCall("Kernel32\GetLastError"))))
 			}
 
 			if (!DllCall("UnhookWindowsHookEx", "Ptr", this.MouseHook, "UInt")) {
-				MsgBox(Math.ToBase(DllCall("GetLastError", "UInt"), 10, 16) . " (" . DllCall("GetLastError", "UInt") . ")")
+				throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", DllCall("Kernel32\GetLastError"), "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(DllCall("Kernel32\GetLastError"))))
 			}
 		}
 
@@ -181,11 +180,11 @@ Class Console {
 	Show(enable := 0) {
 		if (enable || !this.IsVisible) {
 			if (!this.KeyboardHook := DllCall("SetWindowsHookEx", "Int", 13, "Ptr", RegisterCallback("__WindowsProc", "Fast"), "Ptr", DllCall("GetModuleHandle", "UInt", 0, "Ptr"), "UInt", 0, "Ptr")) {
-				MsgBox(Math.ToBase(DllCall("GetLastError", "UInt"), 10, 16) . " (" . DllCall("GetLastError", "UInt") . ")")
+				throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", DllCall("Kernel32\GetLastError"), "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(DllCall("Kernel32\GetLastError"))))
 			}
 
 			if (!this.MouseHook := DllCall("SetWindowsHookEx", "Int", 14, "Ptr", RegisterCallback("__WindowsProc", "Fast"), "Ptr", DllCall("GetModuleHandle", "UInt", 0, "Ptr"), "UInt", 0, "Ptr")) {
-				MsgBox(Math.ToBase(DllCall("GetLastError", "UInt"), 10, 16) . " (" . DllCall("GetLastError", "UInt") . ")")
+				throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", DllCall("Kernel32\GetLastError"), "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(DllCall("Kernel32\GetLastError"))))
 			}
 		}
 
@@ -206,7 +205,7 @@ Class Console {
 		Static shell := ComObjCreate("WScript.Shell")
 
 		if (error := (exec := shell.Exec(commnad)).StdErr.ReadAll()) {
-;			throw (Exception("NotImplementedError", -1, error))
+;			throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", DllCall("Kernel32\GetLastError"), "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(DllCall("Kernel32\GetLastError"))))
 		}
 
 		return (exec.StdOut.ReadAll())
@@ -224,7 +223,7 @@ Class Console {
 		this.Hide(1)
 
 		if (!DllCall("ReadConsole", "Ptr", this.Input, "Ptr", buffer.Pointer, "UInt", numberOfCharsToRead, "UInt*", numberOfCharsRead, "Ptr", CreateConsoleReadConsoleControl(0, (1 << 0x0A) | (1 << 0x1B)).Pointer, "UInt")) {
-			throw (Exception("NotImplementedError", -1, Math.ToBase(DllCall("GetLastError", "UInt"), 10, 16)))
+			throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", DllCall("Kernel32\GetLastError"), "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(DllCall("Kernel32\GetLastError"))))
 		}
 
 		this.Show(1)
@@ -240,7 +239,7 @@ Class Console {
 		}
 
 		if (!DllCall("WriteConsole", "Ptr", this.Output, "Str", text, "UInt", StrLen(text), "UInt*", written, "Ptr", 0, "UInt")) {
-			throw (Exception("NotImplementedError", -1, Math.ToBase(DllCall("GetLastError", "UInt"), 10, 16)))
+			throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", DllCall("Kernel32\GetLastError"), "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(DllCall("Kernel32\GetLastError"))))
 		}
 
 		return (written - (newLine != 0))  ;* Account for the newline character.
