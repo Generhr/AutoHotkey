@@ -3,3 +3,6 @@ https://docs.microsoft.com/en-us/windows/win32/debug/system-error-code-lookup-to
 
 ## PsExec ##
 https://docs.microsoft.com/en-gb/sysinternals/downloads/psexec
+
+## Nircmd ##
+https://www.nirsoft.net/utils/nircmd.html
