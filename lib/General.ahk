@@ -5,6 +5,10 @@
 ;============== Function ======================================================;
 ;========================================================  AHK  ================;
 
+HotKey(keyName, label, options := "") {
+	HotKey, % keyName, % label, % options
+}
+
 ;* KeyGet(keyName)
 ;* Description:
 	;* Strip a key of modifiers.
@@ -146,7 +150,7 @@ SetTimer(label, period := "", priority := 0) {
 
 ;* Sleep(milliseconds)
 Sleep(milliseconds) {
-    Sleep, milliseconds
+	Sleep, milliseconds
 }
 
 ;* ToolTip((message), (x), (y), (which), (relativeTo))
@@ -222,29 +226,29 @@ WinGet(subCommand := "", winTitle := "A", excludeTitle := "", detectHiddenWindow
 
 ;* CloseClipboard()
 CloseClipboard() {
-    if (!DllCall("user32\CloseClipboard")) {  ;: https://github.com/jNizM/AHK_DllCall_WinAPI/tree/master/src/Clipboard%20Functions
-        return (ErrorLevel := DllCall("kernel32\GetLastError"))
+	if (!DllCall("user32\CloseClipboard")) {  ;: https://github.com/jNizM/AHK_DllCall_WinAPI/tree/master/src/Clipboard%20Functions
+		return (ErrorLevel := DllCall("Kernel32\GetLastError"))
 	}
 
-    return (ErrorLevel := 0)
+	return (ErrorLevel := 0)
 }
 
 ;* EmptyClipboard()
 EmptyClipboard() {
-    if (!DllCall("user32\EmptyClipboard")) {  ;: https://msdn.microsoft.com/en-us/library/ms649037.aspx
-        return (ErrorLevel := DllCall("kernel32\GetLastError"))
+	if (!DllCall("user32\EmptyClipboard")) {  ;: https://msdn.microsoft.com/en-us/library/ms649037.aspx
+		return (ErrorLevel := DllCall("Kernel32\GetLastError"))
 	}
 
-    return (ErrorLevel := 0)
+	return (ErrorLevel := 0)
 }
 
 ;* OpenClipboard((newOwner))
 OpenClipboard(newOwner := 0) {
-    if (!DllCall("user32\OpenClipboard", "Ptr", newOwner)) {  ;: https://msdn.microsoft.com/en-us/library/ms649048.aspx
-        return (ErrorLevel := DllCall("kernel32\GetLastError"))
+	if (!DllCall("user32\OpenClipboard", "Ptr", newOwner)) {  ;: https://msdn.microsoft.com/en-us/library/ms649048.aspx
+		return (ErrorLevel := DllCall("Kernel32\GetLastError"))
 	}
 
-    return (ErrorLevel := 0)
+	return (ErrorLevel := 0)
 }
 
 ;====================================================== Keyboard ==============;
@@ -253,11 +257,11 @@ OpenClipboard(newOwner := 0) {
 ;* Note:
 	;* Note that only the thread that blocked input can successfully unblock input.
 BlockInput(mode := 0) {
-    if (!DllCall("user32\BlockInput", "UInt", mode)) {  ;: https://msdn.microsoft.com/en-us/library/ms646290.aspx
-        return (ErrorLevel := DllCall("kernel32\GetLastError"))
+	if (!DllCall("user32\BlockInput", "UInt", mode)) {  ;: https://msdn.microsoft.com/en-us/library/ms646290.aspx
+		return (ErrorLevel := DllCall("Kernel32\GetLastError"))
 	}
 
-    return (ErrorLevel := 0)
+	return (ErrorLevel := 0)
 }
 
 DoubleTap(wait := 0, delay := 300) {
@@ -265,8 +269,8 @@ DoubleTap(wait := 0, delay := 300) {
 		return ((A_ThisHotkey == A_PriorHotkey) && (A_TimeSincePriorHotkey <= 300))
 	}
 
-    KeyWait, % A_ThisHotkey
-    KeyWait, % A_ThisHotkey, % Format("DT{}", delay/1000)
+	KeyWait, % A_ThisHotkey
+	KeyWait, % A_ThisHotkey, % Format("DT{}", delay/1000)
 
 	return (!ErrorLevel)
 }
@@ -331,7 +335,7 @@ Class Date {
 }
 
 Clock() {
-    return (DllCall("msvcrt\clock"))
+	return (DllCall("msvcrt\clock"))
 }
 
 ;==================================================== Machine Code ============;
@@ -347,8 +351,8 @@ MCode(machineCode) {
 	DllCall("Crypt32\CryptStringToBinaryW", "Str", m3, "UInt", 0, "UInt", e[m1], "Ptr", 0, "UIntP", s, "Ptr", 0, "Ptr", 0)  ;? e[m1] = 4 (Hex) || 1 (Base64)
 
 	p := DllCall("Kernel32\GlobalAlloc", "UInt", 0, "Ptr", s, "Ptr")
-    if (A_PtrSize == 8) {
-        DllCall("Kernel32\VirtualProtect", "Ptr", p, "Ptr", s, "UInt", 0x40, "UIntP", 0)
+	if (A_PtrSize == 8) {
+		DllCall("Kernel32\VirtualProtect", "Ptr", p, "Ptr", s, "UInt", 0x40, "UIntP", 0)
 	}
 
 	if (DllCall("Crypt32\CryptStringToBinaryW", "str", m3, "UInt", 0, "UInt", e[m1], "Ptr", p, "UIntP", s, "Ptr", 0, "Ptr", 0)) {
@@ -384,7 +388,7 @@ ClipCursor(confine := 0, x := "", y := "", width := "", height := "") {
 	}
 
 	if (!DllCall("user32\ClipCursor", "Ptr", rect.Pointer)) {
-		return (ErrorLevel := DllCall("kernel32\GetLastError"))
+		return (ErrorLevel := DllCall("Kernel32\GetLastError"))
 	}
 
 	return (ErrorLevel := 0)
@@ -392,12 +396,12 @@ ClipCursor(confine := 0, x := "", y := "", width := "", height := "") {
 
 ;* GetDoubleClickTime()
 GetDoubleClickTime() {
-    return (ErrorLevel := DllCall("user32\GetDoubleClickTime"))  ;: https://msdn.microsoft.com/en-us/library/ms646258.aspx
+	return (ErrorLevel := DllCall("user32\GetDoubleClickTime"))  ;: https://msdn.microsoft.com/en-us/library/ms646258.aspx
 }
 
 ;* GetCapture()
 GetCapture() {
-    return (ErrorLevel := DllCall("user32\GetCapture"))  ;: https://msdn.microsoft.com/en-us/library/ms646262.aspx
+	return (ErrorLevel := DllCall("user32\GetCapture"))  ;: https://msdn.microsoft.com/en-us/library/ms646262.aspx
 }
 
 ;* GetCapture([Point2] stop, (speed))
@@ -423,25 +427,25 @@ MouseWheel(delta := 120) {
 
 ;* ReleaseCapture()
 ReleaseCapture() {
-    if (!DllCall("user32\ReleaseCapture")) {  ;: https://msdn.microsoft.com/en-us/library/ms646261.aspx
-        return (ErrorLevel := DllCall("kernel32\GetLastError"))
+	if (!DllCall("user32\ReleaseCapture")) {  ;: https://msdn.microsoft.com/en-us/library/ms646261.aspx
+		return (ErrorLevel := DllCall("Kernel32\GetLastError"))
 	}
 
-    return (ErrorLevel := 0)
+	return (ErrorLevel := 0)
 }
 
 ;* SetDoubleClickTime((interval))
 SetDoubleClickTime(interval := 500) {
-    if (!DllCall("user32\SetDoubleClickTime", "UInt", interval)) {  ;: https://msdn.microsoft.com/en-us/library/ms646263.aspx
-        return (ErrorLevel := DllCall("kernel32\GetLastError"))
+	if (!DllCall("user32\SetDoubleClickTime", "UInt", interval)) {  ;: https://msdn.microsoft.com/en-us/library/ms646263.aspx
+		return (ErrorLevel := DllCall("Kernel32\GetLastError"))
 	}
 
-    return (ErrorLevel := 0)
+	return (ErrorLevel := 0)
 }
 
 ;* SwapMouseButton((mode))
 SwapMouseButton(mode := 0) {
-    DllCall("user32\SwapMouseButton", "UInt", mode)  ;: https://msdn.microsoft.com/en-us/library/ms646264.aspx
+	DllCall("user32\SwapMouseButton", "UInt", mode)  ;: https://msdn.microsoft.com/en-us/library/ms646264.aspx
 }
 
 ;======================================================== Type ================;
@@ -450,12 +454,11 @@ SwapMouseButton(mode := 0) {
 Type(variable) {
 	Static RegExMatchObject := NumGet(&(m, RegExMatch("", "O)", m))), BoundFuncObject := NumGet(&(f := Func("Func").Bind())), FileObject := NumGet(&(f := FileOpen("*", "w"))), EnumeratorObject := NumGet(&(e := ObjNewEnum({}))), hHeap := DllCall("GetProcessHeap", "Ptr")
 
-    if (IsObject(variable)) {
-        return ((ObjGetCapacity(variable) != "") ? (RegExReplace(variable.__Class, "S)(.*?\.|_*)(?!.*?\..*?)")) : ((IsFunc(variable)) ? ("FuncObject") : ((ComObjType(variable) != "") ? ("ComObject") : ((NumGet(&variable) == BoundFuncObject) ? ("BoundFuncObject ") : ((NumGet(&variable) == RegExMatchObject) ? ("RegExMatchObject") : ((NumGet(&variable) == FileObject) ? ("FileObject") : ((NumGet(&variable) == EnumeratorObject) ? ("EnumeratorObject") : ("Property"))))))))
+	if (IsObject(variable)) {
+		return ((ObjGetCapacity(variable) != "") ? (RegExReplace(variable.__Class, "S)(.*?\.|_*)(?!.*?\..*?)")) : ((IsFunc(variable)) ? ("FuncObject") : ((ComObjType(variable) != "") ? ("ComObject") : ((NumGet(&variable) == BoundFuncObject) ? ("BoundFuncObject ") : ((NumGet(&variable) == RegExMatchObject) ? ("RegExMatchObject") : ((NumGet(&variable) == FileObject) ? ("FileObject") : ((NumGet(&variable) == EnumeratorObject) ? ("EnumeratorObject") : ("Property"))))))))
 	}
-	else if (Math.IsNumeric(variable)) {
-		return ((variable == Round(variable)) ? ("Integer") : ("Float"))
-	}
+	else if variable is Number
+		return ("Number")
 	else {
 		return ((ObjGetCapacity([variable], 0) > 0) ? ("String") : (""))
 	}
@@ -558,7 +561,7 @@ GetActiveExplorerPath() {
 
 ;* ScriptCommand(scriptName, message)
 ScriptCommand(scriptName, message) {
-    Static commands := {"Open": 65300, "Help": 65301, "Spy": 65302, "Reload": 65303, "Edit": 65304, "Suspend": 65305, "Pause": 65306, "Exit": 65307}
+	Static commands := {"Open": 65300, "Help": 65301, "Spy": 65302, "Reload": 65303, "Edit": 65304, "Suspend": 65305, "Pause": 65306, "Exit": 65307}
 
 	PostMessage(0x111, commands[message], , scriptName . " - AutoHotkey", , 1)
 }
@@ -575,11 +578,31 @@ ShowStartMenu() {
 	DllCall("User32\PostMessage", "Ptr", WinExist(), "UInt", 0x112, "Ptr", 0xF130, "Ptr", 0)
 }
 
-;=======================================================  Other  ===============;
+;=====================================================  Microsoft  =============;
 
-InternetConnection() {
-	return (ErrorLevel := DllCall("Wininet\InternetGetConnectedState", "Str", "", "Int", 0))  ;: https://docs.microsoft.com/en-us/windows/win32/api/wininet/nf-wininet-internetgetconnectedstate
+GetCurrentProcessId() {
+	return DllCall("Kernel32\GetCurrentProcessId", "UInt")
 }
+
+GetCurrentThreadId() {
+	return (DllCall("Kernel32\GetCurrentThreadId", "UInt"))
+}
+
+;* FormatMessage(messageID)
+FormatMessage(messageID) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
+	if (!length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr", (buffer := new Structure(A_PtrSize)).Pointer, "UInt", 0, "UInt*", 0, "UInt")) {
+		return (FormatMessage(DllCall("Kernel32\GetLastError")))
+	}
+
+	return (StrGet(buffer.NumGet(0, "Ptr"), length - 2))  ;* Account for the newline and carriage return characters.
+}
+
+;* InternetGetConnectedState()
+InternetGetConnectedState() {  ;: https://docs.microsoft.com/en-us/windows/win32/api/wininet/nf-wininet-internetgetconnectedstate
+	return (ErrorLevel := DllCall("Wininet\InternetGetConnectedState", "Str", "", "Int", 0))
+}
+
+;=======================================================  Other  ===============;
 
 ;* Speak(message)
 ;* Note:
@@ -595,15 +618,15 @@ Speak(message) {
 Class Spotify {
 	Static Handle := 0
 
-    Pause() {
-		PostMessage(0x319, , 0xD0000, this.GetWindow(1), , 1)  ;? 0x319 = WM_APPCOMMAND
-    }
+	Pause() {
+		PostMessage(0x319, , 0xD0000, this.GetWindow(1), , "On")  ;? 0x319 = WM_APPCOMMAND
+	}
 
-    PlayPause() {
-		PostMessage(0x319, , 0xE0000, this.GetWindow(1), , 1)
-    }
+	PlayPause() {
+		PostMessage(0x319, , 0xE0000, this.GetWindow(1), , "On")
+	}
 
-    Play() {
+	Play() {
 		Local
 
 		detect := A_DetectHiddenWindows
@@ -615,24 +638,24 @@ Class Spotify {
 		PostMessage, 0x319, , 0xE0000, , % window
 
 		DetectHiddenWindows, % detect
-    }
+	}
 
-    Prev() {
-		PostMessage(0x319, , 0xC0000, this.GetWindow(1), , 1)
-    }
+	Prev() {
+		PostMessage(0x319, , 0xC0000, this.GetWindow(1), , "On")
+	}
 
-    Next() {
-		PostMessage(0x319, , 0xB0000, this.GetWindow(1), , 1)
-    }
+	Next() {
+		PostMessage(0x319, , 0xB0000, this.GetWindow(1), , "On")
+	}
 
-    GetWindow(prefix := true) {
+	GetWindow(prefix := true) {
 		Local
 
 		detect := A_DetectHiddenWindows
 		DetectHiddenWindows, On
 
 		if (WinExist("ahk_exe Spotify.exe")) {
-			if (this.Handle && WinGet("Class", "ahk_ID" . this.Handle) == "Chrome_WidgetWin_0" && WinGet("Title", "ahk_ID" . this.Handle) ~= "^(Spotify.*|.* - .*)$") {
+			if (this.Handle && DllCall("IsWindow", "Ptr", this.Handle, "UInt")) {
 				window := (prefix) ? ("ahk_ID" . this.Handle) : (this.Handle)
 			}
 			else {
@@ -649,8 +672,8 @@ Class Spotify {
 
 		DetectHiddenWindows, % detect  ;* Avoid leaving `DetectHiddenWindows` on for the calling thread.
 
-        return (window)
-    }
+		return (window)
+	}
 }
 
 Class Timer {
@@ -666,6 +689,10 @@ Class Timer {
 
 		pointer := &instance
 			, this.Instances[pointer] := instance, ObjRelease(pointer)  ;* Decrease this object's reference count to allow `__Delete()` to be called while still keeping a copy in `Timer.Instances`.
+
+		if (interval >= 0 && interval == Round(interval)) {
+			instance.Start(interval)
+		}
 
 		return (instance)
 	}
@@ -693,9 +720,9 @@ Class Timer {
 				SetTimer(this.Callback, "Delete")
 			}
 
-			if (Debug) {
-				MsgBox("__Timer.__Delete(): " Timer.Instances.Count)
-			}
+;			if (Debug) {
+;				MsgBox("__Timer.__Delete(): " Timer.Instances.Count)
+;			}
 
 			pointer := &this
 				, ObjAddRef(pointer), Timer.Instances.Delete(pointer)  ;* Increase this object's reference count before deleting the copy stored in `Timer.Instances` to avoid crashing the calling script.
