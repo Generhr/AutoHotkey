@@ -1,10 +1,22 @@
 ;============== Function ======================================================;  ;* ** Data Type Conversion: http://ahkscript.org/ursrc/Windows_Data_Types.html **
 
-;* CreateConsoleReadConsoleControl(length, initialChars, ctrlWakeupMask, controlKeyState)
+;* CreateSecurityDescriptor()
+;* Description:
+	;* The SECURITY_DESCRIPTOR structure contains the security information associated with an object. Applications use this structure to set and query an object's security status.
+CreateSecurityDescriptor() {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-security_descriptor
+	s := new Structure(8 + A_PtrSize*4 - 4*(A_PtrSize == 4), 1)
+
+    return (s)
+}  ;? SECURITY_DESCRIPTOR, *PISECURITY_DESCRIPTOR;
+
+;* CreateConsoleReadConsoleControl(initialChars, ctrlWakeupMask, controlKeyState)
 ;* Description:
 	;* Contains information for a console read operation.
+;* Parameters:
+	;* ctrlWakeupMask
+		;* *: https://www.asciitable.com/
 CreateConsoleReadConsoleControl(initialChars := 0, ctrlWakeupMask := 0x0A, controlKeyState := 0) {  ;: https://docs.microsoft.com/en-us/windows/console/console-readconsole-control
-	(s := new Structure(16)).NumPut(0, "UInt", 16, "UInt", initialChars, "UInt", ctrlWakeupMask, "UInt", controlKeyState)  ;? ctrlWakeupMask: https://www.asciitable.com/
+	(s := new Structure(16)).NumPut(0, "UInt", 16, "UInt", initialChars, "UInt", ctrlWakeupMask, "UInt", controlKeyState)
 
     return (s)
 }  ;? CONSOLE_READCONSOLE_CONTROL, *PCONSOLE_READCONSOLE_CONTROL;
