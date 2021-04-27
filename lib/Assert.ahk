@@ -1,3 +1,9 @@
+;==============  Include  ======================================================;
+
+#Include, <Console>
+
+;===============  Class  =======================================================;
+
 Class Assert {
 	Static Tests := 0, Failures := 0, Successes := 0
 		, Log := []
@@ -96,7 +102,7 @@ Class Assert {
 	}
 
 	Report() {
-		this.Console(this.BuildReport())
+		Console.Write(this.BuildReport())
 	}
 
 	WriteResultsToFile(path := "", clear := 1, run := 1) {
@@ -162,21 +168,5 @@ Class Assert {
 		}
 
 		return (string)
-	}
-
-	Console(output) {
-		try {
-			DllCall("AttachConsole", "Int", -1) || DllCall("AllocConsole")
-			FileAppend, % output . "`n", CONOUT$
-		}
-		catch {
-			return (0)
-		}
-
-		KeyWait, Esc, D
-
-		DllCall("FreeConsole")
-
-		return (1)
 	}
 }
