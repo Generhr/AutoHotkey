@@ -1,0 +1,6 @@
+[submodule "lib/Assert"]
+	path = lib/Assert
+	url = https://github.com/Onimuru/Assert.ahk
+[submodule "lib/Structure"]
+	path = lib/Structure
+	url = https://github.com/Onimuru/Structure.ahk
