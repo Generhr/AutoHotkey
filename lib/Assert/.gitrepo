@@ -7,6 +7,6 @@
 	remote = https://github.com/Onimuru/Assert.ahk
 	branch = master
 	commit = 7cd49f7faa420edfe648231436ecf5a4124b57e6
-	parent = b565be9d98a7a838a387700e1bfbaa70bb7ed846
+	parent = 747c71d3a25a93b86e7b48e7ce8f0a1a6f9024a6
 	method = merge
 	cmdver = 0.4.3
