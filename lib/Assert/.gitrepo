@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/Onimuru/Assert.ahk
+	branch = master
+	commit = 7cd49f7faa420edfe648231436ecf5a4124b57e6
+	parent = b565be9d98a7a838a387700e1bfbaa70bb7ed846
+	method = merge
+	cmdver = 0.4.3
