@@ -1,5 +1,6 @@
 ;==============  Include  ======================================================;
 
+#Include, %A_LineFile%\..\ObjectOriented.ahk
 #Include, %A_LineFile%\..\Structure\Structure.ahk
 
 ;============== Function ======================================================;
@@ -57,17 +58,21 @@ MouseGet(subCommand := "", relativeTo := "", flag := 0) {
 
 	if (subCommand != "") {
 		switch (subCommand) {
-			case "Control":
+			case "Control": {
 				MouseGetPos, , , , out, % flag
-			case "Pos":
+			}
+			case "Pos": {
 				MouseGetPos, x, y, , , % flag
 
 				out := {"x": x
 					, "y": y}
-			case "Window":
+			}
+			case "Window": {
 				MouseGetPos, , , out, , % flag
-			default:
+			}
+			Default: {
 				throw, (Exception("Invalid Parameter", -1, Format("""{}"" is invalid.", subCommand)))
+			}
 		}
 
 		return (out)
@@ -103,13 +108,16 @@ PostMessage(msg, wParam := 0, lParam := 0, winTitle := "", excludeTitle := "", d
 ;* Random((min), (max), (exclude*))
 Random(min := 0.0, max := 1.0, exclude*) {
 	Random, u, min, max
+
 	for i, v in exclude {
 		if (u == v) {
 			return (Random(min, max, exclude*))
 		}
 	}
+
 	return (u)
 }
+
 ;* RunActivate(winTitle, target, (options), (timeOut), (x), (y), (width), (height))
 ;* Parameter:
 	;* rect:
@@ -121,12 +129,15 @@ RunActivate(winTitle, target, options := "", timeOut := 5000, x := "", y := "", 
 		if (ErrorLevel) {
 			return (ErrorLevel)  ;* ErrorLevel is set to 1 if `WinWait` timed out.
 		}
-		if (!(x == "" || y == "" || width == "" || height == "")) {
+
+		if (x != "" || y != "" || width || height) {
 			WinMove, % winTitle, , x, y, width, height
 		}
 	}
+
 	WinActivate
 	WinWaitActive, A  ;* Set "Last Found" window.
+
 	return (WinExist())
 }
 
@@ -180,37 +191,46 @@ WinGet(subCommand := "", winTitle := "A", excludeTitle := "", detectHiddenWindow
 	if (winTitle == "A" || WinExist(winTitle, , excludeTitle)) {
 		if (subCommand != "") {
 			switch (subCommand) {
-				case "Class":
+				case "Class": {
 					WinGetClass, out, % winTitle, % winText, % excludeTitle, % excludeText
-				case "Extension":
+				}
+				case "Extension": {
 					WinGet, name, ProcessName, % winTitle, % winText, % excludeTitle, % excludeText
 
 					out := RegExReplace(name, "i).*\.([a-z]+).*", "$1")
-				case "List":
+				}
+				case "List": {
 					WinGet, handles, List, % winTitle, % winText, % excludeTitle, % excludeText
 					out := []
 
 					loop, % handles {
 						out.Push(handles%A_Index%)
 					}
-				case "Pos":
+				}
+				case "Pos": {
 					WinGetPos, x, y, width, height, % winTitle, % winText, % excludeTitle, % excludeText
 
 					out := {"x": x, "y": y, "Width": width, "Height": height}
-				case "Text":
+				}
+				case "Text": {
 					WinGetText, out, % winTitle, % winText, % excludeTitle, % excludeText
-				case "Title":
+				}
+				case "Title": {
 					WinGetTitle, out, % winTitle, % winText, % excludeTitle, % excludeText
-				case "Transparent":
+				}
+				case "Transparent": {
 					WinGet, alpha, Transparent, % winTitle, % winText, % excludeTitle, % excludeText
 
 					out := (alpha != "") ? (alpha) : (255)
-				case "Visible":
+				}
+				case "Visible": {
 					WinGet, hWnd, ID, % winTitle, % winText, % excludeTitle, % excludeText
 
 					out := DllCall("IsWindowVisible", "UInt", hWnd)  ;: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-iswindowvisible
-				default:
+				}
+				Default: {
 					WinGet, out, % subCommand, % winTitle, % winText, % excludeTitle, % excludeText  ;~ Native error handling.
+				}
 			}
 		}
 		else {
@@ -383,12 +403,13 @@ MCode(machineCode) {
 	;* rect:
 		;* *: An array containg x, y, width and height in that order.
 ClipCursor(confine := 0, x := "", y := "", width := "", height := "") {
-	Static rect := new Structure(16)
 	if (!confine) {
 		return (DllCall("User32\ClipCursor", "Ptr", 0, "UInt"))  ;: https://msdn.microsoft.com/en-us/library/ms648383.aspx
 	}
 
-	if (x == "" || y == "" || width == "" || height == "") {
+	Static rect := new Structure(16)
+
+	if (x == "" || y == "" || !width || !height) {
 		if (!DllCall("User32\GetWindowRect", "Ptr", WinExist(), "Ptr", rect.Pointer, "UInt")) {
 			throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", A_LastError, "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(A_LastError)))
 		}
@@ -432,7 +453,7 @@ MouseWheel(delta := 120) {
 
 	modifiers := 0x8*GetKeyState("Ctrl") | 0x1*GetKeyState("LButton") | 0x10*GetKeyState("MButton") | 0x2*GetKeyState("RButton") | 0x4*GetKeyState("Shift") | 0x20*GetKeyState("XButton1") | 0x40*GetKeyState("XButton2")
 
-	PostMessage, 0x20A, (delta << 16) | (modifiers, y << 16) | x , , A  ;: http://msdn.microsoft.com/en-us/library/windows/desktop/ms645617(v=vs.85).aspx
+	PostMessage, 0x20A, (delta << 16) | modifiers, y << 16 | x , , A  ;: http://msdn.microsoft.com/en-us/library/windows/desktop/ms645617(v=vs.85).aspx
 }
 
 ;* ReleaseCapture()
@@ -598,7 +619,7 @@ ShowStartMenu() {
 ;=====================================================  Microsoft  =============;
 
 GetCurrentProcessId() {
-	return DllCall("Kernel32\GetCurrentProcessId", "UInt")
+	return (DllCall("Kernel32\GetCurrentProcessId", "UInt"))
 }
 
 GetCurrentThreadId() {
@@ -736,10 +757,6 @@ Class Timer {
 			if (this.State != -1) {
 				SetTimer(this.Callback, "Delete")
 			}
-
-;			if (Debug) {
-;				MsgBox("__Timer.__Delete(): " Timer.Instances.Count)
-;			}
 
 			pointer := &this
 				, ObjAddRef(pointer), Timer.Instances.Delete(pointer)  ;* Increase this object's reference count before deleting the copy stored in `Timer.Instances` to avoid crashing the calling script.

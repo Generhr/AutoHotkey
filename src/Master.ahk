@@ -187,18 +187,18 @@ AppsKey & LButton::
 	KeyWait("LButton")
 	return
 
-~$LButton::
-	while (GetKeyState("LButton", "P")) {
-		if (k := ((GetKeyState("Up", "P")) ? ("Up") : ((GetKeyState("Left", "P")) ? ("Left") : ((GetKeyState("Down", "P")) ? ("Down") : ((GetKeyState("Right", "P")) ? ("Right") : (0)))))) {
-			MouseMove, % Round({"Left": -1, "Right": 1}[k]), % Round({"Up": -1, "Down": 1}[k]), 0, R
-
-			KeyWait(k)
-		}
-
-		Sleep, -1
-	}
-
-	return
+;~$LButton::
+;	while (GetKeyState("LButton", "P")) {
+;		if (k := ((GetKeyState("Up", "P")) ? ("Up") : ((GetKeyState("Left", "P")) ? ("Left") : ((GetKeyState("Down", "P")) ? ("Down") : ((GetKeyState("Right", "P")) ? ("Right") : (0)))))) {
+;			MouseMove, % Round({"Left": -1, "Right": 1}[k]), % Round({"Up": -1, "Down": 1}[k]), 0, R
+;
+;			KeyWait(k)
+;		}
+;
+;		Sleep, -1
+;	}
+;
+;	return
 
 ;====================================================== Keyboard ==============;
 
@@ -233,7 +233,7 @@ AppsKey & LButton::
 						append := " v2"  ;~ append
 					}
 
-					RunActivate("AutoHotkey" . append . " Help ahk_exe hh.exe", A_WorkingDir . "\AutoHotkey" . append . ".chm", , , -7, 730, 894, 357)  ;* Force the position here to avoid flickering with Window.ahk.
+					RunActivate("AutoHotkey" . append . " Help ahk_exe hh.exe", A_ProgramFiles . "\AutoHotkey\AutoHotkey" . append . ".chm", , , -7, 730, 894, 357)  ;* Force the position here to avoid flickering with Window.ahk.
 
 					Send, !n
 					Sleep, 200
@@ -346,7 +346,7 @@ AppsKey & LButton::
 			extension := RegExReplace(A_LoopFileName, "i).*(\.\w+).*", "$1")  ;~ extension
 
 			loop, % 10 + 5*(extension ~= "gif|mov|mp4|webm" != 0) {
-				extension := Math.Random.Uniform(0, 9) . extension
+				extension := Random(0, 9) . extension
 			}
 
 			if (Debug) {
@@ -623,7 +623,7 @@ $!CapsLock::
 $CapsLock::
 	if (KeyWait("CapsLock", "T0.25")) {
 		if (String.Clipboard.Copy(1)) {
-			Menu, Case, Show  ; ** Need a different script to handle hiding this menu, the thread is locked up. **
+			Menu, Case, Show  ;* ** Need a different script to handle hiding this menu, the thread is locked up. **
 		}
 
 		KeyWait("CapsLock")
@@ -649,7 +649,7 @@ AppsKey & Enter::
 	return
 
 $!q::
-	Send, #.
+	MsgBox(OCR())  ;! Send, #.
 	Return
 
 AppsKey & q::
@@ -828,11 +828,12 @@ AppsKey & Right::
 
 ;==============  Include  ======================================================;
 
-#Include, %A_ScriptDir%\..\lib\Color.ahk
-#Include, %A_ScriptDir%\..\lib\General.ahk
-#Include, %A_ScriptDir%\..\lib\Math.ahk
 #Include, %A_ScriptDir%\..\lib\ObjectOriented.ahk
+
+#Include, %A_ScriptDir%\..\lib\General.ahk
+#Include, %A_ScriptDir%\..\lib\Console.ahk
 #Include, %A_ScriptDir%\..\lib\String.ahk
+#Include, %A_ScriptDir%\..\lib\OCR.ahk
 
 ;===============  Label  =======================================================;
 
@@ -884,9 +885,11 @@ Menu(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := "Tray") {
 	switch (thisMenu) {
 		case "Case": {
 			s := String.Clipboard.Copy()
+
 			switch (RegExReplace(thisMenuItem, "iS).*?([a-z])", "$1")) {
 				case "Sentencecase": {
 					s := RegExReplace(Format("{:L}", s), "S)((?:^|[.!?]\s*)[a-z])", "$U1")
+
 					for i, v in ["I", "Dr", "Mr", "Ms", "Mrs"] {
 						s := RegExReplace(s, "i)\b" . v . "\b", v)
 					}
@@ -901,6 +904,7 @@ Menu(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := "Tray") {
 					s := Format("{:" . SubStr(thisMenuItem, 6, 1) . "}", s)
 				}
 			}
+
 			String.Clipboard.Paste(s)
 		}
 		case "Tray": {
@@ -913,16 +917,20 @@ Menu(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := "Tray") {
 				}
 				case "WindowSpy": {
 					w := "ahk_id" . WinGet("ID")
-					RunActivate("Window Spy ahk_class AutoHotkeyGUI", A_ScriptDir . "\WindowSpy.ahk", , , 50, 35)
+
+					RunActivate("Window Spy ahk_class AutoHotkeyGUI", A_ProgramFiles . "\AutoHotkey\WindowSpy.ahk", , , 50, 35)
+
 					if (WinExist(w)) {
 						WinActivate, % w
 					}
+
 					else {  ;* Launched with script menu.
 						Send, !{Esc}  ;* Restore focus away from the taskbar.
 					}
 				}
 				case "ListLines": {
 					ListLines
+
 					Sleep, 100
 					Send, ^{End}
 				}
@@ -934,6 +942,7 @@ Menu(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := "Tray") {
 				}
 				case "KeyHistory": {
 					KeyHistory
+
 					Sleep, 100
 					Send, ^{End}
 				}
@@ -942,16 +951,21 @@ Menu(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := "Tray") {
 					if (!A_IsSuspended) {
 						Menu, Tray, Icon, % (A_IsPaused) ? ("mstscax.dll") : ("wmploc.dll"), % (A_IsPaused) ? (10) : (136), 1
 					}
+
 					Pause, -1, 1
 					Run, % Format("{}\bin\Nircmd.exe speak text ""{}.""", A_WorkingDir, (A_IsPaused) ? ("Paused") : ("Unpaused"))
 				}
 				case "Suspend": {
 					w := "ahk_id" . WinGet("ID")
+
 					Menu, Tray, ToggleCheck, [&9] Suspend
-					if (!A_IsPaused)
+					if (!A_IsPaused) {
 						Menu, Tray, Icon, % (A_IsSuspended) ? ("mstscax.dll") : ("wmploc.dll"), % (A_IsSuspended) ? (10) : (136), 1
+					}
+
 					Suspend, -1
 					Run, %  Format("{}\bin\Nircmd.exe speak text ""{}.""", A_WorkingDir, A_IsSuspended ? "You're suspended young lady!" : "Carry on...")
+
 					if (WinExist(w)) {
 						WinActivate, % w
 					}
@@ -961,9 +975,11 @@ Menu(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := "Tray") {
 				}
 				case "RestoreAll": {
 					w := "ahk_id" . WinGet("ID")
+
 					loop, % s := HiddenWindows.Length {
 						Menu(HiddenWindows[--s])
 					}
+
 					WinActivate, % w
 				}
 				case "Exit": {
@@ -971,13 +987,18 @@ Menu(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := "Tray") {
 				}
 				Default: {
 					w := "ahk_id" . RegExReplace(thisMenuItem, ".*?\((0x.*?)\)", "$1")
+
 					WinShow, % w
 					WinActivate, % w
+
 					DetectHiddenWindows, Off
+
 					if (!WinExist(w)) {
 						MsgBox(Format("There was an error unhiding this window ({}). Please contact your system administrator.", thisMenuItem))
 					}
+
 					DetectHiddenWindows, % DetectHiddenWindows
+
 					Menu, Tray, Delete, % thisMenuItem
 					HiddenWindows.RemoveAt(HiddenWindows.IndexOf(thisMenuItem))
 				}

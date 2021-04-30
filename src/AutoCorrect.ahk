@@ -1,84 +1,131 @@
-;=====         Auto-execute         =========================;
+;============ Auto-execute ====================================================;
+;======================================================  Setting  ==============;
 
-;===============           Setting            ===============;
-
+#KeyHistory, 0
 #NoEnv
 #NoTrayIcon
-#SingleInstance Force
+#SingleInstance, Force
+#Warn, ClassOverwrite, MsgBox
 
+ListLines, Off
 Process, Priority, , Normal
 SendMode, Input
 SetKeyDelay, -1, -1
+SetTitleMatchMode, 2
+SetWorkingDir, % A_ScriptDir . "\.."
 
-;===============           Variable           ===============;
+;====================================================== Variable ==============;
 
-IniRead, vEmail, % A_WorkingDir . "\cfg\Settings.ini", Email, Email
+IniRead, Debug, % A_WorkingDir . "\cfg\Settings.ini", Debug, Debug
+Global Debug
+	, WindowMessage := DllCall("RegisterWindowMessage", "Str", "WindowMessage", "UInt")
 
-Exit
+;======================================================== Hook ================;
 
-;=====           Function           =========================;
+OnMessage(WindowMessage, "WindowMessage")
 
-;* Description:
-;*		Restores the clipboard to what it was after 0.85 seconds of inactivity.
-Restore(_Clipboard) {
-	Static vFuncObj := Func("Restore")
+;=======================================================  Other  ===============;
 
-	If (A_TimeIdle > 850)  ;? [A_TimeIdle || A_TimeIdleKeyboard].
-		Return, (Clipboard := _Clipboard)
+exit
 
-	SetTimer(vFuncObj.Bind(_Clipboard), -25)
-}
+;=============== Hotkey =======================================================;
 
-SetTimer(_Label, _Period := "", _Priority := 0) {
-	SetTimer, % _Label, % _Period, % _Priority
-}
+#If (WinActive(A_ScriptName))
 
-;=====            Hotkey            =========================;
+	$F10::
+		ListVars
+		return
 
-~$^s::
-	Critical
-	SetTitleMatchMode, 2
+	~$^s::
+		Critical, On
 
-	If (WinActive(A_ScriptName)) {
 		Sleep, 200
 		Reload
-	}
+
+		return
+
+#If
+
+;=============  Hotstring  =====================================================;
+;====================================================== Personal ==============;
+
+:*x:\@::
+	IniRead, email, % A_WorkingDir . "\cfg\Settings.ini", Email, Email
+	Send, % email
+
 	Return
 
-;=====          Hotstring          =========================;
-
-;===============           Personal           ===============;
-
-:*x:oni@::Send, % vEmail
-
-;===============             Code             ===============;
+;======================================================== Code ================;
 
 #If (WinActive("ahk_exe Code.exe"))
 
-	:*x:\\i::Send, % "If () {{}{}}{Left}{Enter}{Up}Condition^{Left}^+{Right}"
-	:*x:\\s::Send, % "Switch () {{}{}}{Left}{Enter}Case ""_____"":{Up}{Left 3}Condition^{Left}^+{Right}"
-	:*x:\\t::Send, % "(Condition ? ----- : -----)^{Left 5}^+{Right}"
+	:*x:\\i::
+		Send, % "if () {{}{}}{Left}{Enter}{Up}Condition^{Left}^+{Right}"
+		return
+
+	:*x:\\s::
+		Send, % "switch () {{}{}}{Left}{Enter}case ""_____"":{Up}{Left 3}condition^{Left}^+{Right}"
+		return
+
+	:*x:\\t::
+		Send, % "(condition ? ----- : -----)^{Left 5}^+{Right}"
+		return
+
 	:*x:\\o::
 	:*x:\\a::
 		c := Clipboard
 
-		Switch (A_ThisHotkey) {
-			Case ":*x:\\o":
+		switch (A_ThisHotkey) {
+			case ":*x:\\o": {
 				Send, % "{{}""key"": ""value""" . (Clipboard := ", ""key"": ""value""") . "{}}{Left}"
-			Case ":*x:\\a":
+			}
+			case ":*x:\\a": {
 				Send, % "{[}""value""" . (Clipboard := ", ""value""") . "{]}{Left}"
+			}
 		}
 
 		SetTimer(Func("Restore").Bind(c), -200)
-		Return
+		return
 
-	:*x:\point::Send, % "{{}""x"": _____, ""y"": _____{}}^{Left 7}^+{Right}"
-	:*x:\rect::Send, % "{{}""x"": _____, ""y"": _____, ""Width"": _____, ""Height"": _____{}}^{Left 17}^+{Right}"
+	:*x:\cc::
+		SendRaw, % "Clipboard := "
+		return
 
-	:*x:\cc::SendRaw, % "Clipboard := "
-	:*x:\mm::SendRaw, % "MsgBox("
-	:*x:\rr::Send, % "Return"
-	:*x:\tt::SendRaw, % "ToolTip("
+	:*x:\ff::
+		SendRaw, % "Format("""
+		return
+
+	:*x:\mm::
+		SendRaw, % "MsgBox("
+		return
+
+	:*x:\rr::
+		Send, % "return"
+		return
+
+	:*x:\tt::
+		SendRaw, % "ToolTip("
+		return
+
+	:*x:\vec2::
+		Send, % "{{}""x"": _____, ""y"": _____{}}^{Left 5}^+{Right}"
+		return
+
+	:*x:\vec3::
+		Send, % "{{}""x"": _____, ""y"": _____{}, ""z"": _____{}}^{Left 9}^+{Right}"
+		return
+
+	:*x:\rect::
+		Send, % "{{}""x"": _____, ""y"": _____, ""Width"": _____, ""Height"": _____{}}^{Left 13}^+{Right}"
+		return
+
+#If
+
+#If (WinActive("Discord ahk_class Chrome_WidgetWin_1 ahk_exe Discord.exe"))
+
+	:*x:``````::Send, % "``````ahk`n`n``````{Up}"
+
+#If
 
 #If (WinActive("Command Prompt ahk_exe cmd.exe"))
 
@@ -87,22 +134,17 @@ SetTimer(_Label, _Period := "", _Priority := 0) {
 
 #If
 
-;===============            Angle             ===============;  ;? https://altcodeunicode.com/.
+;=======================================================  Angle  ===============;  ;: https://altcodeunicode.com/
 
-:?*:\degree::{U+00B0}
+:?*:\deg::{U+00B0}
 
-;===============           Currency           ===============;
-
-:*:\cent::{U+00A2}
-:*:\pound::{U+00A3}
-
-;===============           Fraction           ===============;
+;====================================================== Fraction ==============;
 
 :*:\1/4::{U+00BC}
 :*:\1/2::{U+00BD}
 :*:\3/4::{U+00BE}
 
-;===============            Greek             ===============;
+;=======================================================  Greek  ===============;
 
 :*:\alpha::{U+03B1}
 :*:\beta::{U+03B2}
@@ -130,12 +172,12 @@ SetTimer(_Label, _Period := "", _Priority := 0) {
 :*:\psi::{U+03C8}
 :*:\omega::{U+03C9}
 
-;===============           Inverted           ===============;
+;====================================================== Inverted ==============;
 
 :*:\!::{U+00A1}
 :*:\?::{U+00BF}
 
-;===============         Superscript          ===============;
+;====================================================  Superscript  ============;
 
 :*:\^1::{U+00B9}
 :*:\^2::{U+00B2}
@@ -154,11 +196,9 @@ SetTimer(_Label, _Period := "", _Priority := 0) {
 :*:\^)::{U+207E}
 :*:\^n::{U+207F}
 
-;===============           English            ===============;  *? https://gist.github.com/endolith/876629.
+;=====================================================   *ign Fix  =============;  ;: https://gist.github.com/endolith/876629
 
-;=========================           *ign Fix           =====;
-
-#Hotstring B0
+#Hotstring, B0
 
 ::align::
 ::antiforeign::
@@ -198,11 +238,11 @@ SetTimer(_Label, _Period := "", _Priority := 0) {
 ::unbenign::
 ::verisign::Return  ;* This makes the above hotstrings do nothing so that they override the ign->ing rule below.
 
-#Hotstring RB
+#Hotstring, RB
 
 :?:ign::ing
 
-;=========================         Word Endings         =====;
+;==================================================== Word Endings ============;
 
 :?:bilites::bilities
 :?:bilties::bilities
@@ -220,7 +260,7 @@ SetTimer(_Label, _Period := "", _Priority := 0) {
 :?:t eh::the
 :?:t hem::them
 
-;=========================       Word Beginnings        =====;
+;==================================================  Word Beginnings  ==========;
 
 :*:abondon::abandon
 :*:abreviat::abbreviat
@@ -306,339 +346,339 @@ SetTimer(_Label, _Period := "", _Priority := 0) {
 :*:superceed::supersede
 :*:weild::wield
 
-;=========================         Word Middles         =====;
+;=================================================== Accented Words ===========;
+
+;::a gogo::à gogo
+;::ago-go::àgo-go
+;::aesop::Æsop
+;::a bas::à bas
+;::a la::à la
+;::abbe::abbé
+;::ancien regime::Ancien Régime
+;::angstrom::Ångström
+;::angstroms::Ångströms
+;::anime::animé
+;::animes::animés
+;::anu::añu
+;::ao dai::ào dái
+;::apertif::apértif
+;::apertifs::apértifs
+;::applique::appliqué
+;::appliques::appliqués
+;::apres::après
+;::arete::arête
+;::attache::attaché
+;::attaches::attachés
+;::auto-da-fe::auto-da-fé
+;::belle epoque::belle époque
+;::bete noire::bête noire
+;::betise::bêtise
+;::Bjorn::Bjørn
+;::blase::blasé
+;::boite::boîte
+;::Bon::Bön
+;::Bootes::Boötes
+;::boutonniere::boutonnière
+;::bric-a-brac::bric-à-brac
+;::cafe::café
+;::canape::canapé
+;::canapes::canapés
+;::canon::cañon
+;::celebre::célèbre
+;::celebres::célèbres
+;::chaines::chaînés
+;::cinema verite::cinéma vérité
+;::cinemas verite::cinémas vérité
+;::cinema verites::cinéma vérités
+;::champs-elysees::Champs-Élysées
+;::charge d'affaires::chargé d'affaires
+;::chateau::château
+;::chateaux::châteaux
+;::chateaus::châteaus
+;::cliche::cliché
+;::cliched::clichéd
+;::cliches::clichés
+;::cloisonne::cloisonné
+;::communique::communiqué
+;::communiques::communiqués
+;::consomme::consommé
+;::consommes::consommés
+;::continuum::continuüm
+;::confrere::confrère
+;::confreres::confrères
+;:*:cooperat::coöperat
+;::coopt::coöpt
+;::coordinat::coördinat
+;::cortege::cortège
+;::corteges::cortèges
+;::coup d'etat::coup d'état
+;::coup d'etats::coup d'états
+;::coup de tat::coup d'état
+;::coup de tats::coup d'états
+;::coup de grace::coup de grâce
+;::creche::crèche
+;::creches::crèches
+;::creme::crème
+;::coulee::coulée
+;::coulees::coulées
+;::creme brulee::crème brûlée
+;::creme brulees::crème brûlées
+;::creme caramel::crème caramel
+;::creme caramels::crème caramels
+;::creme de cacao::crème de cacao
+;::creme de menthe::crème de menthe
+;::crepe::crêpe
+;::crepes::crêpes
+;::creusa::Creüsa
+;::crouton::croûton
+;::croutons::croûtons
+;::crudites::crudités
+;::curacao::curaçao
+;::dais::daïs
+;::daises::daïses
+;::debacle::débâcle
+;::debacles::débâcles
+;::debutante::débutante
+;::debutants::débutants
+;::declasse::déclassé
+;::decolletage::décolletage
+;::decollete::décolleté
+;::decor::décor
+;::decors::décors
+;::decoupage::découpage
+;::degage::dégagé
+;::deja vu::déjà vu
+;::demode::démodé
+;::denoument::dénoument
+;::derailleur::dérailleur
+;::derriere::derrière
+;::deshabille::déshabillé
+;::detente::détente
+;::diamante::diamanté
+;::discotheque::discothèque
+;::discotheques::discothèques
+;::divorce::divorcé
+;::divorcee::divorcée
+;::divorcees::divorcées
+;::Dona::Doña
+;::doppelganger::doppelgänger
+;::doppelgangers::doppelgängers
+;::eclair::éclair
+;::eclairs::éclairs
+;::eclat::éclat
+;::el nino::El Niño
+;::elan::élan
+;::elite::élite
+;::emigre::émigré
+;::emigres::émigrés
+;::entree::entrée
+;::entrees::entrées
+;::entrepot::entrepôt
+;::entrecote::entrecôte
+;::epee::épée
+;::epees::épées
+;::etouffee::étouffée
+;::etude::étude
+;::expose::exposé
+;::facade::façade
+;::facades::façades
+;::fete::fête
+;::fetes::fêtes
+;::faience::faïence
+;::fiance::fiancé
+;::fiances::fiancés
+;::fiancee::fiancée
+;::fiancees::fiancées
+;::filmjolk::filmjölk
+;::fin de siecle::fin de siècle
+;::flambe::flambé
+;::flambes::flambés
+;::fleche::flèche
+;::Fohn wind::Föhn wind
+;::folie a deux::folie à deux
+;::folies a deux::folies à deux
+;::fouette::fouetté
+;::frappe::frappé
+;::frappes::frappés
+;:?*:fraulein::fräulein
+;:?*:fuhrer::Führer
+;::garcon::garçon
+;::garcons::garçons
+;::gateau::gâteau
+;::gateaus::gâteaus
+;::gateaux::gâteaux
+;::gemutlichkeit::gemütlichkeit
+;::glace::glacé
+;::glogg::glögg
+;::gewurztraminer::Gewürztraminer
+;::gotterdammerung::Götterdämmerung
+;::grafenberg spot::Gräfenberg spot
+;::habitue::habitué
+;::ingenue::ingénue
+;::jager::jäger
+;::jalapeno::jalapeño
+;::jalapenos::jalapeños
+;::jardiniere::jardinière
+;::krouzek::kroužek
+;::kummel::kümmel
+;::kaldolmar::kåldolmar
+;::lame::lamé
+;::landler::ländler
+;::langue d'oil::langue d'oïl
+;::la nina::La Niña
+;::litterateur::littérateur
+;::lycee::lycée
+;::macedoine::macédoine
+;::macrame::macramé
+;::maitre d'hotel::maître d'hôtel
+;::malaguena::malagueña
+;::manana::mañana
+;::manege::manège
+;::manque::manqué
+;::materiel::matériel
+;::matinee::matinée
+;::matinees::matinées
+;::melange::mélange
+;::melee::mêlée
+;::melees::mêlées
+;::menage a trois::ménage à trois
+;::menages a trois::ménages à trois
+;::mesalliance::mésalliance
+;::metier::métier
+;::Metis::Métis
+;::minaudiere::minaudière
+;::mobius strip::Möbius strip
+;::mobius strips::Möbius strips
+;::moire::moiré
+;::moireing::moiréing
+;::moires::moirés
+;::motley crue::Mötley Crüe
+;::motorhead::Motörhead
+;::naif::naïf
+;::naifs::naïfs
+;::naive::naïve
+;::naiver::naïver
+;::naives::naïves
+;::naivete::naïveté
+;::nee::née
+;::negligee::negligée
+;::negligees::negligées
+;::neufchatel cheese::Neufchâtel cheese
+;::ne::né
+;::nez perce::Nez Percé
+;::noël::Noël
+;::noëls::Noëls
+;::número uno::número uno
+;::objet trouve::objet trouvé
+;::objets trouve::objets trouvé
+;::ole::olé
+;::ombre::ombré
+;::ombres::ombrés
+;::omerta::omertà
+;::opera bouffe::opéra bouffe
+;::operas bouffe::opéras bouffe
+;::opera comique::opéra comique
+;::operas comique::opéras comique
+;::opium::opïum
+;::ore::öre
+;::ore::øre
+;::outre::outré
+;::papier-mache::papier-mâché
+;::passe::passé
+;::piece de resistance::pièce de résistance
+;::pied-a-terre::pied-à-terre
+;::plisse::plissé
+;::pina colada::Piña Colada
+;::pina coladas::Piña Coladas
+;::pinata::piñata
+;::pinatas::piñatas
+;::pinon::piñon
+;::pinons::piñons
+;::pirana::piraña
+;::pique::piqué
+;::piqued::piquéd
+;::più::più
+;::plie::plié
+;::precis::précis
+;::polsa::pölsa
+;::preempt::preëmpt
+;::premiere::première
+;::premiered::premièred
+;::premieres::premières
+;::premiering::premièring
+;::pret-a-porter::prêt-à-porter
+;::protoge::protégé
+;::protege::protégé
+;::proteged::protégéd
+;::proteges::protégés
+;::protegee::protégée
+;::protegees::protégées
+;::protegeed::protégéed
+;::puree::purée
+;::pureed::puréed
+;::purees::purées
+;::Quebecois::Québécois
+;::raison d'etre::raison d'être
+;::recherche::recherché
+;::reclame::réclame
+;::reenter::reënter
+;::residuum::residuüm
+;::resume::résumé
+;::résume::résumé
+;::resumé::résumé
+;::résumes::résumés
+;::resumés::résumés
+;::retrousse::retroussé
+;::risque::risqué
+;::riviere::rivière
+;::role::rôle
+;::roman a clef::roman à clef
+;::rose::rosé
+;::roue::roué
+;::saute::sauté
+;::sauted::sautéd
+;::seance::séance
+;::seances::séances
+;::senor::señor
+;::senors::señors
+;::senora::señora
+;::senoras::señoras
+;::senorita::señorita
+;::senoritas::señoritas
+;::sinn fein::Sinn Féin
+;::smorgasbord::smörgåsbord
+;::smorgasbords::smörgåsbords
+;::smorgastarta::smörgåstårta
+;::soigne::soigné
+;::soiree::soirée
+;::soireed::soiréed
+;::soirees::soirées
+;::souffle::soufflé
+;::souffles::soufflés
+;::soupcon::soupçon
+;::soupcons::soupçons
+;::surstromming::surströmming
+;::tete-a-tete::tête-à-tête
+;::tete-a-tetes::tête-à-têtes
+;::touche::touché
+;::tourtiere::tourtière
+;::uber::über
+;::ubermensch::Übermensch
+;::ubermensches::Übermensches
+;::ventre a terre::ventre à terre
+;::vicuna::vicuña
+;::vin rose::vin rosé
+;::vins rose::vins rosé
+;::vis a vis::vis à vis
+;::vis-a-vis::vis-à-vis
+;::voila::voilà
+
+;==================================================== Word Middles ============;
 
 :?*:compatab::compatib  ;* Covers incompat* and compat*.
 :?*:catagor::categor  ;* Covers subcatagories and catagories.
 
-;=========================        Accented Words        =====;
-
-::a gogo::à gogo
-::ago-go::àgo-go
-::aesop::Æsop
-::a bas::à bas
-::a la::à la
-::abbe::abbé
-::ancien regime::Ancien Régime
-::angstrom::Ångström
-::angstroms::Ångströms
-::anime::animé
-::animes::animés
-::anu::añu
-::ao dai::ào dái
-::apertif::apértif
-::apertifs::apértifs
-::applique::appliqué
-::appliques::appliqués
-::apres::après
-::arete::arête
-::attache::attaché
-::attaches::attachés
-::auto-da-fe::auto-da-fé
-::belle epoque::belle époque
-::bete noire::bête noire
-::betise::bêtise
-::Bjorn::Bjørn
-::blase::blasé
-::boite::boîte
-::Bon::Bön
-::Bootes::Boötes
-::boutonniere::boutonnière
-::bric-a-brac::bric-à-brac
-::cafe::café
-::canape::canapé
-::canapes::canapés
-;::canon::cañon
-::celebre::célèbre
-::celebres::célèbres
-::chaines::chaînés
-::cinema verite::cinéma vérité
-::cinemas verite::cinémas vérité
-::cinema verites::cinéma vérités
-::champs-elysees::Champs-Élysées
-::charge d'affaires::chargé d'affaires
-::chateau::château
-::chateaux::châteaux
-::chateaus::châteaus
-::cliche::cliché
-::cliched::clichéd
-::cliches::clichés
-::cloisonne::cloisonné
-::communique::communiqué
-::communiques::communiqués
-::consomme::consommé
-::consommes::consommés
-::continuum::continuüm
-::confrere::confrère
-::confreres::confrères
-;:*:cooperat::coöperat
-::coopt::coöpt
-::coordinat::coördinat
-::cortege::cortège
-::corteges::cortèges
-::coup d'etat::coup d'état
-::coup d'etats::coup d'états
-::coup de tat::coup d'état
-::coup de tats::coup d'états
-::coup de grace::coup de grâce
-::creche::crèche
-::creches::crèches
-::creme::crème
-::coulee::coulée
-::coulees::coulées
-::creme brulee::crème brûlée
-::creme brulees::crème brûlées
-::creme caramel::crème caramel
-::creme caramels::crème caramels
-::creme de cacao::crème de cacao
-::creme de menthe::crème de menthe
-::crepe::crêpe
-::crepes::crêpes
-::creusa::Creüsa
-::crouton::croûton
-::croutons::croûtons
-::crudites::crudités
-::curacao::curaçao
-::dais::daïs
-::daises::daïses
-::debacle::débâcle
-::debacles::débâcles
-::debutante::débutante
-::debutants::débutants
-::declasse::déclassé
-::decolletage::décolletage
-::decollete::décolleté
-::decor::décor
-::decors::décors
-::decoupage::découpage
-::degage::dégagé
-::deja vu::déjà vu
-::demode::démodé
-::denoument::dénoument
-::derailleur::dérailleur
-::derriere::derrière
-::deshabille::déshabillé
-::detente::détente
-::diamante::diamanté
-::discotheque::discothèque
-::discotheques::discothèques
-;::divorce::divorcé
-::divorcee::divorcée
-::divorcees::divorcées
-::Dona::Doña
-::doppelganger::doppelgänger
-::doppelgangers::doppelgängers
-::eclair::éclair
-::eclairs::éclairs
-::eclat::éclat
-::el nino::El Niño
-::elan::élan
-;::elite::élite
-::emigre::émigré
-::emigres::émigrés
-::entree::entrée
-::entrees::entrées
-::entrepot::entrepôt
-::entrecote::entrecôte
-::epee::épée
-::epees::épées
-::etouffee::étouffée
-::etude::étude
-;::expose::exposé
-::facade::façade
-::facades::façades
-::fete::fête
-::fetes::fêtes
-::faience::faïence
-::fiance::fiancé
-::fiances::fiancés
-::fiancee::fiancée
-::fiancees::fiancées
-::filmjolk::filmjölk
-::fin de siecle::fin de siècle
-::flambe::flambé
-::flambes::flambés
-::fleche::flèche
-::Fohn wind::Föhn wind
-::folie a deux::folie à deux
-::folies a deux::folies à deux
-::fouette::fouetté
-::frappe::frappé
-::frappes::frappés
-:?*:fraulein::fräulein
-:?*:fuhrer::Führer
-::garcon::garçon
-::garcons::garçons
-::gateau::gâteau
-::gateaus::gâteaus
-::gateaux::gâteaux
-::gemutlichkeit::gemütlichkeit
-::glace::glacé
-::glogg::glögg
-::gewurztraminer::Gewürztraminer
-::gotterdammerung::Götterdämmerung
-::grafenberg spot::Gräfenberg spot
-::habitue::habitué
-::ingenue::ingénue
-::jager::jäger
-::jalapeno::jalapeño
-::jalapenos::jalapeños
-::jardiniere::jardinière
-::krouzek::kroužek
-::kummel::kümmel
-::kaldolmar::kåldolmar
-;::lame::lamé
-::landler::ländler
-::langue d'oil::langue d'oïl
-::la nina::La Niña
-::litterateur::littérateur
-::lycee::lycée
-::macedoine::macédoine
-::macrame::macramé
-::maitre d'hotel::maître d'hôtel
-::malaguena::malagueña
-::manana::mañana
-::manege::manège
-::manque::manqué
-::materiel::matériel
-::matinee::matinée
-::matinees::matinées
-::melange::mélange
-::melee::mêlée
-::melees::mêlées
-::menage a trois::ménage à trois
-::menages a trois::ménages à trois
-::mesalliance::mésalliance
-::metier::métier
-::Metis::Métis
-::minaudiere::minaudière
-::mobius strip::Möbius strip
-::mobius strips::Möbius strips
-::moire::moiré
-::moireing::moiréing
-::moires::moirés
-::motley crue::Mötley Crüe
-::motorhead::Motörhead
-::naif::naïf
-::naifs::naïfs
-::naive::naïve
-::naiver::naïver
-::naives::naïves
-::naivete::naïveté
-::nee::née
-::negligee::negligée
-::negligees::negligées
-::neufchatel cheese::Neufchâtel cheese
-::ne::né
-::nez perce::Nez Percé
-::noël::Noël
-::noëls::Noëls
-::número uno::número uno
-::objet trouve::objet trouvé
-::objets trouve::objets trouvé
-::ole::olé
-::ombre::ombré
-::ombres::ombrés
-::omerta::omertà
-::opera bouffe::opéra bouffe
-::operas bouffe::opéras bouffe
-::opera comique::opéra comique
-::operas comique::opéras comique
-::opium::opïum
-;::ore::öre
-;::ore::øre
-::outre::outré
-::papier-mache::papier-mâché
-::passe::passé
-::piece de resistance::pièce de résistance
-::pied-a-terre::pied-à-terre
-::plisse::plissé
-::pina colada::Piña Colada
-::pina coladas::Piña Coladas
-::pinata::piñata
-::pinatas::piñatas
-::pinon::piñon
-::pinons::piñons
-::pirana::piraña
-::pique::piqué
-::piqued::piquéd
-::più::più
-::plie::plié
-::precis::précis
-::polsa::pölsa
-::preempt::preëmpt
-::premiere::première
-::premiered::premièred
-::premieres::premières
-::premiering::premièring
-::pret-a-porter::prêt-à-porter
-::protoge::protégé
-::protege::protégé
-::proteged::protégéd
-::proteges::protégés
-::protegee::protégée
-::protegees::protégées
-::protegeed::protégéed
-::puree::purée
-::pureed::puréed
-::purees::purées
-::Quebecois::Québécois
-::raison d'etre::raison d'être
-::recherche::recherché
-::reclame::réclame
-;::reenter::reënter
-::residuum::residuüm
-;::resume::résumé
-::résume::résumé
-::resumé::résumé
-::résumes::résumés
-::resumés::résumés
-::retrousse::retroussé
-::risque::risqué
-::riviere::rivière
-;::role::rôle
-::roman a clef::roman à clef
-;::rose::rosé
-::roue::roué
-::saute::sauté
-::sauted::sautéd
-::seance::séance
-::seances::séances
-::senor::señor
-::senors::señors
-::senora::señora
-::senoras::señoras
-::senorita::señorita
-::senoritas::señoritas
-::sinn fein::Sinn Féin
-::smorgasbord::smörgåsbord
-::smorgasbords::smörgåsbords
-::smorgastarta::smörgåstårta
-::soigne::soigné
-::soiree::soirée
-::soireed::soiréed
-::soirees::soirées
-::souffle::soufflé
-::souffles::soufflés
-::soupcon::soupçon
-::soupcons::soupçons
-::surstromming::surströmming
-::tete-a-tete::tête-à-tête
-::tete-a-tetes::tête-à-têtes
-::touche::touché
-::tourtiere::tourtière
-::uber::über
-::ubermensch::Übermensch
-::ubermensches::Übermensches
-::ventre a terre::ventre à terre
-::vicuna::vicuña
-::vin rose::vin rosé
-::vins rose::vins rosé
-::vis a vis::vis à vis
-::vis-a-vis::vis-à-vis
-::voila::voilà
-
-;=========================     Commonly Misspelled      =====;
+;================================================  Commonly Misspelled  ========;
 
 ::htp:::http:
 ::http:\\::http://
@@ -2642,7 +2682,7 @@ SetTimer(_Label, _Period := "", _Priority := 0) {
 :C:ill::I'll
 :C:ive::I've
 ::iconclastic::iconoclastic
-;:C:id::I'd
+::Id::I'd
 ::idae::idea
 ::idaeidae::idea
 ::idaes::ideas
@@ -5053,7 +5093,7 @@ SetTimer(_Label, _Period := "", _Priority := 0) {
 ::sionist::Zionist
 ::sionists::Zionists
 
-;=========================             Date             =====;
+;======================================================== Date ================;
 
 ::monday::Monday
 ::tuesday::Tuesday
@@ -5076,7 +5116,7 @@ SetTimer(_Label, _Period := "", _Priority := 0) {
 ::november::November
 ::december::December
 
-;=========================       Ambiguous entries      =====;
+;=================================================  Ambiguous Entries  =========;
 
 /*
 :*:cooperat::coöperat
@@ -5125,8 +5165,8 @@ SetTimer(_Label, _Period := "", _Priority := 0) {
 ::cafe::café
 ::calaber::caliber, calibre
 ::calander::calendar, calender, colander
-::cancelled::canceled  ;* commonwealth vs US.
-::cancelling::canceling  ;* commonwealth vs US.
+::cancelled::canceled  ;* Commonwealth vs US.
+::cancelling::canceling  ;* Commonwealth vs US.
 ::canon::cañon
 ::cant::cannot, can not, can't
 ::carcas::carcass, Caracas
@@ -5208,8 +5248,8 @@ SetTimer(_Label, _Period := "", _Priority := 0) {
 ::imaginery::imaginary, imagery
 ::imanent::eminent, imminent
 ::iminent::eminent, imminent, immanent
-::indispensable::indispensible  ;* commonwealth vs US?
-::indispensible::indispensable  ;* commonwealth vs US?
+::indispensable::indispensible  ;* Commonwealth vs US?
+::indispensible::indispensable  ;* Commonwealth vs US?
 ::inheritage::heritage, inheritance
 ::inspite::in spite, inspire
 ::interbread::interbreed, interbred
@@ -5318,7 +5358,7 @@ SetTimer(_Label, _Period := "", _Priority := 0) {
 ::tiome::time, tome
 ::tourch::torch, touch
 ::transcripting::transcribing, transcription
-::travelling::traveling   ;* commonwealth vs US.
+::travelling::traveling   ;* Commonwealth vs US.
 ::troups::troupes, troops
 ::turnk::turnkey, trunk
 ::uber::über
@@ -5336,5 +5376,49 @@ SetTimer(_Label, _Period := "", _Priority := 0) {
 ::ws::was, www.example.ws
 ::Yementite::Yemenite, Yemeni
 :?:oology::oölogy
-:?:t he:: the  ;* Can't use this. Needs to be cleverer.
+:?:t he:: the
 */
+
+;============== Function ======================================================;
+;======================================================== Hook ================;
+
+WindowMessage(wParam := 0, lParam := 0) {
+	switch (wParam) {
+		case 0x1000: {
+			IniRead, Debug, % A_WorkingDir . "\cfg\Settings.ini", Debug, Debug
+
+			if (!Debug) {
+				ToolTip, , , , 20
+			}
+
+			return (0)
+		}
+	}
+
+	return (-1)
+}
+
+;=======================================================  Other  ===============;
+
+;* Description:
+;*	Restores the clipboard to what it was after 0.85 seconds of inactivity.
+Restore(restore) {
+	Static funcObj := Func("Restore")
+
+	if (A_TimeIdle > 850)  ;? [A_TimeIdle || A_TimeIdleKeyboard].
+		return (Clipboard := restore)
+
+	SetTimer(funcObj.Bind(restore), -25)
+}
+
+;* SetTimer(label, (period), (priority))
+SetTimer(label, period := "", priority := 0) {
+	try {
+		SetTimer, % label, % period, % priority
+	}
+	catch {
+		return (0)
+	}
+
+	return (1)
+}
