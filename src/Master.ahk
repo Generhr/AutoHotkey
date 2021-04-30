@@ -634,8 +634,9 @@ AppsKey & Enter::
 	String.Clipboard.Paste("`r`n")
 	return
 
-;$!q::
-;	return
+$!q::
+	Send, #.
+	Return
 
 AppsKey & q::
 	if (coordinates == "Delete") {
@@ -808,13 +809,11 @@ AppsKey & Right::
 
 ;==============  Include  ======================================================;
 
-#Include, <Color>
-#Include, <GDIp>
-#Include, <General>
-#Include, <Geometry>
-#Include, <Math>
-#Include, <ObjectOriented>
-#Include, <String>
+#Include, %A_ScriptDir%\..\lib\Color.ahk
+#Include, %A_ScriptDir%\..\lib\General.ahk
+#Include, %A_ScriptDir%\..\lib\Math.ahk
+#Include, %A_ScriptDir%\..\lib\ObjectOriented.ahk
+#Include, %A_ScriptDir%\..\lib\String.ahk
 
 ;===============  Label  =======================================================;
 

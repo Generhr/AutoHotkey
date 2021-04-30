@@ -196,7 +196,7 @@ Assert.IsEqual(array.Print(), "[1, """", 3, 4, 5, 6]")
 
 Assert.Report()
 
-ExitApp
+exit
 
 ;=============== Hotkey =======================================================;
 
@@ -218,10 +218,10 @@ ExitApp
 
 ;==============  Include  ======================================================;
 
-#Include, <Assert>
-#Include, <General>
-#Include, <Math>
-#Include, <ObjectOriented>
+#Include, %A_ScriptDir%\..\lib\Assert\Assert.ahk
+#Include, %A_ScriptDir%\..\lib\General.ahk
+#Include, %A_ScriptDir%\..\lib\Math.ahk
+#Include, %A_ScriptDir%\..\lib\ObjectOriented.ahk
 
 ;============== Function ======================================================;
 

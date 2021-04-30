@@ -1,1160 +1,826 @@
-﻿;=====         Auto-execute         =========================;
-
-Global Math := new Math
-
-;=====            Class             =========================;
+﻿;===============  Class  =======================================================;
 
 Class Math {
 
-	;-----         Constructor          -------------------------;
+	;-------------- Property ------------------------------------------------------;  ;* ** Constants: https://numerics.mathdotnet.com/Constants.html **
 
-	Static __Precision := 15, ThrowException := 1
+	Precision[] {
+		Get {
+			return (A_FormatFloat)
+		}
 
-	__Init() {
-		SetFormat, FloatFast, % "0." . this.__Precision
-	}
+		Set {
+			SetFormat, FloatFast, % value
 
-	;-----           Property           -------------------------;
-
-	__Get(vKey, vValues*) {
-		Switch (vKey) {
-			Case "Precision":
-				Return, (this.__Precision)
-
-			;* Description:
-				;* Euler"s exponential constant.
-			Case "E":
-				Return, (2.718281828459045235360287471352662497757247093699959574966968)
-
-			;* Description:
-				;* The smallest signficant differentiation between two floating point values. Useful as a tolerance when testing if two single precision real numbers approximate each other.
-			;* Note:
-				;* The smallest 32-bit integer greater than zero is `1/(2^32 - 1)`.
-			Case "Epsilon":
-				Return, (1.0e-15)
-
-			;* Description:
-				;* The angle subtended by the smaller arc when two arcs that make up a circle are in the golden ratio.
-			Case "GoldenAngle":
-				Return, (2.399963229728653322231555506633613853124999011058115042935112)  ;? ≈ ((4 - 2*Phi)*Pi)
-
-			;* Description:
-				;* The golden ratio (φ).
-			Case "GoldenRatio":
-				Return, (1.618033988749894848204586834365638117720309179805762862135449)  ;? ≈ ((1 + Sqrt(5))/2)
-
-			;* Math.Log2[vNumber]
-			;* Description:
-				;* The natural logarithm of 2.
-			Case "Log2":
-				Return, (0.693147180559945309417232121458176568075500134360255254120680)
-
-			;* Description:
-				;* The base-2 logarithm of E.
-			Case "Log2E":
-				Return, (1.442695040888963407359924681001892137426645954152985934135450)
-
-			;* Description:
-				;* The natural logarithm of 10.
-			Case "Log10":
-				Return, (2.302585092994045684017991454684364207601101488628772976033328)
-
-			;* Description:
-				;* The base-10 logarithm of E.
-			Case "Log10E":
-				Return, (0.434294481903251827651128918916605082294397005803666566114454)
-
-			;* Description:
-				;* (π).
-			Case "Pi":
-				Return, (3.141592653589793238462643383279502884197169399375105820974945)
-
-			;* Description:
-				;* The ratio of a circle's circumference to its diameter (τ).
-			Case "Tau":
-				Return, (6.283185307179586476925286766559005768394338798750211641949889)
+			return (value)
 		}
 	}
 
-	__Set(vKey, vValue) {
-		Switch (vKey) {
-			Case "Precision":
-				ObjRawSet(Math, "__Precision", vValue)
+	E[] {
 
-				SetFormat, FloatFast, % "0." . vValue
+		;* Description:
+			;* Euler's exponential constant.
+		Get {
+			return (2.718281828459045)  ;? ≈ Exp(1)
 		}
-		Return
 	}
 
-	;-----            Method            -------------------------;
-	;---------------          Comparison          ---------------;
+	Epsilon[] {
 
-	;* Math.IsBetween(Number, LowerLimit, UpperLimit, ExcludedNumber, ...)
+		;* Description:
+			;* The smallest signficant differentiation between two floating point values. Useful as a tolerance when testing if two single precision real numbers approximate each other.
+		;* Note:
+			;* The smallest 32-bit integer greater than zero is `1/(2**32 - 1)`.
+		Get {
+			epsilon := 1.0
+
+			while (epsilon + 1 > 1) {
+				epsilon /= 2
+			}
+
+			epsilon *= 2
+			ObjRawSet(this, "Epsilon", epsilon)
+
+			return (epsilon)
+		}
+	}
+
+	Log2[number := ""] {
+
+		;* Description:
+			;* Calculate the base-2 logarithm of a number.
+		Get {
+			if (number == "") {
+				return (0.693147180559945)
+			}
+
+			if (number > 0) {
+				return (Ln(number)/0.693147180559945)
+			}
+
+			throw, (Exception("NaN.", -1, Format("Math.Log2({}) is out of bounds.", number)))
+		}
+	}
+
+	Log2E[] {
+
+		;* Description:
+			;* The base-2 logarithm of E.
+		Get {
+			return (1.442695040888963)
+		}
+	}
+
+	Log10[number := ""] {
+
+		;* Description:
+			;* Calculate the base-10 logarithm of a number.
+		Get {
+			if (number == "") {
+				return (2.302585092994046)
+			}
+
+			if (number > 0) {
+				return (Log(number))
+			}
+
+			throw, (Exception("NaN.", -1, Format("Math.Log10({}) is out of bounds.", number)))
+		}
+	}
+
+	Log10E[] {
+
+		;* Description:
+			;* The base-10 logarithm of E.
+		Get {
+			return (0.434294481903252)
+		}
+	}
+
+	Pi[] {
+		Get {
+			return (3.141592653589793)  ;? ≈ ACos(-1)
+		}
+	}
+
+	Tau[] {
+
+		;* Description:
+			;* The ratio of a circle's circumference to its diameter (τ).
+		Get {
+			return (6.283185307179587)
+		}
+	}
+
+	;--------------- Method -------------------------------------------------------;
+	;----------------------------------------------------- Comparison -------------;
+
+	;* Math.IsBetween(number, lower, upper, (exclude*))
 	;* Description:
 		;* Determine whether a number is within bounds (inclusive) and is not an excluded number.
-	IsBetween(vNumber, vLower, vUpper, vExclude*) {
-		For i, v in [vExclude*] {
-			If (v == vNumber) {
-				Return, (0)
+	IsBetween(number, lower, upper, exclude*) {
+		for i, v in exclude {
+			if (v == number) {
+				return (0)
 			}
 		}
 
-		Return, ((!(vLower == "" || vUpper == "")) ? (vNumber >= vLower && vNumber <= vUpper) : ((vLower == "") ? (vNumber <= vUpper) : (vNumber <= vLower)))
+		return ((number - lower)*(number - upper) <= 0)
 	}
 
-	;* Math.IsEven(Number)
-	IsEven(vNumber) {
-		Return, (Mod(vNumber, 2) == 0)
+	;* Math.IsEven(number)
+	IsEven(number) {
+		return (Mod(number, 2) == 0)
 	}
 
-	;* Math.IsInteger(Number)
-	IsInteger(vNumber) {
-		Return, (this.IsNumeric(vNumber) && vNumber == Round(vNumber))
+	IsHexadecimal(number) {
+		if number is xdigit
+			return (1)
+		return (0)
 	}
 
-	;* Math.IsNumeric(Number)
-	IsNumeric(vNumber) {
-		If vNumber is Number
-			Return, (1)
-		Return, (0)
+	;* Math.IsInteger(number)
+	IsInteger(number) {
+		return (number == Round(number))
 	}
 
-	;* Math.IsPrime(Number)
-	IsPrime(vNumber) {
-		If (vNumber < 2 || vNumber != Round(vNumber)) {
-			Return, (0)
+	;* Math.IsNegativeInteger(number)
+	IsNegativeInteger(number) {
+		return (number < 0 && this.IsInteger(number))
+	}
+
+	;* Math.IsPositiveInteger(number)
+	IsPositiveInteger(number) {
+		return (number >= 0 && this.IsInteger(number))
+	}
+
+	;* Math.IsNumber(number)
+	IsNumber(number) {
+		if number is Number
+			return (1)
+		return (0)
+	}
+
+	;* Math.IsPrime(number)
+	IsPrime(number) {
+		if (number < 2 || !this.IsInteger(number)) {
+			return (0)
 		}
 
-		Loop, % Floor(this.Sqrt(vNumber)) {
-			If (A_Index > 1 && Mod(vNumber, A_Index) == 0) {
-				Return, (0)
+		loop, % Floor(this.Sqrt(number)) {
+			if (Mod(number, A_Index) == 0 && A_Index > 1) {
+				return (0)
 			}
 		}
 
-		Return, (1)
+		return (1)
 	}
 
-	;* Math.IsSquare(Number)
-	IsSquare(vNumber) {
-		Return, (this.IsInteger(this.Sqrt(vNumber)))
+	;* Math.IsSquare(number)
+	IsSquare(number) {
+		return (this.IsInteger(this.Sqrt(number)))
 	}
 
-	;---------------          Conversion          ---------------;
-	;-------------------------            Angle             -----;
+	;----------------------------------------------------- Conversion -------------;
+	;----------------------------------------  Angle  ------------------------------;
 
-	;* Math.ToDegrees(Radians)
-	ToDegrees(vTheta) {
-		Return, (vTheta*57.295779513082320876798154814105170332405472466564321549160244)
+	;* Math.ToDegrees(radians)
+	ToDegrees(radians) {
+		return (radians*57.295779513082321)
 	}
 
-	;* Math.ToRadians(Degrees)
-	ToRadians(vTheta) {
-		Return, (vTheta*0.017453292519943295769236907684886127134428718885417254560972)
+	;* Math.ToRadians(degrees)
+	ToRadians(degrees) {
+		return (degrees*0.017453292519943)
 	}
 
-	;-------------------------             Base             -----;
+	;----------------------------------------- Base -------------------------------;
 
-	;* Math.ToBase(Number, CurrentBase, TargetBase)
-	ToBase(vNumber, vCurrentBase := 10, vTargetBase := 16) {
-		Static __IsUnicode := A_IsUnicode ? ["_wcstoui64", "_i64tow"] : ["_strtoui64", "_i64toa"], __Result := VarSetCapacity(__Result, 66, 0)
-
-		If (vNumber < 0) {
-			s := "-", vNumber := Math.Abs(vNumber)
+	ToBase(number, currentBase := 10, targetBase := 16) {
+		if (number < 0) {
+			s := "-", number := Abs(number)
 		}
 
-		DllCall("msvcrt.dll\" . __IsUnicode[1], "Int64", DllCall("msvcrt.dll\" . __IsUnicode[0], "Str", vNumber, "UInt", 0, "UInt", vCurrentBase, "Int64"), "Str", __Result, "UInt", vTargetBase)
+		result := DllCall("msvcrt\_i64tow", "Int64", DllCall("msvcrt\_wcstoui64", "Str", number, "UInt", 0, "UInt", currentBase, "Int64"), "Ptr*", 0, "UInt", targetBase, "Str")
 
-		If (vTargetBase > 10) {
-			__Result := "0x" . __Result.ToUpperCase()
+		if (targetBase > 10) {
+			result := Format("0x{:U}", result)
 		}
 
-		Return, (s . __Result)
+		return (s . result)
 	}
 
-	;* Math.ToFloat(Number || [Number, ...])
-	ToFloat(vNumber) {
-		If (Type(vVariable) == "Array") {
-			r := vNumber.Clone()
+	;* Math.ToDecimal(hexadecimal)
+	ToDecimal(hexadecimal) {
+		return (DllCall("msvcrt\_wcstoui64", "Str", hexadecimal, "UInt", 0, "UInt", 16, "Int64"))
+	}
 
-			For i, v in r {
-				If (!this.IsNumeric(v)) {
-					r[i] *= 1.0
-				}
-				Else If (Type(v) == "Array") {
-					r[i] := this.ToNumber(v)
-				}
-			}
-
-			Return, (r)
+	;* Math.ToHexadecimal(decimal)
+	ToHexadecimal(decimal) {
+		if (decimal < 0) {
+			s := "-", decimal := Abs(decimal)
 		}
 
-		Return, (vNumber*1.0)
+		return (Format("{}0x{:U}", s, DllCall("msvcrt\_i64tow", "Int64", decimal, "Ptr*", 0, "UInt", 16, "Str")))
 	}
 
-	;* Math.ToNumber(Number || [Number, ...])
-	ToNumber(vVariable) {
-		If (Type(vVariable) == "Array") {
-			r := vNumber.Clone()
+	;---------------------------------------  General  -----------------------------;
 
-			For i, v in r {
-				If (!this.IsNumeric(v)) {
-					r[i] := Round(v)
-				}
-				Else If (Type(v) == "Array") {
-					r[i] := this.ToNumber(v)
-				}
-			}
-
-			Return, (r)
-		}
-
-		Return, (!Math.IsNumeric(v) ? Round(vVariable) : vVariable)
+	;* Math.Map(value, start1, stop1, start2, stop2)
+	;* Description:
+		;* Re-maps a number from one range to another.
+	Map(value, start1, stop1, start2, stop2) {
+		return (start2 + (stop2 - start2)*((value - start1)/(stop1 - start1)))
 	}
 
-	;---------------          Elementary          ---------------;
-	;-------------------------         Exponential          -----;
+	;----------------------------------------------------- Elementary -------------;
+	;-------------------------------------  Exponential  ---------------------------;
 
-	;* Math.Exp(Number || [Number, ...])
+	;* Math.Exp(number)
 	;* Description:
 		;* Calculate the exponent of a number.
-	Exp(vNumber) {
-		If (Type(vNumber) == "Array") {
-			r := vNumber.Clone()
-
-			For i, v in r {
-				If (this.IsNumeric(v)) {
-					r[i] := Exp(v)
-				}
-				Else If (Type(v) == "Array") {
-					r[i] := this.Exp(v)
-				}
-			}
-
-			Return, (r)
-		}
-
-		Return, (Exp(vNumber))
+	Exp(number) {
+		return (Exp(number))
 	}
 
-	;* Math.Log(vNumber) || Math.Log(Base, Number)
+	;* Math.Log(number) || Math.Log(base, number)
 	;* Description:
 		;* Calculate the logarithm of a number.
 	;* Note:
 		;* In AutoHotkey `Ln()` is the natural logarithm and `Log()` is the decadic logarithm.
-	Log(vParameters*) {
-		vNumber := vParameters[1 + (vParameters.Length() > 1)], vBase := vParameters[(vParameters.Length() > 1)]
-
-		If (Type(vNumber) == "Array") {
-			r := vNumber.Clone()
-
-			If (vBase == "") {
-				For i, v in r {
-					If (this.IsNumeric(v)) {
-						If (v > 0) {
-							r[i] := Ln(vNumber)
-						}
-						Else If (this.ThrowException) {
-							Throw, (Exception("NaN.", -1, Format("Math.Log({}) is out of bounds.", vNumber.Print())))
-						}
-					}
-					Else If (Type(v) == "Array") {
-						r[i] := this.Log(v)
-					}
-				}
-			}
-			Else {
-				For i, v in r {
-					If (this.IsNumeric(v)) {
-						If (v > 0) {
-							r[i] := Ln(vNumber)/Ln(vBase)
-						}
-						Else If (this.ThrowException) {
-							Throw, (Exception("NaN.", -1, Format("Math.Log({}) is out of bounds.", vNumber.Print())))
-						}
-					}
-					Else If (Type(v) == "Array") {
-						r[i] := this.Log(v)
-					}
-				}
-			}
-
-			Return, (r)
+	Log(base, number := "") {
+		if (number == "") {
+			Swap(number, base)
 		}
 
-		If (vNumber > 0) {
-			Return, ((vBase != "") ? (Ln(vNumber)/Ln(vBase)) : (Ln(vNumber)))
+		if (number > 0) {
+			return ((base == "") ? (Ln(number)) : (Ln(number)/Ln(base)))
 		}
 
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.Log({}) is out of bounds.", [vParameters*].Join(", "))))
-		}
+		throw, (Exception("NaN.", -1, Format("Math.Log({}) is out of bounds.", [parameters*].Join(", "))))
 	}
 
+	;----------------------------------------- Root -------------------------------;
 
-
-	;* Math.Log2(Number)
-	;* Description:
-		;* Calculate the base-2 logarithm of a number.
-	Log2(vNumber) {
-		If (Type(vNumber) == "Array") {
-			r := vNumber.Clone()
-
-			For i, v in r {
-				If (this.IsNumeric(v)) {
-					If (v > 0) {
-						r[i] := Ln(vNumber)/0.693147180559945309417232121458176568075500134360255254120680
-					}
-					Else If (this.ThrowException) {
-						Throw, (Exception("NaN.", -1, Format("Math.Log2({}) is out of bounds.", vNumber.Print())))
-					}
-				}
-				Else If (Type(v) == "Array") {
-					r[i] := this.Log(v)
-				}
-			}
-
-			Return, (r)
-		}
-
-		If (vNumber > 0) {
-			Return, (Ln(vNumber)/0.693147180559945309417232121458176568075500134360255254120680)
-		}
-
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.Log2({}) is out of bounds.", vNumber)))
-		}
-	}
-
-	;* Math.Log10(Number)
-	;* Description:
-		;* Calculate the base-10 logarithm of a number.
-	Log10(vNumber) {
-		If (Type(vNumber) == "Array") {
-			r := vNumber.Clone()
-
-			For i, v in r {
-				If (this.IsNumeric(v)) {
-					If (v > 0) {
-						r[i] := Log(vNumber)
-					}
-					Else If (this.ThrowException) {
-						Throw, (Exception("NaN.", -1, Format("Math.Log10({}) is out of bounds.", vNumber.Print())))
-					}
-				}
-				Else If (Type(v) == "Array") {
-					r[i] := this.Log(v)
-				}
-			}
-
-			Return, (r)
-		}
-
-		If (vNumber > 0) {
-			Return, (Log(vNumber))
-		}
-
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.Log10({}) is out of bounds.", vNumber)))
-		}
-	}
-
-	;-------------------------             Root             -----;
-
-	;* Math.CubeRoot(Number || [Number, ...])
+	;* Math.CubeRoot(number)
 	;* Description:
 		;* Calculate the cubic root of a number.
-	Cbrt(vNumber) {
-		If (Type(vNumber) == "Array") {
-			r := vNumber.Clone()
-
-			For i, v in r {
-				If (this.IsNumeric(v)) {
-					r[i] := (v < 0) ? (-(-v)**(1/3)) : (v**(1/3))
-				}
-				Else If (Type(v) == "Array") {
-					r[i] := this.Cbrt(v)
-				}
-			}
-
-			Return, (r)
-		}
-
-		Return, ((vNumber < 0) ? (-(-vNumber)**(1/3)) : (vNumber**(1/3)))
+	Cbrt(number) {
+		return ((number < 0) ? (-(-number)**(1/3)) : (number**(1/3)))
 	}
 
-	;* Math.Sqrt(Number || [Number, ...])
+	;* Math.Sqrt(number)
 	;* Description:
 		;* Calculate the square root of a number.
-	Sqrt(vNumber) {
-		If (Type(vNumber) == "Array") {
-			r := vNumber.Clone()
-
-			For i, v in r {
-				If (this.IsNumeric(v)) {
-					If (v >= 0) {
-						r[i] := Sqrt(v)
-					}
-					Else If (this.ThrowException) {
-						Throw, (Exception("NaN.", -1, Format("Math.Sqrt({}) is out of bounds.", vNumber.Print())))
-					}
-				}
-				Else If (Type(v) == "Array") {
-					r[i] := this.Sqrt(v)
-				}
-			}
-
-			Return, (r)
+	Sqrt(number) {
+		if (number >= 0) {
+			return (Sqrt(number))
 		}
 
-		If (vNumber >= 0) {
-			Return, (Sqrt(vNumber))
-		}
-
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.Sqrt({}) is out of bounds.", vNumber)))
-		}
+		throw, (Exception("NaN.", -1, Format("Math.Sqrt({}) is out of bounds.", number)))
 	}
 
-	;* Math.Surd(Number || [Number, ...], N)
+	;* Math.Surd(number, n)
 	;* Description:
-		;* Calculate the nᵗʰ root of a number.
-	Surd(vNumber, vN) {
-		If (Type(vNumber) == "Array") {
-			r := vNumber.Clone(), c := this.IsEven(vN)
-
-			For i, v in r {
-				If (this.IsNumeric(v)) {
-					If (!c || v >= 0) {
-						r[i] := this.Abs(v)**(1/vN)*((v > 0) - (v < 0))
-					}
-					Else If (this.ThrowException) {
-						Throw, (Exception("NaN.", -1, Format("Math.Surd({}, {}) is out of bounds.", vNumber, vN)))
-					}
-				}
-				Else If (Type(v) == "Array") {
-					r[i] := this.Surd(v)
-				}
-			}
-
-			Return, (r)
+		;* Calculate the `n`ᵗʰ root of a number.
+	Surd(number, n) {
+		if (!this.IsEven(n) || number >= 0) {
+			return (this.Abs(number)**(1/n)*((number > 0) - (number < 0)))
 		}
 
-		If (!this.IsEven(vN) || vNumber >= 0) {
-			Return, (this.Abs(vNumber)**(1/vN)*((vNumber > 0) - (vNumber < 0)))
-		}
-
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.Surd({}, {}) is out of bounds.", vNumber, vN)))
-		}
+		throw, (Exception("NaN.", -1, Format("Math.Surd({}, {}) is out of bounds.", number, n)))
 	}
 
-	;-------------------------        Trigonometric         -----;
+	;------------------------------------  Trigonometric  --------------------------;
 
-	Sin(vTheta) {
-		Return, (DllCall("msvcrt\sin", "Double", vTheta, "Double"))
+	;* Description:
+		;* `opposite/hypotenuse`.
+	Sin(radians) {
+		return (DllCall("msvcrt\sin", "Double", radians, "Double"))
 	}
 
-	ASin(vTheta) {
-		If (vTheta > -1 && vTheta < 1) {
-			Return, (DllCall("msvcrt\asin", "Double", vTheta, "Double"))  ;* -1 < θ < 1
+	ASin(radians) {
+		if (radians <= -1 || radians >= 1) {
+			throw, (Exception("NaN.", -1, Format("Math.ASin({}) is out of bounds.", radians)))
 		}
 
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.ASin({}) is out of bounds.", vTheta)))
-		}
+		return (DllCall("msvcrt\asin", "Double", radians, "Double"))  ;* [-1, 1]
 	}
 
-	Cos(vTheta) {
-		Return, (DllCall("msvcrt\cos", "Double", vTheta, "Double"))
+	;* Description:
+		;* `adjacent/hypotenuse`.
+	Cos(radians) {
+		return (DllCall("msvcrt\cos", "Double", radians, "Double"))
 	}
 
-	ACos(vTheta) {
-		If (vTheta > -1 && vTheta < 1) {
-			Return, (DllCall("msvcrt\acos", "Double", vTheta, "Double"))  ;* -1 < θ < 1
+	ACos(radians) {
+		if (radians <= -1 || radians >= 1) {
+			throw, (Exception("NaN.", -1, Format("Math.ACos({}) is out of bounds.", radians)))
 		}
 
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.ACos({}) is out of bounds.", vTheta)))
-		}
+		return (DllCall("msvcrt\acos", "Double", radians, "Double"))  ;* [-1, 1]
 	}
 
-	Tan(vTheta) {
-		Return, (DllCall("msvcrt\tan", "Double", vTheta, "Double"))
+	;* Description:
+		;* `opposite/adjacent`.
+	Tan(radians) {
+		return (DllCall("msvcrt\tan", "Double", radians, "Double"))
 	}
 
-	ATan(vTheta) {
-		Return, (DllCall("msvcrt\atan", "Double", vTheta, "Double"))
+	ATan(radians) {
+		return (DllCall("msvcrt\atan", "Double", radians, "Double"))
 	}
 
-	ATan2(oPoint) {
-		Return, (DllCall("msvcrt\atan2", "Double", oPoint.y, "Double", oPoint.x, "Double"))
+	;* Math.ATan(x, y)
+	ATan2(x, y) {
+		return (DllCall("msvcrt\atan2", "Double", y, "Double", x, "Double"))
 	}
 
-	Csc(vTheta) {
-		If (vTheta != 0) {
-			Return, (1/DllCall("msvcrt\sin", "Double", vTheta, "Double"))  ;* θ != 0
-		}
-
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.Csc({}) is out of bounds.", vTheta)))
-		}
+	;* Description:
+		;* `hypotenuse/opposite`.
+	Csc(radians) {
+		return (1/DllCall("msvcrt\sin", "Double", radians, "Double"))
 	}
 
-	ACsc(vTheta) {
-		If (vTheta != 0) {
-			Return, (DllCall("msvcrt\asin", "Double", 1/vTheta, "Double"))  ;* θ != 0
+	ACsc(radians) {
+		if (!(radians < -1 && radians > 1)) {
+			throw, (Exception("NaN.", -1, Format("Math.ACsc({}) is out of bounds.", radians)))
 		}
 
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.ACsc({}) is out of bounds.", vTheta)))
-		}
+		return (DllCall("msvcrt\asin", "Double", 1/radians, "Double"))   ;* (-inf, -1] ∪ [1, inf)
 	}
 
-	Sec(vTheta) {
-		Return, (1/DllCall("msvcrt\cos", "Double", vTheta, "Double"))
+	;* Description:
+		;* `hypotenuse/adjacent`.
+	Sec(radians) {
+		return (1/DllCall("msvcrt\cos", "Double", radians, "Double"))
 	}
 
-	ASec(vTheta) {
-		If (vTheta != 0) {
-			Return, (DllCall("msvcrt\acos", "Double", 1/vTheta, "Double"))  ;* θ != 0
+	ASec(radians) {
+		if (!(radians < -1 && radians > 1)) {
+			throw, (Exception("NaN.", -1, Format("Math.ASec({}) is out of bounds.", radians)))
 		}
 
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.ASec({}) is out of bounds.", vTheta)))
-		}
+		return (DllCall("msvcrt\acos", "Double", 1/radians, "Double"))   ;* (-inf, -1] ∪ [1, inf)
 	}
 
-	Cot(vTheta) {
-		If (vTheta != 0) {
-			Return, (1/DllCall("msvcrt\tan", "Double", vTheta, "Double"))  ;* θ != 0
-		}
-
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.Cot({}) is out of bounds.", vTheta)))
-		}
+	;* Description:
+		;* `adjacent/opposite`.
+	Cot(radians) {
+		return (1/DllCall("msvcrt\tan", "Double", radians, "Double"))
 	}
 
-	ACot(vTheta) {
-		If (vTheta != 0) {
-			Return, (DllCall("msvcrt\atan", "Double", 1/vTheta, "Double"))  ;* θ != 0
-		}
-
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.ACot({}) is out of bounds.", vTheta)))
-		}
+	ACot(radians) {
+		return (DllCall("msvcrt\atan", "Double", 1/radians, "Double"))
 	}
 
-	;-------------------------          Hyperbolic          -----;
+	;-------------------------------------- Hyperbolic ----------------------------;
 
-	SinH(vTheta) {
-		Return, (DllCall("msvcrt\sinh", "Double", vTheta, "Double"))
+	SinH(radians) {
+		return (DllCall("msvcrt\sinh", "Double", radians, "Double"))
 	}
 
-	ASinH(vTheta) {
-		Return, (this.Log(vTheta + Sqrt(vTheta**2 + 1)))
+	ASinH(radians) {
+		return (Ln(radians + Sqrt(radians**2 + 1)))
 	}
 
-	CosH(vTheta) {
-		Return, (DllCall("msvcrt\cosh", "Double", vTheta, "Double"))
+	CosH(radians) {
+		return (DllCall("msvcrt\cosh", "Double", radians, "Double"))
 	}
 
-	ACosH(vTheta) {
-		If (vTheta >= 1) {
-			Return, (this.Log(vTheta + Sqrt(vTheta**2 - 1)))  ;* θ >= 1
+	ACosH(radians) {
+		if (radians < 1) {
+			throw, (Exception("NaN.", -1, Format("Math.ACosH({}) is out of bounds.", radians)))
 		}
 
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.ACosH({}) is out of bounds.", vTheta)))
-		}
+		return (Ln(radians + Sqrt(radians**2 - 1)))  ;* θ >= 1
 	}
 
-	TanH(vTheta) {
-		Return, (DllCall("msvcrt\tanh", "Double", vTheta, "Double"))
+	TanH(radians) {
+		return (DllCall("msvcrt\tanh", "Double", radians, "Double"))
 	}
 
-	ATanH(vTheta) {
-		If (this.Abs(vTheta) < 1) {
-			Return, (0.5*this.Log((1 + vTheta)/(1 - vTheta)))  ;* |θ| < 1
+	ATanH(radians) {
+		if (radians < -1 || radians > 1) {
+			throw, (Exception("NaN.", -1, Format("Math.ATanH({}) is out of bounds.", radians)))
 		}
 
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.ATanH({}) is out of bounds.", vTheta)))
-		}
+		return (0.5*Ln((1 + radians)/(1 - radians)))  ;* (-1, 1)
 	}
 
-	CscH(vTheta) {
-		If (vTheta != 0) {
-			Return, (1/DllCall("msvcrt\sinh", "Double", vTheta, "Double"))  ;* θ != 0
+	CscH(radians) {
+		if (!radians) {
+			throw, (Exception("NaN.", -1, Format("Math.CscH({}) is out of bounds.", radians)))
 		}
 
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.CscH({}) is out of bounds.", vTheta)))
-		}
+		return (1/DllCall("msvcrt\sinh", "Double", radians, "Double"))  ;* (-inf, 0) U (0, inf)
 	}
 
-	ACscH(vTheta) {
-		If (vTheta != 0) {
-			Return, (this.Log(1/vTheta + Sqrt(1 + vTheta**2)/Abs(vTheta))) ;* θ != 0
+	ACscH(radians) {
+		if (radians != 0) {
+			throw, (Exception("NaN.", -1, Format("Math.ACscH({}) is out of bounds.", radians)))
 		}
 
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.ACscH({}) is out of bounds.", vTheta)))
-		}
+		return (Ln(1/radians + Sqrt(1 + radians**2)/Abs(radians))) ;* θ != 0
 	}
 
-	SecH(vTheta) {
-		Return, (1/DllCall("msvcrt\cosh", "Double", vTheta, "Double"))
+	SecH(radians) {
+		return (1/DllCall("msvcrt\cosh", "Double", radians, "Double"))
 	}
 
-	ASecH(vTheta) {
-		If (vTheta > 0 && vTheta <= 1) {
-			Return, (this.Log(1/vTheta + Sqrt(1/vTheta**2 - 1)))  ;* 0 < θ <= 1
+	ASecH(radians) {
+		if (radians < 0 || radians >= 1) {
+			throw, (Exception("NaN.", -1, Format("Math.ASecH({}) is out of bounds.", radians)))
 		}
 
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.ASecH({}) is out of bounds.", vTheta)))
-		}
+		return (Ln(1/radians + Sqrt(1/radians**2 - 1)))  ;* (0, 1]
 	}
 
-	CotH(vTheta) {
-		If (vTheta != 0) {
-			Return, (1/DllCall("msvcrt\tanh", "Double", vTheta, "Double"))  ;* θ != 0
+	CotH(radians) {
+		if (!radians) {
+			throw, (Exception("NaN.", -1, Format("Math.CotH({}) is out of bounds.", radians)))
 		}
 
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.CotH({}) is out of bounds.", vTheta)))
-		}
+		return (1/DllCall("msvcrt\tanh", "Double", radians, "Double"))  ;* (-inf, 0) U (0, inf)
 	}
 
-	ACotH(vTheta) {
-		If (this.Abs(vTheta) > 1) {
-			Return, (0.5*this.Log((vTheta + 1)/(vTheta - 1)))  ;* |θ| > 1
+	ACotH(radians) {
+		if (!(this.Abs(radians) > 1)) {
+			throw, (Exception("NaN.", -1, Format("Math.ACotH({}) is out of bounds.", radians)))
 		}
 
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.ACotH({}) is out of bounds.", vTheta)))
-		}
+		return (0.5*Ln((radians + 1)/(radians - 1)))  ;* |θ| > 1
 	}
 
-	;---------------           Integer            ---------------;
-	;-------------------------       Division-related       -----;
+	;------------------------------------------------------  Integer  --------------;
+	;----------------------------------- Division-related -------------------------;
 
-	;* Math.GCD(Integer, ..., [Integer, ...])
+	;* Math.GCD(integers*)
 	;* Description:
 		;* Calculates the greatest common divisor of two or more integers.
-	GCD(vNumbers*) {
-		Static __MCode := [MCode("2,x64:QYnIiciJ0UHB+B/B+R9EMcAxykQpwCnKDx+EAAAAAAA50HQKOcJ9CCnQOdB19vPDKcLr7JCQkJA="), MCode("2,x64:iwGD+gF+V4PqAkyNQQRMjVSRCEGLEEGLCEGJwUHB+R9EMcjB+h8x0SnRicJEKcqJyDnRdRHrGWYPH4QAAAAAACnQOdB0CjnQf/YpwjnQdfaD+AF0CUmDwARNOdB1tfPD")]
+	GCD(integers*) {
+		Static mCode := [MCode("2,x64:QYnIiciJ0UHB+B/B+R9EMcAxykQpwCnKDx+EAAAAAAA50HQKOcJ9CCnQOdB19vPDKcLr7JCQkJA="), MCode("2,x64:iwGD+gF+V4PqAkyNQQRMjVSRCEGLEEGLCEGJwUHB+R9EMcjB+h8x0SnRicJEKcqJyDnRdRHrGWYPH4QAAAAAACnQOdB0CjnQf/YpwjnQdfaD+AF0CUmDwARNOdB1tfPD")]
+		integers := [integers*]
 
-		If (Type(vNumbers[1]) == "Array" || Type(vNumbers[2]) == "Array" || vNumbers.Count() > 2) {
-			o := [].Concat(vNumbers*), VarSetCapacity(a, o.Count*4, 0), c := 0
+		if (Type(integers[0]) == "Array" || Type(integers[1]) == "Array" || integers.Count() > 2) {
+			o := [].Concat(integers*), VarSetCapacity(a, o.Count*4, 0), c := 0
 
-			For i, v in o {
-				If (this.IsInteger(v)) {
-					NumPut(v, a, (c++)*4, "Int")
+			for i, v in o {
+				if (!this.IsInteger(v)) {
+					throw, (Exception("TypeError.", -1, Format("Math.GCD({}) may only contain integers.", integers.Print())))
 				}
-				Else If (this.ThrowException) {
-					Throw, (Exception("TypeError.", -1, Format("Math.GCD({}) may only contain integers.", [vNumbers*].Print())))
-				}
+
+				NumPut(v, a, (c++)*4, "Int")
 			}
 
-			Return, (DllCall(__MCode[1], "Int", &a, "Int", c, "Int"))
+			return (DllCall(mCode[1], "Int", &a, "Int", c, "Int"))
 		}
 
-		If (this.IsInteger(vNumbers[1]) && this.IsInteger(vNumbers[2])) {
-			Return, (DllCall(__MCode[0], "Int", vNumbers[1], "Int", vNumbers[2], "Int"))
+		if (this.IsInteger(integers[0]) && this.IsInteger(integers[1])) {
+			return (DllCall(mCode[0], "Int", integers[0], "Int", integers[1], "Int"))
 		}
 
-		If (this.ThrowException) {
-			Throw, (Exception("TypeError.", -1, Format("Math.GCD({}) may only contain integers.", [vNumbers*].Join(", "))))
-		}
+		throw, (Exception("TypeError.", -1, Format("Math.GCD({}) may only contain integers.", integers.Join(", "))))
 	}
 
-	;* Math.LCM(Integer, ..., [Integer, ...])
+	;* Math.LCM(integers*)
 	;* Description:
 		;* Calculates the greatest common multiple of two or more integers.
-	LCM(vNumbers*) {
-		Static __MCode := MCode("2,x64:QYnIiciJ0UHB+B/B+R9EMcAxykQpwCnKDx+EAAAAAAA50HQKOcJ9CCnQOdB19vPDKcLr7JCQkJA=")
+	LCM(integer*) {
+		Static mCode := MCode("2,x64:QYnIiciJ0UHB+B/B+R9EMcAxykQpwCnKDx+EAAAAAAA50HQKOcJ9CCnQOdB19vPDKcLr7JCQkJA=")
+		integer := [integer*]
 
-		If (Type(vNumbers[1]) == "Array" || Type(vNumbers[2]) == "Array" || vNumbers.Count() > 2) {
-			r := (o := [].Concat(vNumbers*)).Shift()
+		if (Type(integer[0]) == "Array" || Type(integer[1]) == "Array" || integer.Count() > 2) {
+			r := (o := [].Concat(integer*)).Shift()
 
-			For i, v in o {
-				If (this.IsInteger(r) && this.IsInteger(v)) {
-					r := r*v/DllCall(__MCode, "Int", r, "Int", v, "Int")
+			for i, v in o {
+				if (!(this.IsInteger(r) && this.IsInteger(v))) {
+					throw, (Exception("TypeError.", -1, Format("Math.LCM({}) may only contain integers.", integer.Print())))
 				}
-				Else If (this.ThrowException) {
-					Throw, (Exception("TypeError.", -1, Format("Math.LCM({}) may only contain integers.", [vNumbers*].Print())))
-				}
+
+				r := r*v/DllCall(mCode, "Int", r, "Int", v, "Int")
 			}
 
-			Return, (Floor(r))
+			return (Floor(r))
 		}
 
-		If (this.IsInteger(vNumbers[1]) && this.IsInteger(vNumbers[2])) {
-			Return, (Floor(vNumbers[1]*vNumbers[2]/DllCall(__MCode, "Int", vNumbers[1], "Int", vNumbers[2], "Int")))
+		if (this.IsInteger(integer[0]) && this.IsInteger(integer[1])) {
+			return (Floor(integer[0]*integer[2]/DllCall(mCode, "Int", integer[1], "Int", integer[1], "Int")))
 		}
 
-		If (this.ThrowException) {
-			Throw, (Exception("TypeError.", -1, Format("Math.LCM({}) may only contain integers.", [vNumbers*].Join(", "))))
-		}
+		throw, (Exception("TypeError.", -1, Format("Math.LCM({}) may only contain integers.", integer.Join(", "))))
 	}
 
-	;-------------------------      Recurrence and Sum      -----;
+	;---------------------------------- Recurrence and Sum ------------------------;
 
-	;* Math.Factorial(Integer)
+	;* Math.Factorial(integer)
 	;* Description:
 		;* Calculate the factorial of an integer.
-	Factorial(vNumber) {
-		Static __MCode := MCode("2,x64:hcl+GYPBAboBAAAAuAEAAAAPr8KDwgE5ynX288O4AQAAAMOQkJCQ")
-
-		If (this.IsInteger(vNumber) && vNumber >= 0) {
-			Return, (DllCall(__MCode, "Int", vNumber, "Int"))
+	Factorial(integer) {
+		if (!this.IsPositiveInteger(integer)) {
+			throw, (Exception("NaN.", -1, Format("Math.Factorial({}) is out of bounds.", integer)))
 		}
 
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.Factorial({}) is out of bounds.", vNumber)))
-		}
+		Static mCode := MCode("2,x64:hcl+GYPBAboBAAAAuAEAAAAPr8KDwgE5ynX288O4AQAAAMOQkJCQ")
+
+		return (DllCall(mCode, "Int", integer, "Int"))
 	}
 
-	;* Math.Fibonacci(N)
+	;* Math.Fibonacci(n)
 	;* Description:
-		;* Calculate the nᵗʰ Fibonacci number.
-	Fibonacci(vN) {
-		Static __MCode := MCode("2,x64:hcl+L4PBAboBAAAAuAEAAABFMcDrDWYuDx+EAAAAAABEiciDwgFFjQwAQYnAOdF17/PDMcDDkJA=")
-
-		If (this.IsInteger(vN) && vN >= 0) {
-			Return, (DllCall(__MCode, "Int", vN, "Int"))
+		;* Calculate the `n`ᵗʰ Fibonacci number.
+	Fibonacci(n) {
+		if (!this.IsPositiveInteger(n)) {
+			throw, (Exception("NaN.", -1, Format("Math.Fibonacci({}) is out of bounds.", n)))
 		}
 
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.Fibonacci({}) is out of bounds.", vN)))
-		}
+		Static mCode := MCode("2,x64:hcl+L4PBAboBAAAAuAEAAABFMcDrDWYuDx+EAAAAAABEiciDwgFFjQwAQYnAOdF17/PDMcDDkJA=")
+
+		return (DllCall(mCode, "Int", n, "Int"))
 	}
 
-	;---------------       Number Theoretic       ---------------;
+	;----------------------------------- Number Theoretic -------------------------;
 
-	;* Math.Prime(N)
+	;* Math.Prime(n)
 	;* Description:
-		;* Calculate the nᵗʰ prime number.
-	Prime(vN) {
-		Static __MCode := MCode("2,x64:QbkCAAAAg/kBfmJBugEAAABBuQEAAABBu1ZVVVUPHwBBg8ECQYP5A3Q6RInIQffrRInIwfgfKcKNBFJBOcF0KEG4AwAAAOsTDx+EAAAAAABEiciZQff4hdJ0DUGDwAJFOcF/7EGDwgFBOcp1s0SJyMOQkJCQ")
-
-		If (this.IsInteger(vN) && vN > 0) {
-			Return, (DllCall(__MCode, "Int", vN, "Int"))
+		;* Calculate the `n`ᵗʰ prime number.
+	Prime(n) {
+		if (!(this.IsInteger(n) && n > 0)) {
+			throw, (Exception("NaN.", -1, Format("Math.Prime({}) is out of bounds.", n)))
 		}
 
-		If (this.ThrowException) {
-			Throw, (Exception("NaN.", -1, Format("Math.Prime({}) is out of bounds.", vN)))
-		}
+		Static mCode := MCode("2,x64:QbkCAAAAg/kBfmJBugEAAABBuQEAAABBu1ZVVVUPHwBBg8ECQYP5A3Q6RInIQffrRInIwfgfKcKNBFJBOcF0KEG4AwAAAOsTDx+EAAAAAABEiciZQff4hdJ0DUGDwAJFOcF/7EGDwgFBOcp1s0SJyMOQkJCQ")
+
+		return (DllCall(mCode, "Int", n, "Int"))
 	}
 
-	;---------------          Numerical           ---------------;
-	;-------------------------          Arithmetic          -----;
+	;-----------------------------------------------------  Numerical  -------------;
+	;-------------------------------------- Arithmetic ----------------------------;
 
-	;* Math.Abs(Number || [Number, ...])
+	;* Math.Abs(number)
 	;* Description:
 		;* Calculate the absolute value of a number.
-	Abs(vNumber) {
-		If (Type(vNumber) == "Array") {
-			r := vNumber.Clone()
-
-			For i, v in r {
-				If (this.IsNumeric(v)) {
-					r[i] := Abs(v)
-
-					If (v == -9223372036854775808 && this.ThrowException) {
-						Throw, (Exception("Overflow.", -1, Format("Math.Abs({}) has no 64-bit non-negative equal in magnitude.", vNumber.Print())))
-					}
-				}
-				Else If (Type(v) == "Array") {
-					r[i] := this.Abs(v)
-				}
-			}
-
-			Return, (r)
+	Abs(number) {
+		if (number == -9223372036854775808) {
+			throw, (Exception("Overflow.", -1, Format("Math.Abs({}) has no 64-bit non-negative equal in magnitude.", number)))
 		}
 
-		If (this.IsNumeric(vNumber)) {
-			Return, (Abs(vNumber))
-		}
-
-		If (vNumber == -9223372036854775808 && this.ThrowException) {
-			Throw, (Exception("Overflow.", -1, Format("Math.Abs({}) has no 64-bit non-negative equal in magnitude.", vNumber)))
+		if (this.IsNumber(number)) {
+			return (Abs(number))
 		}
 	}
 
-	;* Math.Clamp(Number || [Number, ...], LowerLimit, UpperLimit)
+	;* Math.Clamp(number, lower, upper)
 	;* Description:
-		;* Limit a number to a upper and lower limit.
-	Clamp(vNumber, vLower := -1, vUpper := 1) {
-		If (Type(vNumber) == "Array") {
-			r := vNumber.Clone()
-
-			If (!(vLower == "" || vUpper == "")) {
-				For i, v in r {
-					If (this.IsNumeric(v)) {
-						r[i] := (v < vLower) ? (vLower) : ((v > vUpper) ? (vUpper) : (v))
-					}
-					Else If (Type(v) == "Array") {
-						r[i] := this.Clamp(v)
-					}
-				}
-			}
-			Else If (vLower == "") {
-				For i, v in r {
-					If (this.IsNumeric(v)) {
-						r[i] := (v > vUpper) ? (vUpper) : (v)
-					}
-					Else If (Type(v) == "Array") {
-						r[i] := this.Clamp(v)
-					}
-				}
-			}
-			Else {
-				For i, v in r {
-					If (this.IsNumeric(v)) {
-						r[i] := (v < vLower) ? (vLower) : (v)
-					}
-					Else If (Type(v) == "Array") {
-						r[i] := this.Clamp(v)
-					}
-				}
-			}
-
-			Return, (r)
-		}
-
-		Return, ((!(vLower == "" || vUpper == "")) ? ((vNumber < vLower) ? (vLower) : ((vNumber > vUpper) ? (vUpper) : (vNumber))) : ((vLower == "") ? ((vNumber > vUpper) ? (vUpper) : (vNumber)) : ((vNumber < vLower) ? (vLower) : (vNumber))))
+		;* Limit a number to a upper and lower value.
+	Clamp(number, lower, upper) {
+		return (((number := (number < lower) ? (lower) : (number)) > upper) ? (upper) : (number))
 	}
 
-	;* Math.CopySign(Number1, Number2)
+	;* Math.CopySign(number1, number2)
 	;* Description:
-		;* Copy the sign of Number2 to Number1.
-	CopySign(vNumber1, vNumber2) {
-		Return, (Abs(vNumber1)*(vNumber2 < 0 ? -1 : 1))
+		;* Copy the sign of `number2` to `number1`.
+	CopySign(number1, number2) {
+		return (Abs(number1)*((number2 < 0) ? (-1) : (1)))
 	}
 
-	;* Math.Mod(Number || [Number, ...], Divisor)
-	Mod(vNumber, vDivisor) {
-		If (Type(vNumber) == "Array") {
-			r := vNumber.Clone()
-
-			For i, v in r {
-				If (this.IsNumeric(v)) {
-					r[i] := Mod(v, vDivisor)
-				}
-				Else If (Type(v) == "Array") {
-					r[i] := this.Mod(v)
-				}
-			}
-
-			Return, (r)
-		}
-
-		Return, (Mod(vNumber, vDivisor))
+	;* Math.Mod(number, divisor)
+	Mod(number, divisor) {
+		return (Mod(number, divisor))
 	}
 
-	;* Math.Sign(Number)
+	;* Math.Sign(number)
 	;* Description:
 		;* Calculate the sign of a number.
-	Sign(vNumber) {
-		Return, ((vNumber > 0) - (vNumber < 0))
+	Sign(number) {
+		return ((number > 0) - (number < 0))
 	}
 
-	;* Math.Wrap(Number, LowerLimit, UpperLimit)
-	Wrap(vNumber, vLower, vUpper) {
-		vUpper -= vLower
-
-		Return, (vLower + Mod(vUpper + Mod(vNumber - vLower, vUpper), vUpper))  ;! Return, ((vLower + ((v := Mod(vNumber - vLower, vUpper)) == 0) ? (vUpper) : (Mod(vUpper + v, vUpper))))
+	;* Math.Wrap(number, lower, upper)
+	Wrap(number, lower, upper) {
+		return ((number < lower) ? (upper - Mod(lower - number, upper - lower)) : (lower + Mod(number - lower, upper - lower)))
 	}
 
-	;-------------------------      Integral Rounding       -----;
+	;----------------------------------  Integral Rounding  ------------------------;
 
-	;* Math.Ceil(Number || [Number, ...], DecimalPlace)
+	;* Math.Ceil(number, (decimalPlace))
 	;* Description:
 		;* Round a number towards plus infinity.
-	Ceil(vNumber, vDecimalPlace := 0) {
-		p := 10**vDecimalPlace
+	Ceil(number, decimalPlace := 0) {
+		p := 10**decimalPlace
 
-		If (Type(vNumber) == "Array") {
-			r := vNumber.Clone()
-
-			For i, v in r {
-				If (this.IsNumeric(v)) {
-					r[i] := Ceil(v*p)/p, vDecimalPlace
-				}
-				Else If (Type(v) == "Array") {
-					r[i] := this.Ceil(v, vDecimalPlace)
-				}
-			}
-
-			Return, (r)
-		}
-
-		Return, (Ceil(vNumber*p)/p)
+		return (Ceil(number*p)/p)
 	}
 
-	;* Math.Floor(Number || [Number, ...], DecimalPlace)
+	;* Math.Floor(number, (decimalPlace))
 	;* Description:
 		;* Round a number towards minus infinity.
-	Floor(vNumber, vDecimalPlace := 0) {
-		p := 10**vDecimalPlace
+	Floor(number, decimalPlace := 0) {
+		p := 10**decimalPlace
 
-		If (Type(vNumber) == "Array") {
-			r := vNumber.Clone()
-
-			For i, v in r {
-				If (this.IsNumeric(v)) {
-					r[i] := Floor(v*p)/p
-				}
-				Else If (Type(v) == "Array") {
-					r[i] := this.Floor(v, vDecimalPlace)
-				}
-			}
-
-			Return, (r)
-		}
-
-		Return, (Floor(vNumber*p)/p)
+		return (Floor(number*p)/p)
 	}
 
-	;* Math.Fix(Number || [Number, ...], DecimalPlace)
+	;* Math.Fix(number, (decimalPlace))
 	;* Description:
 		;* Round a number towards zero.
-	Fix(vNumber, vDecimalPlace := 0) {
-		p := 10**vDecimalPlace
+	Fix(number, decimalPlace := 0) {
+		p := 10**decimalPlace
 
-		If (Type(vNumber) == "Array") {
-			r := vNumber.Clone()
-
-			For i, v in r {
-				If (this.IsNumeric(v)) {
-					r[i] := v < 0 ? Ceil(v*p)/p : Floor(v*p)/p
-				}
-				Else If (Type(v) == "Array") {
-					r[i] := this.Fix(v, vDecimalPlace)
-				}
-			}
-
-			Return, (r)
-		}
-
-		Return, (vNumber < 0 ? Ceil(vNumber*p)/p : Floor(vNumber*p)/p)
+		return (number < 0 ? Ceil(number*p)/p : Floor(number*p)/p)
 	}
 
-	;* Math.Round(Number || [Number, ...], DecimalPlace)
+	;* Math.Round(number, (decimalPlace))
 	;* Description:
 		;* Round a number towards the nearest integer and strips trailing zeros.
-	Round(vNumber, vDecimalPlace := 0) {
-		If (Type(vNumber) == "Array") {
-			r := vNumber.Clone()
-
-			For i, v in r {
-				If (this.IsNumeric(v)) {
-					r[i] := Round(v, vDecimalPlace)
-				}
-				Else If (Type(v) == "Array") {
-					r[i] := this.Round(v, vDecimalPlace)
-				}
-			}
-
-			Return, (r)
-		}
-
-		Return, (Round(vNumber, vDecimalPlace))  ;! (RegExReplace(Round(vNumber, vDecimalPlace), "S)(?=\.).*?\K\.?0*$"))
+	Round(number, decimalPlace := 0) {
+		return (Round(number, decimalPlace))
 	}
 
-	;-------------------------         Statistical          -----;
+	;-------------------------------------  Statistical  ---------------------------;
 
-	;* Math.Min(Number, ..., [Number, ...])
+	;* Math.Min(numbers*)
 	;* Description:
 		;* Calculate the numerically smallest of two or more numbers.
-	Min(vNumbers*) {
-		If (Type(vNumbers[1]) == "Array" || Type(vNumbers[2]) == "Array" || vNumbers.Count() > 2) {
-			r := [].Concat(vNumbers*)
-
-			Return, (Min(r[0], r*))
-		}
-
-		Return, (Min(vNumbers*))
+	Min(numbers*) {
+		return (Min(numbers*))
 	}
 
-	;* Math.Max(Number, ..., [Number, ...])
+	;* Math.Max(numbers*)
 	;* Description:
 		;* Calculate the numerically largest of two or more numbers.
-	Max(vNumbers*) {
-		If (Type(vNumbers[1]) == "Array" || Type(vNumbers[2]) == "Array" || vNumbers.Count() > 2) {
-			r := [].Concat(vNumbers*)
-
-			Return, (Max(r[0], r*))
-		}
-
-		Return, (Max(vNumbers*))
+	Max(numbers*) {
+		return (Max(numbers*))
 	}
 
-	;* Math.Mean(Number, ..., [Number, ...])
+	;* Math.Mean(numbers*)
 	;* Description:
 		;* Calculate statistical mean of two or more numbers.
-	Mean(vNumbers*) {
-		t := c := 0
-
-		For i, v in [].Concat(vNumbers*) {
-			If (this.IsNumeric(v)) {
-				t += v, c++
-			}
+	Mean(numbers*) {
+		for i, v in numbers {
+			t += v
 		}
 
-		Return, (t/c)
+		return (t/i)
 	}
 
-	;* Percent(Number, Percentage)
-	Percent(vNumber, vPercentage) {
-		Return, (vNumber/100.0*vPercentage)
+	;* Percentage(number, percentage)
+	Percentage(number, percentage) {
+		return (number/100.0*percentage)
 	}
 
-	;* PercentChange(Number1, Number2)
-	PercentChange(vNumber1, vNumber2) {
-		vNumber1 := this.Abs(vNumber1), vNumber2 := this.Abs(vNumber2)
-
-		Return, (vNumber1 < vNumber2 ? this.Abs((vNumber1 - vNumber2)/vNumber2*100.0) : (vNumber2 - vNumber1)/vNumber1*100.0)
+	;* PercentageChange(number1, number2)
+	PercentageChange(number1, number2) {
+		return ((number2 - number1)/Abs(number1)*100)
 	}
 
-	;---------------         Probability          ---------------;
-	;-------------------------            Normal            -----;
+	;* PercentageDifference(number1, number2)
+	PercentageDifference(number1, number2) {
+		return (Abs(number1 - number2)/((number1 + number2)/2)*100)
+	}
 
-	;-----      Rejection Sampling      -----;
+	;----------------------------------------------------  Probability  ------------;
 
-	;* Math.Ziggurat(Mean, Deviation)
-	;* Description:
-		;* https://en.wikipedia.org/wiki/Ziggurat_algorithm
-	;* Note:
-		;* This algorithm is ~3.5 times faster than the Box Muller transform.
-	Ziggurat(vMean := 0, vDeviation := 1.0) {
-		Static __K := (v := Math.__Ziggurat()).k, __W := v.w, __F := v.f  ;* Populate the lookup tables.
+	Class Random {
 
-		Loop {
-			u := Math.Random(-0x80000000, 0x7FFFFFFF), i := u & 0xFF
+		;---------------------------------------- Normal ------------------------------;
 
-			If (Abs(u) < __K[i]) {  ;* Rectangle. This will be the case for 99.33% of values (512 rectangles would be 99.64%).
-				Return, (u*__W[i]*vDeviation + vMean)
+		Normal(min := 0.0, max := 1.0) {
+			loop, 12 {
+				u += this.Uniform()
 			}
 
-			x := u*__W[i]
+			return ((u/12)*(max - min) + min)  ;! return (((u/12)*(max - min) + min)*deviation + mean)
+		}
 
-			If (i == 0) {  ;* Base segment. Sample using a ratio of uniforms.
-				While (2*y <= x**2) {
-					x := -Math.Log(Math.RandomFloat())*.27366123732975828, y := -Math.Log(Math.RandomFloat())  ;? .27366123732975828 = 1/r
+		;* Math.Random.Ziggurat((mean), (deviation))
+		;* Description:
+			;* https://en.wikipedia.org/wiki/Ziggurat_algorithm.
+		;* Note:
+			;* This algorithm is ~3.5 times faster than the Box Muller transform.
+		Ziggurat(mean := 0, deviation := 1.0) {
+			Static __K := (v := Math.Random.__Ziggurat()).k, __W := v.w, __F := v.f  ;* Populate the lookup tables.
+
+			loop {
+				u := this.Uniform(-0x80000000, 0x7FFFFFFF), i := u & 0xFF
+
+				if (Abs(u) < __K[i]) {  ;* Rectangle. This will be the case for 99.33% of values (512 rectangles would be 99.64%).
+					return (u*__W[i]*deviation + mean)
 				}
 
-				Return, (((u > 0)*2 - 1)*(3.6541528853610088 + x)*vDeviation + vMean)
-			}
+				x := u*__W[i]
 
-			If ((__F[i - 1] - __F[i])*Math.RandomFloat() + __F[i] < Exp(-.5*x**2)) {  ;* Wedge.
-				Return, (x*vDeviation + vMean)
-			}
+				if (i == 0) {  ;* Base segment. Sample using a ratio of uniforms.
+					While (2*y <= x**2) {
+						x := -Ln(this.Uniform())*.273661237329758, y := -Ln(this.Uniform())  ;? .273661237329758 = 1/r
+					}
 
-			;* The wedge was missed; start again.
+					return (((u > 0)*2 - 1)*(3.654152885361009 + x)*deviation + mean)
+				}
+
+				if ((__F[i - 1] - __F[i])*this.Uniform() + __F[i] < Exp(-.5*x**2)) {  ;* Wedge.
+					return (x*deviation + mean)
+				}
+
+				;* The wedge was missed; start again.
+			}
 		}
-	}
-	__Ziggurat() {
-		r := 3.6541528853610088, v := 0.00492867323399, q := Exp(-.5*r**2)  ;? r = start of the tail, v = area of each rectangle
-			, k := [(r*(q/v*2147483648.0)), 0], w := [(v/q)/2147483648.0], w[255] := r/2147483648.0, f := [1.0], f[255] := q  ;* Index zero is for the base segment, where Marsaglia and Tsang define this as k[0] = 2^31*r*f(r)/v, w[0] = .5^31*v/f(r), f[0] = 1.0.
+		__Ziggurat() {
+			r := 3.654152885361009, v := 0.00492867323399, q := Exp(-.5*r**2)  ;? r = start of the tail, v = area of each rectangle
+				, k := [(r*(q/v*2147483648.0)), 0], w := [(v/q)/2147483648.0], w[255] := r/2147483648.0, f := [1.0], f[255] := q  ;* Index zero is for the base segment, where Marsaglia and Tsang define this as k[0] = 2^31*r*f(r)/v, w[0] = .5^31*v/f(r), f[0] = 1.0.
 
-		i := 255
-		While (--i) {
-			x := Sqrt(-2.0*Math.Log(v/r + f[i + 1]))
+			i := 255
+			While (--i) {
+				x := Sqrt(-2.0*Ln(v/r + f[i + 1]))
 
-			k[i + 1] := ((x/r)*2147483648.0), w[i] := x/2147483648.0, f[i] := Exp(-.5*x**2)
+				k[i + 1] := ((x/r)*2147483648.0), w[i] := x/2147483648.0, f[i] := Exp(-.5*x**2)
 
-			r := x
-		}
-
-		Return, ({"k": k, "w": w, "f": f})
-	}
-
-	;-----        Transformation        -----;
-
-	;* Math.MarsagliaPolar(Mean, Deviation)
-	;* Description:
-		;* https://en.wikipedia.org/wiki/Marsaglia_polar_method
-	;* Note:
-		;* This algorithm does not involve any approximations so it has the proper behavior even in the tail of the distribution. It is however moderately expensive since the efficiency of the rejection method is `e = π/4 ≈ 0.785`, so about 21.5% of the uniformly distributed points within the square are discarded. The square root and the logarithm also contribute significantly to the computational cost.
-	MarsagliaPolar(vMean := 0, vDeviation := 1.0) {
-		Static __Secondary
-
-		If (!__Secondary) {
-			r := 0
-
-			While (r > 1.0 || r == 0) {
-				u1 := Math.RandomFloat()*2.0 - 1.0, u2 := Math.RandomFloat()*2.0 - 1.0
-					, r := u1**2 + u2**2
+				r := x
 			}
-			__Secondary := (r := Sqrt((-2.0*Math.Log(r))/r))*u1
 
-			Return, (r*u2*vDeviation + vMean)
+			return ({"k": k, "w": w, "f": f})
 		}
 
-		Swap(r, __Secondary)
+		;* Math.Random.MarsagliaPolar((mean), (deviation))
+		;* Description:
+			;* https://en.wikipedia.org/wiki/Marsaglia_polar_method.
+		;* Note:
+			;* This algorithm does not involve any approximations so it has the proper behavior even in the tail of the distribution. It is however moderately expensive since the efficiency of the rejection method is `e = π/4 ≈ 0.785`, so about 21.5% of the uniformly distributed points within the square are discarded. The square root and the logarithm also contribute significantly to the computational cost.
+		MarsagliaPolar(mean := 0, deviation := 1.0) {
+			Static spare
 
-		Return, (r*vDeviation + vMean)
-	}
+			if (!spare) {
+				s := 0
 
-	;-------------------------           Uniform            -----;
+				while (s >= 1 || s == 0) {  ;* `s` may not be 0 because `log(0)` will generate an error.
+					u := 2.0*this.Uniform() - 1, v := 2.0*this.Uniform() - 1
+						, s := u**2 + v**2
+				}
 
-	;* Math.Random(Min, Max)
-	;* Description:
-		;* Combines (if needed) two random numbers generated by `Random` to provide a random number in any range.
-	;* Credit:
-		;* Laszlo: https://autohotkey.com/board/topic/19233-64-bit-random-numbers/
-	Random(vMin := -0x80000000, vMax := 0x7FFFFFFF) {
-		d := vMax - vMin
-
-		If (d > 0) {  ;* No overflow.
-			If (d <= 0xFFFFFFFF) {  ;* 32-bit case.
-				Random u, -0x80000000, d - 0x80000000
-
-				Return, (u + vMin + 0x80000000)
+				spare := (s := Sqrt(-2.0*Ln(s)/s))*v, s *= u
 			}
-			Else {
-				Loop {  ;* Range < 2^63.
-					Random u1, 0, (1 << (1 + DllCall("ntdll\RtlFindMostSignificantBit", "Int64", d >> 32))) - 1
-					Random u2, -0x80000000, 0x7FFFFFFF
-					r := (u1 << 32) | u2 + 0x80000000
+			else {
+				Swap(s, spare)
+			}
 
-					If (r <= d) {
-						Return, (r + vMin)  ;! (Math.Random(0, 2147483647) & 0xFFFF << 16 | Math.Random(0, 2147483647) & 0xFFFF)
+			return (s*deviation + mean)
+		}
+
+		;---------------------------------------  Uniform  -----------------------------;
+
+		;* Math.Random.Uniform((min), (max))
+		Uniform(min := 0.0, max := 1.0) {
+			Random, u, min, max
+
+			return (u)
+		}
+
+		;* Math.Random.Uniform64((min), (max))
+		;* Description:
+			;* Combines (if needed) two random numbers generated by `Random` to provide a random number in any range.
+		;* Credit:
+			;* Laszlo (https://autohotkey.com/board/topic/19233-64-bit-random-numbers/).
+		Uniform64(min := -0x80000000, max := 0x7FFFFFFF) {  ;? 0x7FFFFFFF = 2**31 - 1
+			d := max - min
+
+			if (d > 0) {  ;* No overflow.
+				if (d <= 0xFFFFFFFF) {  ;* 32-bit case.
+					Random, u, -0x80000000, d - 0x80000000
+
+					return (u + min + 0x80000000)
+				}
+				else {  ;* Range < 2**63.
+					loop {
+						Random, u1, 0, (1 << (1 + DllCall("ntdll\RtlFindMostSignificantBit", "Int64", d >> 32))) - 1
+						Random, u2, -0x80000000, 0x7FFFFFFF
+						r := (u1 << 32) | u2 + 0x80000000
+
+						if (r <= d) {
+							return (r + min)  ;! (Math.Random.Uniform(0, 2147483647) & 0xFFFF << 16 | Math.Random.Uniform(0, 2147483647) & 0xFFFF)
+						}
 					}
 				}
 			}
-		}
 
-		Loop {  ;* Range >= 2^63.
-			Random u1, -0x80000000, 0x7FFFFFFF
-			Random u2, -0x80000000, 0x7FFFFFFF
-			r := (u1 << 32) | u2 + 0x80000000
+			loop {  ;* Range >= 2**63.
+				Random, u1, -0x80000000, 0x7FFFFFFF
+				Random, u2, -0x80000000, 0x7FFFFFFF
+				r := (u1 << 32) | u2 + 0x80000000
 
-			If (vMin <= r && r <= vMax) {
-				Return, (r)
+				if (min <= r && r <= max) {
+					return (r)
+				}
 			}
 		}
-	}
 
-	;* Math.RandomBool(Percentage)
-	RandomBool(vProbability := 0.5) {
-		Random, r, 0, 1.0
+		;* Math.Random.Bool((probability))
+		Bool(probability := 0.5) {
+			return (this.Uniform() >= probability)
+		}
 
-		Return, (r >= vProbability)
-	}
-
-	;* Math.RandomSeed(Seed)
-	RandomFloat() {
-		Random, r, 0, 1.0
-
-		Return, (r)
-	}
-
-	;* Math.RandomSeed(Seed)
-	RandomSeed(vSeed) {
-		Random, , vSeed
+		;* Math.Random.Seed(seed)
+		Seed(seed) {
+			Random, , seed
+		}
 	}
 }

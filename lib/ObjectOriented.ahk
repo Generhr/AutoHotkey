@@ -23,7 +23,7 @@ Print(object) {
 		case "Array":
 			if (s := this.Length) {
 				for i, v in (this, r := "[") {
-					r .= ((IsObject(v)) ? (Print(v)) : ((Math.IsNumeric(v)) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v)))) . ((A_Index < s) ? (", ") : ("]"))
+					r .= ((IsObject(v)) ? (Print(v)) : ((Math.IsNumber(v)) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v)))) . ((A_Index < s) ? (", ") : ("]"))
 				}
 			}
 			else {
@@ -32,7 +32,7 @@ Print(object) {
 		case "Object":
 			if (s := this.Length) {
 				for i, v in (this, r := "[") {
-					r .= ((IsObject(v)) ? (Print(v)) : ((Math.IsNumeric(v)) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v)))) . ((A_Index < s) ? (", ") : ("]"))
+					r .= ((IsObject(v)) ? (Print(v)) : ((Math.IsNumber(v)) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v)))) . ((A_Index < s) ? (", ") : ("]"))
 				}
 			}
 			else {
@@ -161,7 +161,7 @@ Class __Array {
 	Print() {
 		if (s := this.Length) {
 			for i, v in (this, r := "[") {
-				r .= ((IsObject(v)) ? (v.Print()) : ((Math.IsNumeric(v)) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v)))) . ((A_Index < s) ? (", ") : ("]"))  ;! RegExReplace(v, "S)^0*(\d+(?:\.(?:(?!0+$)\d)+)?).*", "$1")
+				r .= ((IsObject(v)) ? (v.Print()) : ((Math.IsNumber(v)) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v)))) . ((A_Index < s) ? (", ") : ("]"))  ;! RegExReplace(v, "S)^0*(\d+(?:\.(?:(?!0+$)\d)+)?).*", "$1")
 			}
 		}
 		else {
@@ -553,7 +553,7 @@ Class __Object {
 	Print() {
 		if (c := this.Count()) {
 			for k, v in (this, r := "{") {
-				r .= k . ": " . ((IsObject(v)) ? (v.Print()) : (((Math.IsNumeric(v)) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v))))) . ((A_Index < c) ? (", ") : ("}"))
+				r .= k . ": " . ((IsObject(v)) ? (v.Print()) : (((Math.IsNumber(v)) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v))))) . ((A_Index < c) ? (", ") : ("}"))
 			}
 		}
 		else {

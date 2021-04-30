@@ -18,8 +18,8 @@ SetWinDelay, -1
 
 ;====================================================== Variable ==============;
 
-IniRead, Debug, % A_WorkingDir . "\cfg\Settings.ini", Debug, Debug
-Global Debug
+;IniRead, Debug, % A_WorkingDir . "\cfg\Settings.ini", Debug, Debug
+;Global Debug
 
 ;IniRead, scripts, % A_WorkingDir . "\cfg\Settings.ini", Scripts, Scripts
 
@@ -63,10 +63,10 @@ exit
 
 ;==============  Include  ======================================================;
 
-#Include, %A_ScriptDir%\..\lib\General.lib
-#Include, %A_ScriptDir%\..\lib\Math.lib
-#Include, %A_ScriptDir%\..\lib\ObjectOriented.lib
-#Include, %A_ScriptDir%\..\lib\String.lib
+#Include, %A_ScriptDir%\..\lib\General.ahk
+#Include, %A_ScriptDir%\..\lib\Math.ahk
+#Include, %A_ScriptDir%\..\lib\ObjectOriented.ahk
+#Include, %A_ScriptDir%\..\lib\String.ahk
 
 ;============== Function ======================================================;
 

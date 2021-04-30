@@ -3,3 +3,5 @@ bin/*
 build
 cfg
 doc
+res
+test
