@@ -52,7 +52,7 @@ Global Debug
 
 ;=======================================================  Group  ===============;
 
-for k, v in {"Browser": [["Google Chrome ahk_class Chrome_WidgetWin_1 ahk_exe chrome.exe"]]  ;? [["Title ahk_class Class ahk_exe ProcessName", "ExcludeTitle"], ...]
+for k, v in {"Browser": [["Google Chrome ahk_class Chrome_WidgetWin_1 ahk_exe chrome.exe"]]  ;? [["Title ahk_class ClassName ahk_exe ProcessName", "ExcludeTitle"], ...]
 	, "Editor" : [["Notepad++ ahk_class Notepad++ ahk_exe notepad++.exe"], ["ahk_class Chrome_WidgetWin_1 ahk_exe Code.exe"], ["Microsoft Visual Studio ahk_exe devenv.exe"]]
 	, "Escape": [["ahk_class ApplicationFrameWindow ahk_exe ApplicationFrameHost.exe", "Calculator"], ["AutoHotkey Help ahk_class HH Parent ahk_exe hh.exe"], ["ahk_class MediaPlayerClassicW ahk_exe mpc-hc64.exe"], ["Windows Photo Viewer ahk_class Photo_Lightweight_Viewer ahk_exe DllHost.exe"]]} {
 	for i, v in v {
@@ -76,6 +76,15 @@ for i, v in ["QuickTest"] {
 }
 
 ;=======================================================  Other  ===============;
+
+IniRead, v, % A_WorkingDir . "\cfg\Settings.ini", Check, Update, 0
+if (v != Format("{}-{}-{}", A_DD, A_MM, A_YYYY)) {
+	IniWrite, % A_DD . "-" . A_MM . "-" . A_YYYY, % A_WorkingDir . "\cfg\Settings.ini", Check, Update
+}
+
+if (!((v := DownloadContent("https://autohotkey.com/download/1.1/version.txt")) == A_AhkVersion)) {
+	Console.Write(Format("New AHK version: {}", v))
+}
 
 exit
 
@@ -115,12 +124,15 @@ exit
 		KeyWait, XButton1
 
 		switch (WinGet("ProcessName")) {
-			case "7zFM.exe":
+			case "7zFM.exe": {
 				Send, {Backspace}
-			case "Spotify.exe":
+			}
+			case "Spotify.exe": {
 				Send, !{Left}
-			Default:
+			}
+			Default: {
 				Send, {XButton1}
+			}
 		}
 
 		return
@@ -141,10 +153,12 @@ exit
 		KeyWait, XButton2
 
 		switch (WinGet("ProcessName")) {
-			case "Spotify.exe":
+			case "Spotify.exe": {
 				Send, !{Right}
-			Default:
+			}
+			Default: {
 				Send, {XButton2}
+			}
 		}
 
 		return
@@ -219,7 +233,7 @@ AppsKey & LButton::
 						append := " v2"  ;~ append
 					}
 
-					RunActivate("AutoHotkey" . append . " Help ahk_exe hh.exe", A_ProgramFiles . "\AutoHotkey" . append . "\AutoHotkey.chm", , , [-7, 730, 894, 357])  ;* Force the position here to avoid flickering with Window.ahk.
+					RunActivate("AutoHotkey" . append . " Help ahk_exe hh.exe", A_WorkingDir . "\AutoHotkey" . append . ".chm", , , -7, 730, 894, 357)  ;* Force the position here to avoid flickering with Window.ahk.
 
 					Send, !n
 					Sleep, 200
@@ -250,7 +264,7 @@ AppsKey & LButton::
 			IniWrite, % Debug := !Debug, % A_WorkingDir . "\cfg\Settings.ini", Debug, Debug
 
 			for i, v in WinGet("List", "ahk_class AutoHotkey", A_ScriptName, "On") {
-				SendMessage(WindowMessage, -1, , "ahk_id" . v)  ;* Tell other running scripts to update their `Debug` value.
+				SendMessage(WindowMessage, 0x1000, , "ahk_id" . v, , , "On")  ;* Tell other running scripts to update their `Debug` value.
 			}
 
 			Run, % A_WorkingDir . "\bin\Nircmd.exe speak text " . Format("""Debug {}.""", (Debug) ? ("On") : ("Off"))
@@ -336,7 +350,7 @@ AppsKey & LButton::
 			}
 
 			if (Debug) {
-				MsgBox(A_LoopFileName . " --> " . extension . " (" . 10 + 5*(extension ~= "gif|mov|mp4|webm" != 0) . ")")
+				Console.Write(Format("{} --> {} ({})", A_LoopFileName, extension, 10 + 5*(extension ~= "gif|mov|mp4|webm" != 0)))
 			}
 
 			FileMove, % A_LoopFilePath, % A_LoopFileDir . "\" . extension
@@ -678,7 +692,7 @@ AppsKey & t::
 		WinSet, AlwaysOnTop, Toggle, A
 
 		WinGetTitle, v, A
-		WinSetTitle, A, , % ((SubStr(v, 1, 2) != "▲ ") ? "▲ " . v : SubStr(v, 3))  ; ** Need a better way to identify a window as AoT. **
+		WinSetTitle, A, , % ((SubStr(v, 1, 2) != "▲ ") ? "▲ " . v : SubStr(v, 3))  ;* ** Need a better way to identify a window as AoT. **
 	}
 
 	KeyWait("t")
@@ -692,16 +706,21 @@ AppsKey & s::
 
 	if (v ~= "r|s|l|h|p") {
 		switch (v) {
-			case "r":
+			case "r": {
 				ShutDown, 2
-			case "s":
+			}
+			case "s": {
 				ShutDown, 8
-			case "l":
+			}
+			case "l": {
 				ShutDown, 0
-			case "h":
+			}
+			case "h": {
 				DllCall("PowrProf\SetSuspendState", "Int", 1, "Int", 0, "Int", 0)
-			case "p":
+			}
+			case "p": {
 				DllCall("PowrProf\SetSuspendState", "Int", 0, "Int", 0, "Int", 0)
+			}
 		}
 	}
 
@@ -822,12 +841,12 @@ AppsKey & Right::
 
 WindowMessage(wParam := 0, lParam := 0) {
 	switch (wParam) {
-		case -1:
+		case 0x1000: {
 			IniRead, Debug, % A_WorkingDir . "\cfg\Settings.ini", Debug, Debug
 
 			return (Debug)
-
-		case 2:
+		}
+		case 0x1001: {
 			Menu, Tray, ToggleCheck, [&9] Suspend
 			if (!A_IsPaused) {
 				Menu, Tray, Icon, % ((!A_IsSuspended) ? ("mstscax.dll") : ("wmploc.dll")), % ((!A_IsSuspended) ? (10) : (136)), 1
@@ -836,6 +855,7 @@ WindowMessage(wParam := 0, lParam := 0) {
 			Run, % A_WorkingDir . "\bin\Nircmd.exe speak text " . Format("""{}.""", ((A_IsSuspended) ? ("You're suspended young lady!") : ("Carry on...")))
 
 			return, (A_IsSuspended)
+		}
 	}
 
 	return (0)
@@ -862,122 +882,107 @@ Exit(exitReason := "", exitCode := "") {  ;? ExitReason: Close || Error || Exit 
 
 Menu(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := "Tray") {
 	switch (thisMenu) {
-		case "Case":
+		case "Case": {
 			s := String.Clipboard.Copy()
-
 			switch (RegExReplace(thisMenuItem, "iS).*?([a-z])", "$1")) {
-				case "Sentencecase":
+				case "Sentencecase": {
 					s := RegExReplace(Format("{:L}", s), "S)((?:^|[.!?]\s*)[a-z])", "$U1")
-
 					for i, v in ["I", "Dr", "Mr", "Ms", "Mrs"] {
 						s := RegExReplace(s, "i)\b" . v . "\b", v)
 					}
-
-				case "iNVERSE":
+				}
+				case "iNVERSE": {
 					s := String.Inverse(s)
-
-				case "Reverse":
+				}
+				case "Reverse": {
 					s := String.Reverse(s)
-
-				Default:
+				}
+				Default: {
 					s := Format("{:" . SubStr(thisMenuItem, 6, 1) . "}", s)
+				}
 			}
-
 			String.Clipboard.Paste(s)
-
-		case "Tray":
+		}
+		case "Tray": {
 			switch (RegExReplace(thisMenuItem, "iS).*?([a-z])", "$1")) {
-				case "Edit":
+				case "Edit": {
 					Edit, % A_ScriptName
-
-				case "OpenScriptFolder":
+				}
+				case "OpenScriptFolder": {
 					Run, % "explorer.exe /select," . A_ScriptDir . "\" . A_ScriptName
-
-				case "WindowSpy":
+				}
+				case "WindowSpy": {
 					w := "ahk_id" . WinGet("ID")
-
-					RunActivate("Window Spy ahk_class AutoHotkeyGUI", A_ScriptDir . "\WindowSpy.ahk", , , [50, 35])
-
+					RunActivate("Window Spy ahk_class AutoHotkeyGUI", A_ScriptDir . "\WindowSpy.ahk", , , 50, 35)
 					if (WinExist(w)) {
 						WinActivate, % w
 					}
 					else {  ;* Launched with script menu.
 						Send, !{Esc}  ;* Restore focus away from the taskbar.
 					}
-
-				case "ListLines":
+				}
+				case "ListLines": {
 					ListLines
-
 					Sleep, 100
 					Send, ^{End}
-
-				case "ListVars":
+				}
+				case "ListVars": {
 					ListVars
-
-				case "ListHotkeys":
+				}
+				case "ListHotkeys": {
 					ListHotkeys
-
-				case "KeyHistory":
+				}
+				case "KeyHistory": {
 					KeyHistory
-
 					Sleep, 100
 					Send, ^{End}
-
-				case "Pause":
+				}
+				case "Pause": {
 					Menu, Tray, ToggleCheck, [&8] Pause
 					if (!A_IsSuspended) {
 						Menu, Tray, Icon, % (A_IsPaused) ? ("mstscax.dll") : ("wmploc.dll"), % (A_IsPaused) ? (10) : (136), 1
 					}
-
 					Pause, -1, 1
 					Run, % Format("{}\bin\Nircmd.exe speak text ""{}.""", A_WorkingDir, (A_IsPaused) ? ("Paused") : ("Unpaused"))
-
-				case "Suspend":
+				}
+				case "Suspend": {
 					w := "ahk_id" . WinGet("ID")
-
 					Menu, Tray, ToggleCheck, [&9] Suspend
 					if (!A_IsPaused)
 						Menu, Tray, Icon, % (A_IsSuspended) ? ("mstscax.dll") : ("wmploc.dll"), % (A_IsSuspended) ? (10) : (136), 1
-
 					Suspend, -1
 					Run, %  Format("{}\bin\Nircmd.exe speak text ""{}.""", A_WorkingDir, A_IsSuspended ? "You're suspended young lady!" : "Carry on...")
-
 					if (WinExist(w)) {
 						WinActivate, % w
 					}
 					else {
 						Send, !{Esc}
 					}
-
-				case "RestoreAll":
+				}
+				case "RestoreAll": {
 					w := "ahk_id" . WinGet("ID")
-
 					loop, % s := HiddenWindows.Length {
 						Menu(HiddenWindows[--s])
 					}
-
 					WinActivate, % w
-
-				case "Exit":
+				}
+				case "Exit": {
 					Exit()
-
-				Default:
+				}
+				Default: {
 					w := "ahk_id" . RegExReplace(thisMenuItem, ".*?\((0x.*?)\)", "$1")
-
 					WinShow, % w
 					WinActivate, % w
-
 					DetectHiddenWindows, Off
-
 					if (!WinExist(w)) {
 						MsgBox(Format("There was an error unhiding this window ({}). Please contact your system administrator.", thisMenuItem))
 					}
-
 					DetectHiddenWindows, % DetectHiddenWindows
-
 					Menu, Tray, Delete, % thisMenuItem
 					HiddenWindows.RemoveAt(HiddenWindows.IndexOf(thisMenuItem))
+				}
 			}
+		}
 	}
 }
 

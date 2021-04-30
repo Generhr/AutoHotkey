@@ -100,26 +100,33 @@ PostMessage(msg, wParam := 0, lParam := 0, winTitle := "", excludeTitle := "", d
 	return (ErrorLevel)  ;* ErrorLevel is set to 1 if there was a problem such as the target window or control not existing. Otherwise, it is set to 0.
 }
 
-;* RunActivate(winTitle, target, (options), (timeOut), ([Rect] position))
+;* Random((min), (max), (exclude*))
+Random(min := 0.0, max := 1.0, exclude*) {
+	Random, u, min, max
+	for i, v in exclude {
+		if (u == v) {
+			return (Random(min, max, exclude*))
+		}
+	}
+	return (u)
+}
+;* RunActivate(winTitle, target, (options), (timeOut), (x), (y), (width), (height))
 ;* Parameter:
 	;* rect:
 		;* *: An array containg x, y, width and height.
-RunActivate(winTitle, target, options := "", timeOut := 5000, rect := "") {
+RunActivate(winTitle, target, options := "", timeOut := 5000, x := "", y := "", width := "", height := "") {
 	if (!WinExist(winTitle)) {
 		Run, % target, , % options  ;~ Native error handling.
 		WinWait, % winTitle, , timeOut/1000
 		if (ErrorLevel) {
 			return (ErrorLevel)  ;* ErrorLevel is set to 1 if `WinWait` timed out.
 		}
-
-		if (rect) {
-			WinMove, % winTitle, , rect[0], rect[1], rect[2], rect[3]
+		if (!(x == "" || y == "" || width == "" || height == "")) {
+			WinMove, % winTitle, , x, y, width, height
 		}
 	}
-
 	WinActivate
 	WinWaitActive, A  ;* Set "Last Found" window.
-
 	return (WinExist())
 }
 
@@ -146,6 +153,8 @@ SetTimer(label, period := "", priority := 0) {
 	catch {
 		return (0)
 	}
+
+	return (1)
 }
 
 ;* Sleep(milliseconds)
@@ -197,9 +206,9 @@ WinGet(subCommand := "", winTitle := "A", excludeTitle := "", detectHiddenWindow
 
 					out := (alpha != "") ? (alpha) : (255)
 				case "Visible":
-					WinGet, handle, ID, % winTitle, % winText, % excludeTitle, % excludeText
+					WinGet, hWnd, ID, % winTitle, % winText, % excludeTitle, % excludeText
 
-					out := DllCall("IsWindowVisible", "UInt", handle)  ;: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-iswindowvisible
+					out := DllCall("IsWindowVisible", "UInt", hWnd)  ;: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-iswindowvisible
 				default:
 					WinGet, out, % subCommand, % winTitle, % winText, % excludeTitle, % excludeText  ;~ Native error handling.
 			}
@@ -226,8 +235,8 @@ WinGet(subCommand := "", winTitle := "A", excludeTitle := "", detectHiddenWindow
 
 ;* CloseClipboard()
 CloseClipboard() {
-	if (!DllCall("user32\CloseClipboard")) {  ;: https://github.com/jNizM/AHK_DllCall_WinAPI/tree/master/src/Clipboard%20Functions
-		return (ErrorLevel := DllCall("Kernel32\GetLastError"))
+	if (!DllCall("User32\CloseClipboard", "UInt")) {  ;: https://github.com/jNizM/AHK_DllCall_WinAPI/tree/master/src/Clipboard%20Functions
+		throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", A_LastError, "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(A_LastError)))
 	}
 
 	return (ErrorLevel := 0)
@@ -235,8 +244,8 @@ CloseClipboard() {
 
 ;* EmptyClipboard()
 EmptyClipboard() {
-	if (!DllCall("user32\EmptyClipboard")) {  ;: https://msdn.microsoft.com/en-us/library/ms649037.aspx
-		return (ErrorLevel := DllCall("Kernel32\GetLastError"))
+	if (!DllCall("User32\EmptyClipboard", "UInt")) {  ;: https://msdn.microsoft.com/en-us/library/ms649037.aspx
+		throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", A_LastError, "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(A_LastError)))
 	}
 
 	return (ErrorLevel := 0)
@@ -244,8 +253,8 @@ EmptyClipboard() {
 
 ;* OpenClipboard((newOwner))
 OpenClipboard(newOwner := 0) {
-	if (!DllCall("user32\OpenClipboard", "Ptr", newOwner)) {  ;: https://msdn.microsoft.com/en-us/library/ms649048.aspx
-		return (ErrorLevel := DllCall("Kernel32\GetLastError"))
+	if (!DllCall("User32\OpenClipboard", "Ptr", newOwner, "UInt")) {  ;: https://msdn.microsoft.com/en-us/library/ms649048.aspx
+		throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", A_LastError, "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(A_LastError)))
 	}
 
 	return (ErrorLevel := 0)
@@ -255,10 +264,10 @@ OpenClipboard(newOwner := 0) {
 
 ;* BlockInput((mode))
 ;* Note:
-	;* Note that only the thread that blocked input can successfully unblock input.
+	;* Note that only the thread that blocked input can successfully unblock it.
 BlockInput(mode := 0) {
-	if (!DllCall("user32\BlockInput", "UInt", mode)) {  ;: https://msdn.microsoft.com/en-us/library/ms646290.aspx
-		return (ErrorLevel := DllCall("Kernel32\GetLastError"))
+	if (!DllCall("User32\BlockInput", "UInt", mode)) {  ;: https://msdn.microsoft.com/en-us/library/ms646290.aspx
+		throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", A_LastError, "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(A_LastError)))
 	}
 
 	return (ErrorLevel := 0)
@@ -321,7 +330,7 @@ Class Date {
 	;* Description:
 		;* Convert a Gregorian date to a Julian date (https://en.wikipedia.org/wiki/Julian_day).
 	;* Credit:
-		;* SKAN  ;: https://autohotkey.com/board/topic/19644-julian-date-converter-for-google-daterange-search/#entry129225.
+		;* SKAN: https://autohotkey.com/board/topic/19644-julian-date-converter-for-google-daterange-search/#entry129225.
 	ToJulian(date) {
 		FormatTime, date, % date, yyyyMMddHHmmss
 
@@ -364,7 +373,7 @@ MCode(machineCode) {
 
 ;=======================================================  Mouse  ===============;
 
-;* ClipCursor((confine), ([Array] rect))
+;* ClipCursor((confine), (x), (y), (width), (height))
 ;* Description:
 	;* Confines the cursor to a rectangular area on the screen. If a subsequent cursor position (set by the SetCursorPos function or the mouse) lies outside the rectangle, the system automatically adjusts the position to keep the cursor inside the rectangular area.
 ;* Parameter:
@@ -375,20 +384,21 @@ MCode(machineCode) {
 		;* *: An array containg x, y, width and height in that order.
 ClipCursor(confine := 0, x := "", y := "", width := "", height := "") {
 	Static rect := new Structure(16)
-
 	if (!confine) {
-		return (DllCall("user32\ClipCursor"))  ;: https://msdn.microsoft.com/en-us/library/ms648383.aspx
+		return (DllCall("User32\ClipCursor", "Ptr", 0, "UInt"))  ;: https://msdn.microsoft.com/en-us/library/ms648383.aspx
 	}
 
-	if (x == "" && y == "" && width == "" && height == "") {
-		DllCall("GetWindowRect", "Ptr", WinExist(), "Ptr", rect.Pointer)
+	if (x == "" || y == "" || width == "" || height == "") {
+		if (!DllCall("User32\GetWindowRect", "Ptr", WinExist(), "Ptr", rect.Pointer, "UInt")) {
+			throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", A_LastError, "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(A_LastError)))
+		}
 	}
 	else {
 		rect.NumPut(0, "Int", x, "Int", y, "Int", width, "Int", height)  ;: https://docs.microsoft.com/en-us/windows/win32/api/windef/ns-windef-rect
 	}
 
-	if (!DllCall("user32\ClipCursor", "Ptr", rect.Pointer)) {
-		return (ErrorLevel := DllCall("Kernel32\GetLastError"))
+	if (!DllCall("User32\ClipCursor", "Ptr", rect.Pointer)) {
+		throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", A_LastError, "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(A_LastError)))
 	}
 
 	return (ErrorLevel := 0)
@@ -396,15 +406,15 @@ ClipCursor(confine := 0, x := "", y := "", width := "", height := "") {
 
 ;* GetDoubleClickTime()
 GetDoubleClickTime() {
-	return (ErrorLevel := DllCall("user32\GetDoubleClickTime"))  ;: https://msdn.microsoft.com/en-us/library/ms646258.aspx
+	return (ErrorLevel := DllCall("User32\GetDoubleClickTime"))  ;: https://msdn.microsoft.com/en-us/library/ms646258.aspx
 }
 
 ;* GetCapture()
 GetCapture() {
-	return (ErrorLevel := DllCall("user32\GetCapture"))  ;: https://msdn.microsoft.com/en-us/library/ms646262.aspx
+	return (ErrorLevel := DllCall("User32\GetCapture"))  ;: https://msdn.microsoft.com/en-us/library/ms646262.aspx
 }
 
-;* GetCapture([Point2] stop, (speed))
+;* MouseMove([Vec2] stop, (speed))
 MouseMove(stop, speed := 0.5) {
 	start := MouseGet("Pos")
 		, distance := Sqrt((stop.x - start.x)**2 + (stop.y - start.y)**2), difference := {x: (stop.x - start.x)/distance, y: (stop.y - start.y)/distance}
@@ -418,17 +428,17 @@ MouseMove(stop, speed := 0.5) {
 
 MouseWheel(delta := 120) {
 	CoordMode, Mouse, Screen
-
 	MouseGetPos, x, y
+
 	modifiers := 0x8*GetKeyState("Ctrl") | 0x1*GetKeyState("LButton") | 0x10*GetKeyState("MButton") | 0x2*GetKeyState("RButton") | 0x4*GetKeyState("Shift") | 0x20*GetKeyState("XButton1") | 0x40*GetKeyState("XButton2")
 
-	PostMessage, 0x20A, delta << 16 | modifiers, y << 16 | x , , A  ;: http://msdn.microsoft.com/en-us/library/windows/desktop/ms645617(v=vs.85).aspx
+	PostMessage, 0x20A, (delta << 16) | (modifiers, y << 16) | x , , A  ;: http://msdn.microsoft.com/en-us/library/windows/desktop/ms645617(v=vs.85).aspx
 }
 
 ;* ReleaseCapture()
 ReleaseCapture() {
-	if (!DllCall("user32\ReleaseCapture")) {  ;: https://msdn.microsoft.com/en-us/library/ms646261.aspx
-		return (ErrorLevel := DllCall("Kernel32\GetLastError"))
+	if (!DllCall("User32\ReleaseCapture", "UInt")) {  ;: https://msdn.microsoft.com/en-us/library/ms646261.aspx
+		throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", A_LastError, "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(A_LastError)))
 	}
 
 	return (ErrorLevel := 0)
@@ -436,16 +446,21 @@ ReleaseCapture() {
 
 ;* SetDoubleClickTime((interval))
 SetDoubleClickTime(interval := 500) {
-	if (!DllCall("user32\SetDoubleClickTime", "UInt", interval)) {  ;: https://msdn.microsoft.com/en-us/library/ms646263.aspx
-		return (ErrorLevel := DllCall("Kernel32\GetLastError"))
+	if (!DllCall("User32\SetDoubleClickTime", "UInt", interval, "UInt")) {  ;: https://msdn.microsoft.com/en-us/library/ms646263.aspx
+		throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", A_LastError, "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(A_LastError)))
 	}
 
 	return (ErrorLevel := 0)
 }
 
+;* SwapMouseButton((show))
+ShowCursor(show) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showcursor
+	return (DllCall("ShowCursor", "UInt", show, "Int"))  ;* The return value specifies the new display counter.
+}
+
 ;* SwapMouseButton((mode))
-SwapMouseButton(mode := 0) {
-	DllCall("user32\SwapMouseButton", "UInt", mode)  ;: https://msdn.microsoft.com/en-us/library/ms646264.aspx
+SwapMouseButton(mode := 0) {  ;: https://msdn.microsoft.com/en-us/library/ms646264.aspx
+	DllCall("User32\SwapMouseButton", "UInt", mode)
 }
 
 ;======================================================== Type ================;
@@ -534,18 +549,20 @@ FadeWindow(mode, alpha := "", time := 5000, targetWindow := "A") {
 	a := t := ((t := WinGet("Transparent", (w := (targetWindow == "A") ? ("ahk_id" . WinExist()) : (targetWindow)))) == "") ? (255*(mode == "In")) : (t), s := A_TickCount  ;* Safety check for `WinGet("Transparent")` returning `""` because I'm unsure how to test for the fourth exception mentioned in the docs.
 
 	switch (mode) {  ;~ No error handling.
-		case "In":
+		case "In": {
 			v := (z := Math.Clamp(alpha, 0, 255)) - t
 
 			while (a < z) {
 				WinSet, Transparent, % a := ((A_TickCount - s)/time)*v + t, % w
 			}
-		case "Out":
+		}
+		case "Out": {
 			v := t - (z := Math.Clamp(alpha, 0, 255))
 
 			while (a > z) {
 				WinSet, Transparent, % a := (1 - ((A_TickCount - s)/time))*v + z, % w
 			}
+		}
 	}
 }
 
@@ -568,7 +585,7 @@ ScriptCommand(scriptName, message) {
 
 ;* ShowDesktop()
 ShowDesktop() {
-	Static comObj := ComObjCreate("shell.application")
+	Static comObj := ComObjCreate("Shell.Application")
 
 	comObj.ToggleDesktop()
 }
