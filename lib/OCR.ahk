@@ -1,6 +1,6 @@
 ﻿;==============  Include  ======================================================;
 
-#Include, %A_LineFile%\..\Structure\Structure.ahk  ;~ CreateBitmapInfoHeader()
+#Include, %A_LineFile%\..\Core.ahk
 
 ;============== Function ======================================================;
 
@@ -13,7 +13,7 @@ OCR(file := "") {
 		}
 	}
 
-	(input := new Structure(8 + A_PtrSize*2, 1)).NumPut(0, "UInt", 0x1)  ;: https://docs.microsoft.com/en-us/windows/win32/api/gdiplusinit/ns-gdiplusinit-gdiplusstartupinput
+	(input := new Structure(8 + A_PtrSize*2)).NumPut(0, "UInt", 0x1)  ;: https://docs.microsoft.com/en-us/windows/win32/api/gdiplusinit/ns-gdiplusinit-gdiplusstartupinput
 
 	DllCall("Gdiplus\GdiplusStartup", "Ptr*", pToken, "Ptr", input.Pointer, "Ptr", 0)  ;: https://docs.microsoft.com/en-us/windows/win32/api/gdiplusinit/nf-gdiplusinit-gdiplusstartup
 

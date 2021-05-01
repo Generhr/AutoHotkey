@@ -64,11 +64,11 @@ exit
 		return
 
 	:*x:\\s::
-		Send, % "switch () {{}{}}{Left}{Enter}case ""_____"":{Up}{Left 3}condition^{Left}^+{Right}"
+		Send, % "switch () {{}{}}{Left}{Enter}case ""_____"":{{}{Enter}{Up 2}{Right 4}condition^{Left}^+{Right}"
 		return
 
 	:*x:\\t::
-		Send, % "(condition ? ----- : -----)^{Left 5}^+{Right}"
+		Send, % "(condition) ? (_____) : (_____)^{Left 7}^+{Right}"
 		return
 
 	:*x:\\o::
@@ -5378,6 +5378,10 @@ exit
 :?:oology::oölogy
 :?:t he:: the
 */
+
+;==============  Include  ======================================================;
+
+#Include, %A_WorkingDir%\lib\Core.ahk
 
 ;============== Function ======================================================;
 ;======================================================== Hook ================;

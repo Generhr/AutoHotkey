@@ -828,8 +828,6 @@ AppsKey & Right::
 
 ;==============  Include  ======================================================;
 
-#Include, %A_ScriptDir%\..\lib\ObjectOriented.ahk
-
 #Include, %A_ScriptDir%\..\lib\General.ahk
 #Include, %A_ScriptDir%\..\lib\Console.ahk
 #Include, %A_ScriptDir%\..\lib\String.ahk

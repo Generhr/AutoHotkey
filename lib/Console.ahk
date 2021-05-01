@@ -1,7 +1,6 @@
 ;==============  Include  ======================================================;
 
-#Include, %A_LineFile%\..\General.ahk
-#Include, %A_LineFile%\..\Structure\Structure.ahk
+#Include, %A_LineFile%\..\Core.ahk
 
 ;============== Function ======================================================;
 

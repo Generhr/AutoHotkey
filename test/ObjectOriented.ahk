@@ -16,7 +16,7 @@ For i, v in [[[10], "[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]"], [[1, 20], "[1, 2, 3, 4, 5
 	Assert.IsEqual((Range(v[0, 0], v[0, 1], Round(v[0, 2] - 1) + 1).Print()), v[1])
 }  ;---------------------------------------------------------  Range  ----------;
 
-Assert.SetGroup("Property")  ;--------- Property ------------------------------;
+Assert.SetGroup("Array")  ;----------  Array  ----------------------------------;
 
 Assert.SetLabel("Count")  ;----------------------------------  Count  ----------;
 Assert.IsEqual([1, 2, , 4].Count, 3)
@@ -29,8 +29,6 @@ Assert.IsEqual(array.Length, 3)
 array.Length := 5
 Assert.IsEqual(array.Print(), "[1, """", 3, """", """"]")
 Assert.IsEqual(array.Length, 5)
-
-Assert.SetGroup("Method")  ;---------- Method ---------------------------------;
 
 Assert.SetLabel("Compact")  ;-------------------------------  Compact  ---------;
 Assert.IsEqual([0, [0, 0], 0, 0].Compact(1).Print(), "[[]]")
@@ -193,6 +191,28 @@ Assert.IsEqual(array.UnShift(1, , 3), 6)
 Assert.IsEqual(array.Print(), "[1, """", 3, 4, 5, 6]")
 
 ;! *** Values
+
+Assert.SetGroup("String")  ;---------- String ---------------------------------;
+
+a := 1.0
+Assert.IsTrue(a.IsNumber())
+Assert.IsFalse(a.IsString())
+
+a := 1.0e-1
+Assert.IsTrue(a.IsNumber())
+Assert.IsFalse(a.IsString())
+
+a := 1
+Assert.IsTrue(a.IsNumber())
+Assert.IsFalse(a.IsString())
+
+a := "1"
+Assert.IsTrue(a.IsNumber())
+Assert.IsTrue(a.IsString())
+
+a := "a"
+Assert.IsFalse(a.IsNumber())
+Assert.IsTrue(a.IsString())
 
 Assert.Report()
 

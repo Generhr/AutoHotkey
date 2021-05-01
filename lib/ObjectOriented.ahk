@@ -18,26 +18,31 @@ Object(parameters*) {
 	return (r)
 }
 
-Print(object) {
-	switch (Type(object)) {
-		case "Array":
-			if (s := this.Length) {
-				for i, v in (this, r := "[") {
-					r .= ((IsObject(v)) ? (Print(v)) : ((Math.IsNumber(v)) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v)))) . ((A_Index < s) ? (", ") : ("]"))
+Print(input) {
+	switch (RegExReplace(input.__Class, "S).*?\.(?!.*?\..*?)")) {
+		case "__Array": {
+			if (s := input.Length) {
+				for i, v in (input, r := "[") {
+					r .= ((IsObject(v)) ? (Print(v)) : ((v.IsNumber()) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v)))) . ((A_Index < s) ? (", ") : ("]"))
 				}
 			}
 			else {
 				r := "[]"
 			}
-		case "Object":
-			if (s := this.Length) {
-				for i, v in (this, r := "[") {
-					r .= ((IsObject(v)) ? (Print(v)) : ((Math.IsNumber(v)) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v)))) . ((A_Index < s) ? (", ") : ("]"))
+		}
+		case "__Object": {
+			if (s := input.Length) {
+				for k, v in (input, r := "[") {
+					r .= ((IsObject(v)) ? (Print(v)) : ((v.IsNumber()) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v)))) . ((A_Index < s) ? (", ") : ("]"))
 				}
 			}
 			else {
 				r := "[]"
 			}
+		}
+		Default: {
+			r := input
+		}
 	}
 
 	return (r)
@@ -51,15 +56,15 @@ Range(start := 0, stop := "", step := 1) {
 		stop := start, start := 0
 	}
 
-	if (Math.IsInteger(start) && Math.IsInteger(stop)) {
-		loop, % (Math.Max(Math.Ceil((stop - start)/step), 0), r := []) {
-			r.Push(start), start += step
-		}
-
-		return (r)
+	if (!(start.IsInteger() || stop.IsInteger())) {
+		throw (Exception("TypeError.", -1, Format("Range({}) may only contain integers.", [start, stop, step].Join(", "))))
 	}
 
-	throw (Exception("TypeError.", -1, Format("Range({}) may only contain integers.", [start, stop, step].Join(", "))))
+	loop, % (Max(Ceil((stop - start)/step), 0), r := []) {
+		r.Push(start), start += step
+	}
+
+	return (r)
 }
 
 __Sort(value1, value2) {
@@ -91,7 +96,7 @@ Class __Array {
 		;* array[-index]
 		;* Description:
 			;* Register negative index lookups as an offset from the arrays last index with -1 referring to the last index.
-		if (Math.IsNegativeInteger(index)) {
+		if (index < 0 && index == Round(index)) {
 			index += this.Length
 
 			if (this.HasKey(index)) {
@@ -118,15 +123,13 @@ Class __Array {
 
 		;* array.Length
 		Get {
-			Static offset := A_PtrSize*4
-
-			return (NumGet(&this, offset))
+			return (Round(this.MaxIndex() + 1))  ;! (NumGet(&this + A_PtrSize*4))
 		}
 
 		;* array.Length := value
 		Set {
-			if (Math.IsPositiveInteger(value)) {
-				loop, % Math.Abs(o := value - (s := this.Length)) {
+			if (value >= 0 && value == Round(value)) {
+				loop, % Abs(o := value - (s := this.Length)) {
 					(o < 0) ? this.RemoveAt(--s) : this[s++] := ""
 				}
 
@@ -161,7 +164,7 @@ Class __Array {
 	Print() {
 		if (s := this.Length) {
 			for i, v in (this, r := "[") {
-				r .= ((IsObject(v)) ? (v.Print()) : ((Math.IsNumber(v)) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v)))) . ((A_Index < s) ? (", ") : ("]"))  ;! RegExReplace(v, "S)^0*(\d+(?:\.(?:(?!0+$)\d)+)?).*", "$1")
+				r .= ((IsObject(v)) ? (v.Print()) : ((v.IsNumber()) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v)))) . ((A_Index < s) ? (", ") : ("]"))  ;! RegExReplace(v, "S)^0*(\d+(?:\.(?:(?!0+$)\d)+)?).*", "$1")
 			}
 		}
 		else {
@@ -188,7 +191,7 @@ Class __Array {
 	Sample(n := 0) {
 		s := this.Length
 
-		return (this.Clone().Shuffle().Slice(0, Math.Min(Math.Max((n == 0) ? (s) : (n), 0), s)))
+		return (this.Clone().Shuffle().Slice(0, Min(Max((n == 0) ? (s) : (n), 0), s)))
 	}
 
 	;* array.Shuffle()
@@ -196,8 +199,9 @@ Class __Array {
 		;* Fisher–Yates shuffle.  ;: https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
 	Shuffle() {
 		for i, v in (this, m := this.MaxIndex()) {
-			u := Math.Random.Uniform(i, m)
-				, t := this[i], this[i] := this[u], this[u] := t
+			Random, u, i, m
+
+			t := this[i], this[i] := this[u], this[u] := t
 		}
 
 		return (this)
@@ -209,7 +213,7 @@ Class __Array {
 	Swap(index1, index2) {
 		m := this.MaxIndex()
 
-		if (Math.IsBetween(index1, 0, m) && Math.IsBetween(index2, 0, m)) {  ;~ No error handling.
+		if (index1 >= 0 && index1 <= m && index2 >= 0 && index2 <= m) {  ;~ No error handling.
 			t := this[index1], this[index1] := this[index2], this[index2] := t
 		}
 
@@ -256,9 +260,9 @@ Class __Array {
 		;* Changes all elements in an array to a static value, from a start index (default: 0) to an end index (default: `array.Length`). It returns the modified array.
 	Fill(value := "", start := 0, end := "") {
 		s := this.Length
-			, start := (start >= 0) ? (Math.Min(s, start)) : (Math.Max(s + start, 0))
+			, start := (start >= 0) ? (Min(s, start)) : (Max(s + start, 0))
 
-		loop, % ((end != "") ? ((end >= 0) ? (Math.Min(s, end)) : (Math.Max(s + end, 0))) : s) - start {
+		loop, % ((end != "") ? ((end >= 0) ? (Min(s, end)) : (Max(s + end, 0))) : s) - start {
 			this[start++] := value
 		}
 
@@ -341,7 +345,7 @@ Class __Array {
 		;* Returns the first index at which a given element can be found in the array, or -1 if it is not present.
 	IndexOf(needle, start := 0) {
 		s := this.Length
-			, start := (start >= 0) ? (Math.Min(s, start)) : (Math.Max(s + start, 0))
+			, start := (start >= 0) ? (Min(s, start)) : (Max(s + start, 0))
 
 		if (this.StringCaseSense) {
 			loop, % s - start {
@@ -384,7 +388,7 @@ Class __Array {
 	;* Description:
 		;* Returns the last index at which a given element can be found in the array, or -1 if it is not present. The array is searched backwards, starting at fromIndex.
 	LastIndexOf(needle, start := -1) {
-		start := ((start >= 0) ? (Math.Min(this.Length - 1, start)) : (Math.Max(this.Length + start, -1)))
+		start := ((start >= 0) ? (Min(this.Length - 1, start)) : (Max(this.Length + start, -1)))
 
 		if (this.StringCaseSense) {
 			while (start > -1) {
@@ -460,9 +464,9 @@ Class __Array {
 		;* Returns a shallow copy of a portion of an array into a new array object selected from begin to end (end not included) where begin and end represent the index of items in that array. The original array will not be modified.
 	Slice(start := 0, end := "") {
 		s := this.Length
-			, start := ((start >= 0) ? (Math.Min(s, start)) : (Math.Max(s + start, 0)))
+			, start := ((start >= 0) ? (Min(s, start)) : (Max(s + start, 0)))
 
-		loop, % (((end != "") ? ((end >= 0) ? (Math.Min(s, end)) : (Math.Max(s + end, 0))) : s) - start, r := []) {
+		loop, % (((end != "") ? ((end >= 0) ? (Min(s, end)) : (Max(s + end, 0))) : s) - start, r := []) {
 			r.Push(this[start++])
 		}
 
@@ -516,9 +520,9 @@ Class __Array {
 		;* Changes the contents of an array by removing or replacing existing elements and/or adding new elements in place.
 	Splice(start, deleteCount := "", elements*) {
 		s := this.Length, m := elements.MaxIndex()
-			, start := (start >= 0) ? (Math.Min(s, start)) : (Math.Max(s + start, 0))
+			, start := (start >= 0) ? (Min(s, start)) : (Max(s + start, 0))
 
-		loop, % (((deleteCount != "") ? (Math.Max((s <= start + deleteCount) ? (s - start) : (deleteCount), 0)) : ((m) ? (0) : (s))), r := []) {
+		loop, % (((deleteCount != "") ? (Max((s <= start + deleteCount) ? (s - start) : (deleteCount), 0)) : ((m) ? (0) : (s))), r := []) {
 			r.InsertAt(A_Index - 1, this.RemoveAt(start))
 		}
 
@@ -553,7 +557,7 @@ Class __Object {
 	Print() {
 		if (c := this.Count()) {
 			for k, v in (this, r := "{") {
-				r .= k . ": " . ((IsObject(v)) ? (v.Print()) : (((Math.IsNumber(v)) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v))))) . ((A_Index < c) ? (", ") : ("}"))
+				r .= k . ": " . ((IsObject(v)) ? (v.Print()) : (((v.IsNumber()) ? (RegExReplace(v, "S)^0+(?=\d\.?)|(?=\.).*?\K\.?0*$")) : (Format("""{}""", v))))) . ((A_Index < c) ? (", ") : ("}"))
 			}
 		}
 		else {
@@ -580,6 +584,40 @@ Class __String {
 	;--------------- Method -------------------------------------------------------;
 	;------------------------------------------------------- Custom ---------------;
 
+	;* "String".IsInteger()
+	IsInteger() {
+		return (this == Round(this))
+	}
+
+	;* "String".IsNegativeInteger()
+	IsNegativeInteger() {
+		return (this < 0 && this == Round(this))
+	}
+
+	;* "String".IsPositiveInteger()
+	IsPositiveInteger() {
+		return (this >= 0 && this == Round(this))
+	}
+
+	;* "String".IsNumber()
+	IsNumber() {
+		if this is Number
+			return (1)
+
+		return (0)
+	}
+
+	;* "String".IsString()
+	IsString() {
+		if this is Float  ;* Floats are already in the string buffer so I'm siding with not string.
+			return (0)
+
+		if this is Number
+			return ([this].GetCapacity(0) != "")  ;* It is possible for something to be a number as well as a string. Consider `1` (number) vs `"1"` (number and string).
+
+		return (1)
+	}
+
 	;--------------------------------------------------------  MDN  ----------------;
 
 	;* "String".ToLowerCase()
@@ -594,12 +632,12 @@ Class __String {
 
 	;* "String".Includes(needle, (start))
 	Includes(needle, start := 0) {
-		return (InStr(this, needle, 1, Math.Max(0, Math.Min(StrLen(this), Round(start))) + 1) != 0)
+		return (InStr(this, needle, 1, Max(0, Min(StrLen(this), Round(start))) + 1) != 0)
 	}
 
 	;* "String".IndexOf(needle, (start))
 	IndexOf(needle, start := 0) {
-		return (InStr(this, needle, 1, Math.Max(0, Math.Min(StrLen(this), Round(start))) + 1) - 1)
+		return (InStr(this, needle, 1, Max(0, Min(StrLen(this), Round(start))) + 1) - 1)
 	}
 
 	;* "String".Reverse()
@@ -617,7 +655,7 @@ Class __String {
 	Slice(start, end := "") {
 		m := StrLen(this)
 
-		return (SubStr(this, start + 1, Max(((Math.IsInteger(end)) ? (((end >= 0) ? (Math.Min(m, end)) : (Math.Max(m + end, 0))) - ((start >= 0) ? (Math.Min(m, start)) : (Math.Max(m + start, 0)))) : (m)), 0)))
+		return (SubStr(this, start + 1, Max(((end.IsInteger()) ? (((end >= 0) ? (Min(m, end)) : (Max(m + end, 0))) - ((start >= 0) ? (Min(m, start)) : (Max(m + start, 0)))) : (m)), 0)))
 	}
 
 	;* "String".Trim((characters))

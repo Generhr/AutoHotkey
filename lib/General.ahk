@@ -1,7 +1,6 @@
 ;==============  Include  ======================================================;
 
-#Include, %A_LineFile%\..\ObjectOriented.ahk
-#Include, %A_LineFile%\..\Structure\Structure.ahk
+#Include, %A_LineFile%\..\Core.ahk
 
 ;============== Function ======================================================;
 ;========================================================  AHK  ================;
@@ -484,22 +483,6 @@ SwapMouseButton(mode := 0) {  ;: https://msdn.microsoft.com/en-us/library/ms6462
 	DllCall("User32\SwapMouseButton", "UInt", mode)
 }
 
-;======================================================== Type ================;
-
-;* Type(variable)
-Type(variable) {
-	Static RegExMatchObject := NumGet(&(m, RegExMatch("", "O)", m))), BoundFuncObject := NumGet(&(f := Func("Func").Bind())), FileObject := NumGet(&(f := FileOpen("*", "w"))), EnumeratorObject := NumGet(&(e := ObjNewEnum({}))), hHeap := DllCall("GetProcessHeap", "Ptr")
-
-	if (IsObject(variable)) {
-		return ((ObjGetCapacity(variable) != "") ? (RegExReplace(variable.__Class, "S)(.*?\.|_*)(?!.*?\..*?)")) : ((IsFunc(variable)) ? ("FuncObject") : ((ComObjType(variable) != "") ? ("ComObject") : ((NumGet(&variable) == BoundFuncObject) ? ("BoundFuncObject ") : ((NumGet(&variable) == RegExMatchObject) ? ("RegExMatchObject") : ((NumGet(&variable) == FileObject) ? ("FileObject") : ((NumGet(&variable) == EnumeratorObject) ? ("EnumeratorObject") : ("Property"))))))))
-	}
-	else if variable is Number
-		return ("Number")
-	else {
-		return ((ObjGetCapacity([variable], 0) > 0) ? ("String") : (""))
-	}
-}
-
 ;====================================================== Variable ==============;
 
 ;* DownloadContent(url)
@@ -624,15 +607,6 @@ GetCurrentProcessId() {
 
 GetCurrentThreadId() {
 	return (DllCall("Kernel32\GetCurrentThreadId", "UInt"))
-}
-
-;* FormatMessage(messageID)
-FormatMessage(messageID) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
-	if (!length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr", (buffer := new Structure(A_PtrSize)).Pointer, "UInt", 0, "UInt*", 0, "UInt")) {
-		return (FormatMessage(DllCall("Kernel32\GetLastError")))
-	}
-
-	return (StrGet(buffer.NumGet(0, "Ptr"), length - 2))  ;* Account for the newline and carriage return characters.
 }
 
 ;* InternetGetConnectedState()
