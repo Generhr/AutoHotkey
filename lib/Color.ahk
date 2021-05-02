@@ -1,3 +1,7 @@
+;==============  Include  ======================================================;
+
+#Include, %A_LineFile%\..\Core.ahk
+
 ;===============  Class  =======================================================;
 
 Class Color {  ;: https://docs.microsoft.com/en-us/dotnet/api/system.windows.media.colors?redirectedfrom=MSDN&view=netframework-4.8
