@@ -1,8 +1,8 @@
 .vscode
+*/__Template
 bin/*
 build
 cfg
 doc
 res
-src/__Template
 test
