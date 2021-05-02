@@ -4,3 +4,6 @@
 [submodule "lib/Structure"]
 	path = lib/Structure
 	url = https://github.com/Onimuru/Structure.ahk
+[submodule "lib/ObjectOriented"]
+	path = lib/ObjectOriented
+	url = https://github.com/Onimuru/ObjectOriented
