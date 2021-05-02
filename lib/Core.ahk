@@ -1,6 +1,6 @@
 ;==============  Include  ======================================================;
 
-#Include, %A_LineFile%\..\ObjectOriented.ahk
+#Include, %A_LineFile%\..\ObjectOriented\ObjectOriented.ahk
 #Include, %A_LineFile%\..\Structure\Structure.ahk
 
 ;============== Function ======================================================;

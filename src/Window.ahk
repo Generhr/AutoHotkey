@@ -65,7 +65,6 @@ exit
 
 #Include, %A_ScriptDir%\..\lib\General.ahk
 #Include, %A_ScriptDir%\..\lib\Math.ahk
-#Include, %A_ScriptDir%\..\lib\ObjectOriented.ahk
 #Include, %A_ScriptDir%\..\lib\String.ahk
 
 ;============== Function ======================================================;
