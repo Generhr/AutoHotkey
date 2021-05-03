@@ -8,8 +8,6 @@
 
 FreeLibrary(library) {  ;: https://www.autohotkey.com/boards/viewtopic.php?p=48392#p48392
 	if (--library.Count[library.Ptr] == 0) {
-		MsgBox, % "FreeLibrary"
-
         DllCall("FreeLibrary", "Ptr", library.Ptr)
 	}
 }
@@ -18,8 +16,6 @@ LoadLibrary(fileName) {  ;* "User32", "Kernel32", "ComCtl32" and "Gdi32" are alr
 	if (!(ptr := DllCall("LoadLibrary", "Str", fileName, "Ptr"))) {
 		return (0)
 	}
-
-	MsgBox, % "LoadLibrary"
 
 	Static count := {}
 

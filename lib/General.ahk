@@ -409,7 +409,7 @@ ClipCursor(confine := 0, x := "", y := "", width := "", height := "") {
 	Static rect := new Structure(16)
 
 	if (x == "" || y == "" || !width || !height) {
-		if (!DllCall("User32\GetWindowRect", "Ptr", WinExist(), "Ptr", rect.Pointer, "UInt")) {
+		if (!DllCall("User32\GetWindowRect", "Ptr", WinExist(), "Ptr", rect.Ptr, "UInt")) {
 			throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", A_LastError, "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(A_LastError)))
 		}
 	}
@@ -417,7 +417,7 @@ ClipCursor(confine := 0, x := "", y := "", width := "", height := "") {
 		rect.NumPut(0, "Int", x, "Int", y, "Int", width, "Int", height)  ;: https://docs.microsoft.com/en-us/windows/win32/api/windef/ns-windef-rect
 	}
 
-	if (!DllCall("User32\ClipCursor", "Ptr", rect.Pointer)) {
+	if (!DllCall("User32\ClipCursor", "Ptr", rect.Ptr)) {
 		throw (Exception(Format("0x{:U}", DllCall("msvcrt\_i64tow", "Int64", A_LastError, "Ptr*", 0, "UInt", 16, "Str")), -1, FormatMessage(A_LastError)))
 	}
 
