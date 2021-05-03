@@ -13,3 +13,6 @@
 [submodule "lib/Console"]
 	path = lib/Console
 	url = https://github.com/Onimuru/Console
+[submodule "lib/General\\"]
+	path = lib/General\\
+	url = https://github.com/Onimuru/General
