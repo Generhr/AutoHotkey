@@ -16,3 +16,6 @@
 [submodule "lib/General\\"]
 	path = lib/General\\
 	url = https://github.com/Onimuru/General
+[submodule "lib/Math\\"]
+	path = lib/Math\\
+	url = https://github.com/Onimuru/Math
