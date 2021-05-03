@@ -1,9 +1,9 @@
 [submodule "lib/Assert"]
 	path = lib/Assert
-	url = https://github.com/Onimuru/Assert.ahk
+	url = https://github.com/Onimuru/Assert
 [submodule "lib/Structure"]
 	path = lib/Structure
-	url = https://github.com/Onimuru/Structure.ahk
+	url = https://github.com/Onimuru/Structure
 [submodule "lib/ObjectOriented"]
 	path = lib/ObjectOriented
 	url = https://github.com/Onimuru/ObjectOriented
