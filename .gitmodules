@@ -10,3 +10,6 @@
 [submodule "lib/Color"]
 	path = lib/Color
 	url = https://github.com/Onimuru/Color
+[submodule "lib/Console\\"]
+	path = lib/Console\\
+	url = https://github.com/Onimuru/Console
