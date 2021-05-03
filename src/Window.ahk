@@ -63,9 +63,10 @@ exit
 
 ;==============  Include  ======================================================;
 
-#Include, %A_ScriptDir%\..\lib\General.ahk
-#Include, %A_ScriptDir%\..\lib\Math.ahk
-#Include, %A_ScriptDir%\..\lib\String.ahk
+#Include, %A_ScriptDir%\..\lib\Core.ahk
+
+#Include, %A_ScriptDir%\..\lib\String\String.ahk
+#Include, %A_ScriptDir%\..\lib\General\General.ahk
 
 ;============== Function ======================================================;
 
