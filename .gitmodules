@@ -7,6 +7,6 @@
 [submodule "lib/ObjectOriented"]
 	path = lib/ObjectOriented
 	url = https://github.com/Onimuru/ObjectOriented
-[submodule "lib/Color\\"]
-	path = lib/Color\\
+[submodule "lib/Color"]
+	path = lib/Color
 	url = https://github.com/Onimuru/Color

@@ -1,5 +1,5 @@
 .vscode
-*/__Template
+*/__Template.*
 bin/*
 build
 cfg

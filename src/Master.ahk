@@ -828,9 +828,12 @@ AppsKey & Right::
 
 ;==============  Include  ======================================================;
 
-#Include, %A_ScriptDir%\..\lib\General.ahk
+#Include, %A_ScriptDir%\..\lib\Core.ahk
+
 #Include, %A_ScriptDir%\..\lib\Console.ahk
 #Include, %A_ScriptDir%\..\lib\String.ahk
+#Include, %A_ScriptDir%\..\lib\General.ahk
+
 #Include, %A_ScriptDir%\..\lib\OCR.ahk
 
 ;===============  Label  =======================================================;
