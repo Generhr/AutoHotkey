@@ -1,4 +1,4 @@
-;==============  Include  ======================================================;
+﻿;==============  Include  ======================================================;
 
 #Include, %A_LineFile%\..\ObjectOriented\ObjectOriented.ahk
 #Include, %A_LineFile%\..\Structure\Structure.ahk
@@ -6,8 +6,10 @@
 ;============== Function ======================================================;
 ;======================================================  Library  ==============;
 
-FreeLibrary(library) {  ;: https://www.autohotkey.com/boards/viewtopic.php?f=7&t=6413&sid=9b596fa030a73cfdcfc881209aa1acae&start=20.
+FreeLibrary(library) {  ;: https://www.autohotkey.com/boards/viewtopic.php?p=48392#p48392
 	if (--library.Count[library.Ptr] == 0) {
+		MsgBox, % "FreeLibrary"
+
         DllCall("FreeLibrary", "Ptr", library.Ptr)
 	}
 }
@@ -16,6 +18,8 @@ LoadLibrary(fileName) {  ;* "User32", "Kernel32", "ComCtl32" and "Gdi32" are alr
 	if (!(ptr := DllCall("LoadLibrary", "Str", fileName, "Ptr"))) {
 		return (0)
 	}
+
+	MsgBox, % "LoadLibrary"
 
 	Static count := {}
 
@@ -35,7 +39,7 @@ LoadLibrary(fileName) {  ;* "User32", "Kernel32", "ComCtl32" and "Gdi32" are alr
 
 	loop % (NumGet(ts + 24, "UInt"), n := ptr + NumGet(ts + 32, "UInt")) {
 		if (p := NumGet(n + (A_Index - 1)*4, "UInt")) {
-			o[f := StrGet(ptr + p, "CP0")] := DllCall("GetProcAddress", "Ptr", ptr, "AStr", f, "Ptr")  ;~ LPCSTR
+			o[f := StrGet(ptr + p, "CP0")] := DllCall("GetProcAddress", "Ptr", ptr, "AStr", f, "Ptr")
 
 			if (SubStr(f, 0) == ((A_IsUnicode) ? "W" : "A")) {
 				o[SubStr(f, 1, -1)] := o[f]
