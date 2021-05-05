@@ -7,14 +7,12 @@
 OCR(file := "") {
 	Static image := A_Temp . "\tesseract.tiff", text := A_Temp . "\tesseract"
 
-	if (!(GDIp := LoadLibrary("Gdiplus"))) {
-		throw (Exception(Format("0x{:08x}", ErrorLevel), -1, "Could not load the Gdiplus library."))
-	}
+	LoadLibrary("Gdiplus")
 
-	DllCall(GDIp.GdiplusStartup, "Ptr*", pToken, "Ptr", CreateGDIplusStartupInput().Ptr, "Ptr", 0)  ;: https://docs.microsoft.com/en-us/windows/win32/api/gdiplusinit/nf-gdiplusinit-gdiplusstartup
+	DllCall("Gdiplus\GdiplusStartup", "Ptr*", pToken, "Ptr", CreateGDIplusStartupInput().Ptr, "Ptr", 0)  ;: https://docs.microsoft.com/en-us/windows/win32/api/gdiplusinit/nf-gdiplusinit-gdiplusstartup
 
 	if (FileExist(file)) {
-		DllCall(GDIp.GdipCreateBitmapFromFile, "WStr", file, "Ptr*", pBitmap)
+		DllCall("Gdiplus\GdipCreateBitmapFromFile", "WStr", file, "Ptr*", pBitmap)
 	}
 	else {
 		Static void := ObjBindMethod({}, {})
@@ -66,7 +64,7 @@ OCR(file := "") {
 			, hCompatibleBitmap := DllCall("CreateDIBSection", "Ptr", hDestinationDC, "Ptr", CreateBitmapInfoHeader(width, -height).Ptr, "UInt", 0, "Ptr*", 0, "Ptr", 0, "UInt", 0, "Ptr"), hOriginalBitmap := DllCall("SelectObject", "Ptr", hDestinationDC, "Ptr", hCompatibleBitmap, "Ptr")  ;* Select the device-independent bitmap into the compatible DC.
 
 		DllCall("Gdi32\BitBlt", "Ptr", hDestinationDC, "Int", 0, "Int", 0, "Int", width, "Int", height, "Ptr", hSourceDC, "Int", x, "Int", y, "UInt", 0x00CC0020 | 0x40000000)  ;* Copy a portion of the source DC's bitmap to the destination DC's bitmap.
-		DllCall(GDIp.GdipCreateBitmapFromHBITMAP, "Ptr", hCompatibleBitmap, "Ptr", 0, "Ptr*", pBitmap := 0)  ;* Convert the hBitmap to a pBitmap.
+		DllCall("Gdiplus\GdipCreateBitmapFromHBITMAP", "Ptr", hCompatibleBitmap, "Ptr", 0, "Ptr*", pBitmap := 0)  ;* Convert the hBitmap to a pBitmap.
 
 		;* Cleanup up:
 		DllCall("Gdi32\SelectObject", "Ptr", hDestinationDC, "Ptr", hOriginalBitmap), DllCall("DeleteObject", "Ptr", hCompatibleBitmap), DllCall("Gdi32\DeleteDC", "Ptr", hDestinationDC)
@@ -74,12 +72,12 @@ OCR(file := "") {
 	}
 
 	;* Save the bitmap to file:
-	if (DllCall(GDIp.GdipGetImageEncodersSize, "UInt*", number := 0, "UInt*", size := 0)) {  ;: https://docs.microsoft.com/en-us/windows/win32/gdiplus/-gdiplus-retrieving-the-class-identifier-for-an-encoder-use
+	if (DllCall("Gdiplus\GdipGetImageEncodersSize", "UInt*", number := 0, "UInt*", size := 0)) {  ;: https://docs.microsoft.com/en-us/windows/win32/gdiplus/-gdiplus-retrieving-the-class-identifier-for-an-encoder-use
 		throw (Exception("Could not get a list of image codec encoders on this system."))
 	}
 
 	VarSetCapacity(encoders, size)  ;* Fill a buffer with the available encoders.
-	DllCall(GDIp.GdipGetImageEncoders, "UInt", number, "UInt", size, "Ptr", (imageCodecInfo := new Structure(size)).Ptr)
+	DllCall("Gdiplus\GdipGetImageEncoders", "UInt", number, "UInt", size, "Ptr", (imageCodecInfo := new Structure(size)).Ptr)
 
 	RegExMatch(image, "\.\w+$", extension)
 
@@ -97,8 +95,8 @@ OCR(file := "") {
 		throw (Exception("Could not find a matching encoder for the specified file format."))
 	}
 
-	DllCall(GDIp.GdipSaveImageToFile, "Ptr", pBitmap, "WStr", image, "Ptr", pCodec, "UInt", 0)  ;* Save the bitmap to a .tiff file for tesseract to analyze.
-	DllCall(GDIp.GdipDisposeImage, "Ptr", pBitmap)  ;* Dispose of the bitmap.
+	DllCall("Gdiplus\GdipSaveImageToFile", "Ptr", pBitmap, "WStr", image, "Ptr", pCodec, "UInt", 0)  ;* Save the bitmap to a .tiff file for tesseract to analyze.
+	DllCall("Gdiplus\GdipDisposeImage", "Ptr", pBitmap)  ;* Dispose of the bitmap.
 
 	RunWait, % Clipboard := Format("{} /c ""{} {} {}""", A_ComSpec, A_WorkingDir . "\bin\Tesseract\tesseract.exe", image, text), , Hide  ;* The extension for the output text file is automatically added here.
 	FileRead, content, % text . ".txt"
@@ -106,8 +104,9 @@ OCR(file := "") {
 	FileDelete, % image
 	FileDelete, % text . ".txt"
 
-	Shutdown:
-	DllCall(GDIp.GdiplusShutdown, "Ptr", pToken)
+Shutdown:
+	DllCall("Gdiplus\GdiplusShutdown", "Ptr", pToken)
+	FreeLibrary("Gdiplus")
 
 	return (content)
 }
