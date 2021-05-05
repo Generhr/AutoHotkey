@@ -9,6 +9,16 @@ if (!A_IsAdmin || !(DllCall("GetCommandLine", "Str") ~= " /restart(?!\S)")) {
 	ExitApp
 }
 
+;======================================================  Include  ==============;
+
+#Include, %A_ScriptDir%\..\lib\Core.ahk
+
+#Include, %A_ScriptDir%\..\lib\Console\Console.ahk
+#Include, %A_ScriptDir%\..\lib\String\String.ahk
+#Include, %A_ScriptDir%\..\lib\General\General.ahk
+
+#Include, %A_ScriptDir%\..\lib\OCR.ahk
+
 ;======================================================  Setting  ==============;
 
 #InstallKeybdHook
@@ -825,16 +835,6 @@ AppsKey & Right::
 
 	Send, % "{" . KeyGet(A_ThisHotkey) . "}"
 	return
-
-;==============  Include  ======================================================;
-
-#Include, %A_ScriptDir%\..\lib\Core.ahk
-
-#Include, %A_ScriptDir%\..\lib\Console\Console.ahk
-#Include, %A_ScriptDir%\..\lib\String\String.ahk
-#Include, %A_ScriptDir%\..\lib\General\General.ahk
-
-#Include, %A_ScriptDir%\..\lib\OCR.ahk
 
 ;===============  Label  =======================================================;
 

@@ -1,4 +1,11 @@
 ;============ Auto-execute ====================================================;
+;======================================================  Include  ==============;
+
+#Include, %A_ScriptDir%\..\lib\Core.ahk
+
+#Include, %A_ScriptDir%\..\lib\String\String.ahk
+#Include, %A_ScriptDir%\..\lib\General\General.ahk
+
 ;======================================================  Setting  ==============;
 
 #KeyHistory, 0
@@ -60,13 +67,6 @@ exit
 		return
 
 #If
-
-;==============  Include  ======================================================;
-
-#Include, %A_ScriptDir%\..\lib\Core.ahk
-
-#Include, %A_ScriptDir%\..\lib\String\String.ahk
-#Include, %A_ScriptDir%\..\lib\General\General.ahk
 
 ;============== Function ======================================================;
 

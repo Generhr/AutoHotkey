@@ -50,11 +50,11 @@ LoadLibrary(fileName) {  ;* "User32", "Kernel32", "ComCtl32" and "Gdi32" are alr
 
 ;* FormatMessage(messageID)
 FormatMessage(messageID) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
-	if (!length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr", (buffer := new Structure(A_PtrSize)).Pointer, "UInt", 0, "UInt*", 0, "UInt")) {
+	if (!length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", buffer := 0, "UInt", 0, "Ptr", 0, "UInt")) {
 		return (FormatMessage(DllCall("Kernel32\GetLastError")))
 	}
 
-	return (StrGet(buffer.NumGet(0, "Ptr"), length - 2))  ;* Account for the newline and carriage return characters.
+	return (StrGet(buffer, length - 2), DllCall("Kernel32\LocalFree", "Ptr", buffer, "Ptr"))  ;* Account for the newline and carriage return characters.
 }
 
 ;======================================================  General  ==============;
