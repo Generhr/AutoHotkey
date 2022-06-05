@@ -1,77 +1,120 @@
-﻿;==============  Include  ======================================================;
+#Requires AutoHotkey v2.0-beta
 
-#Include, %A_LineFile%\..\ObjectOriented\ObjectOriented.ahk
-#Include, %A_LineFile%\..\Structure\Structure.ahk
+/*
+* The MIT License (MIT)
+* Copyright © 2022 Onimuru
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the “Software”), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+*/
+
+;============ Auto-Execute ====================================================;
+;======================================================  Include  ==============;
+
+#Include %A_LineFile%\..\ObjectOriented\Array.ah2
+#Include %A_LineFile%\..\ObjectOriented\Object.ah2
+#Include %A_LineFile%\..\String\String.ah2
+
+#Include %A_LineFile%\..\Structure\Structure.ah2
 
 ;============== Function ======================================================;
+;=================================================== Error Handling ===========;
+
+;* ErrorFromMessage(messageID)
+ErrorFromMessage(messageID) {
+	if (!(length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100  ;? 0x1100 = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER
+		, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", &(buffer := 0), "UInt", 0, "Ptr", 0, "Int"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
+		return (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+	}
+
+	message := StrGet(buffer, length - 2)  ;* Account for the newline and carriage return characters.
+	DllCall("Kernel32\LocalFree", "Ptr", buffer)
+
+	return (Error(Format("0x{:X}", messageID), -1, message))
+}
+
 ;======================================================  Library  ==============;
 
-FreeLibrary(libraryName) {  ;: https://www.autohotkey.com/boards/viewtopic.php?p=48392#p48392
-	Static loaded := {"ComCtl32": {"Ptr": DllCall("Kernel32\GetModuleHandle", "Str", "ComCtl32", "Ptr")}, "Gdi32": {"Ptr": DllCall("Kernel32\GetModuleHandle", "Str", "Gdi32", "Ptr")}, "Kernel32": {"Ptr": DllCall("Kernel32\GetModuleHandle", "Str", "Kernel32", "Ptr")}, "User32": {"Ptr": DllCall("Kernel32\GetModuleHandle", "Str", "User32", "Ptr")}}  ;* "User32", "Kernel32", "ComCtl32" and "Gdi32" are already loaded.
+LoadLibrary(libraryName) {
+	static loaded := FreeLibrary("__SuperSecretString")
+
+	if (!loaded.HasProp(libraryName)) {
+		if (!(ptr := DllCall("Kernel32\LoadLibrary", "Str", libraryName, "Ptr"))) {
+			throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+		}
+
+		loaded.%libraryName% := { Count: 0, Ptr: ptr }
+	}
+
+	loaded.%libraryName%.Count++
+
+	return (loaded.%libraryName%.Ptr)
+}
+
+FreeLibrary(libraryName) {
+	static loaded := {ComCtl32: {Ptr: DllCall("Kernel32\GetModuleHandle", "Str", "ComCtl32", "Ptr")}, Gdi32: {Ptr: DllCall("Kernel32\GetModuleHandle", "Str", "Gdi32", "Ptr")}, Kernel32: {Ptr: DllCall("Kernel32\GetModuleHandle", "Str", "Kernel32", "Ptr") }, User32: {Ptr: DllCall("Kernel32\GetModuleHandle", "Str", "User32", "Ptr")}}  ;* "User32", "Kernel32", "ComCtl32" and "Gdi32" are already loaded.
 
 	if (libraryName == "__SuperSecretString") {
 		return (loaded)
 	}
-	else if (Type(libraryName) == "Library") {
-		if (--loaded[libraryName.Name].Count) {
-			return (0)
+	else if (Type(libraryName) == "Object") {
+		if (-- loaded.%libraryName := libraryName.Name%.Count) {
+			return (False)
 		}
-
-		libraryName := libraryName.Name
 	}
 
 	if (!(libraryName ~= "i)ComCtl32|Gdi32|Kernel32|User32")) {
-		if (loaded.HasKey(libraryName)) {
-			loaded.Delete(libraryName)
+		if (loaded.HasProp(libraryName)) {
+			loaded.DeleteProp(libraryName)
 		}
 
 		if (handle := DllCall("Kernel32\GetModuleHandle", "Str", libraryName, "Ptr")) {  ;* If the library module is already in the address space of the script's process.
 			if (!DllCall("Kernel32\FreeLibrary", "Ptr", handle, "UInt")) {
-				throw (Exception(Format("0x{:X}", A_LastError), 0, FormatMessage(A_LastError)))
+				throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 			}
 
-			return (1)
+			return (True)
 		}
 	}
 
-	return (0)
-}
-
-LoadLibrary(libraryName) {
-	Static loaded := FreeLibrary("__SuperSecretString")
-
-	if (!loaded.HasKey(libraryName)) {
-		if (!ptr := DllCall("Kernel32\LoadLibrary", "Str", libraryName, "Ptr")) {
-			throw (Exception(Format("0x{:X}", A_LastError), 0, FormatMessage(A_LastError)))
-		}
-
-		loaded[libraryName] := {"Count": 0
-			, "Ptr": ptr}
-	}
-
-	return (loaded[libraryName].Ptr, loaded[libraryName].Count++)
+	return (False)
 }
 
 GetProcAddress(libraryName, functionName) {
-	ptr := LoadLibrary(libraryName)
-
 	if (functionName == "*") {
-		Static library := {"__Class": "Library"
-			, "__Delete": Func("FreeLibrary")}
+		static library := { Call: (*) => ({ Class: "Library",
+					__Delete: FreeLibrary }) }
 
-		(o := new library()).Name := libraryName
-			, p := ptr + NumGet(ptr + 0x3C, "Int") + 24
+		(o := library.Call()).Name := libraryName
+			, p := (ptr := LoadLibrary(libraryName)) + NumGet(ptr + 0x3C, "Int") + 24
 
-		if (NumGet(p + ((A_PtrSize == 4) ? (92) : (108)), "UInt") < 1 || (ts := NumGet(p + ((A_PtrSize == 4) ? (96) : (112)), "UInt") + ptr) == ptr || (te := NumGet(p + (A_PtrSize == 4) ? (100) : (116), "UInt") + ts) == ts) {
+		static offset := (A_PtrSize == 4) ? (92) : (108)
+
+		if (NumGet(p + offset, "UInt") < 1 || (ts := NumGet(p + offset + 4, "UInt") + ptr) == ptr || (te := NumGet(p + offset + 8, "UInt") + ts) == ts) {
 			return (o)
 		}
 
-		loop % (NumGet(ts + 24, "UInt"), n := ptr + NumGet(ts + 32, "UInt")) {
-			if (p := NumGet(n + (A_Index - 1)*4, "UInt")) {
-				o[f := StrGet(ptr + p, "CP0")] := DllCall("Kernel32\GetProcAddress", "Ptr", ptr, "AStr", f, "Ptr")
+		loop (n := ptr + NumGet(ts + 32, "UInt"), NumGet(ts + 24, "UInt")) {
+			if (p := NumGet(n + (A_Index - 1) * 4, "UInt")) {
+				o.%f := StrGet(ptr + p, "CP0")% := DllCall("Kernel32\GetProcAddress", "Ptr", ptr, "AStr", f, "Ptr")
 
-				if (SubStr(f, 0) == ((A_IsUnicode) ? "W" : "A")) {
-					o[SubStr(f, 1, -1)] := o[f]
+				if (SubStr(f, -1) == "W") {
+					o.%SubStr(f, 1, -1)% := o.%f%
 				}
 			}
 		}
@@ -82,30 +125,37 @@ GetProcAddress(libraryName, functionName) {
 	return (DllCall("Kernel32\GetProcAddress", "Ptr", DllCall("Kernel32\GetModuleHandle", "Str", libraryName, "Ptr"), "AStr", functionName, "Ptr"))
 }
 
-;=================================================== Error Handling ===========;
+;=======================================================  Ole32  ===============;
 
-;* FormatMessage(messageID)
-FormatMessage(messageID) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
-	if (!length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", buffer := 0, "UInt", 0, "Ptr", 0, "UInt")) {
-		return (FormatMessage(DllCall("Kernel32\GetLastError")))
+StringFromCLSID(CLSID) {
+	if (DllCall("Ole32\StringFromCLSID", "Ptr", CLSID, "Ptr*", &(pointer := 0), "UInt")) {
+		throw
 	}
 
-	return (StrGet(buffer, length - 2), DllCall("Kernel32\LocalFree", "Ptr", buffer, "Ptr"))  ;* Account for the newline and carriage return characters.
+	string := StrGet(pointer)
+	DllCall("Ole32\CoTaskMemFree", "Ptr", pointer)
+
+	return (string)
 }
 
-;======================================================  General  ==============;
-
-;* Type(variable)
-Type(variable) {  ;: https://www.autohotkey.com/boards/viewtopic.php?f=6&t=2306
-    if (IsObject(variable)) {
-		Static regExMatchObject := NumGet(&(m, RegExMatch("", "O)", m))), boundFuncObject := NumGet(&(f := Func("Func").Bind())), fileObject := NumGet(&(f := FileOpen("*", "w"))), enumeratorObject := NumGet(&(e := ObjNewEnum({})))
-
-        return ((ObjGetCapacity(variable) != "") ? (RegExReplace(variable.__Class, "S)(.*?\.|__)(?!.*?\..*?)")) : ((IsFunc(variable)) ? ("FuncObject") : ((ComObjType(variable) != "") ? ("ComObject") : ((NumGet(&variable) == boundFuncObject) ? ("BoundFuncObject ") : ((NumGet(&variable) == regExMatchObject) ? ("RegExMatchObject") : ((NumGet(&variable) == fileObject) ? ("FileObject") : ((NumGet(&variable) == enumeratorObject) ? ("EnumeratorObject") : ("Property"))))))))
+CLSIDFromString(string) {
+	if (DllCall("Ole32\CLSIDFromString", "Ptr", StrPtr(string), "Ptr", (CLSID := Structure(16).Ptr), "UInt")) {
+		throw
 	}
 
-	if (InStr(variable, ".")) {
-		variable := variable + 0  ;* Account for floats being treated as strings as they're stored in the string buffer.
-	}
+	return (CLSID)
+}
 
-    return ([variable].GetCapacity(0) != "") ? ("String") : ((InStr(variable, ".")) ? ("Float") : ("Integer"))
+;======================================================= MSVCRT ===============;
+
+MemoryCopy(dest, src, bytes) {
+	return (DllCall("msvcrt\memcpy", "Ptr", dest, "Ptr", src, "UInt", bytes))
+}
+
+MemoryMove(dest, src, bytes) {
+	return (DllCall("msvcrt\memmove", "Ptr", dest, "Ptr", src, "UInt", bytes))
+}
+
+MemoryDifference(ptr1, ptr2, bytes) {
+	return (DllCall("msvcrt\memcmp", "Ptr", ptr1, "Ptr", ptr2, "Int", bytes))
 }
