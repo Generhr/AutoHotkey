@@ -1,4 +1,4 @@
-;============ Auto-execute ====================================================;
+;============ Auto-Execute ====================================================;
 
 #Requires AutoHotkey v2.0-beta
 
@@ -84,26 +84,28 @@ LowLevelMouseProc(nCode, wParam, lParam) {
 
 	x := NumGet(lParam + 0, "Int"), y := NumGet(lParam + 4, "Int")
 
+	ToolTip(x ", " y, 50, 75, 2)
+
 	switch (wParam) {
 		case 0x0201:  ;? 0x0201 = WM_LBUTTONDOWN
-			ToolTip("WM_LBUTTONDOWN", 50, 50)
+			ToolTip("WM_LBUTTONDOWN", 50, 50, 1)
 		case 0x0202:  ;? 0x0202 = WM_LBUTTONUP
-			ToolTip("WM_LBUTTONUP", 50, 50)
+			ToolTip("WM_LBUTTONUP", 50, 50, 1)
 
 		case 0x0204:  ;? 0x0204 = WM_RBUTTONDOWN
-			ToolTip("WM_RBUTTONDOWN", 50, 50)
+			ToolTip("WM_RBUTTONDOWN", 50, 50, 1)
 		case 0x0205:  ;? 0x0205 = WM_RBUTTONUP
-			ToolTip("WM_RBUTTONUP", 50, 50)
+			ToolTip("WM_RBUTTONUP", 50, 50, 1)
 
 		case 0x0207:  ;? 0x0207 = WM_MBUTTONDOWN
-			ToolTip("WM_MBUTTONDOWN", 50, 50)
+			ToolTip("WM_MBUTTONDOWN", 50, 50, 1)
 		case 0x0208:  ;? 0x0208 = WM_MBUTTONUP
-			ToolTip("WM_MBUTTONUP", 50, 50)
+			ToolTip("WM_MBUTTONUP", 50, 50, 1)
 
 		case 0x020A:  ;? 0x020A = WM_MOUSEWHEEL (Vertical)
-			ToolTip(Format("WM_MOUSEWHEEL {}", (NumGet(lParam + 8, "UInt") >> 16 == 120) ? ("Up") : ("Down")), 50, 50)
+			ToolTip(Format("WM_MOUSEWHEEL {}", (NumGet(lParam + 8, "UInt") >> 16 == 120) ? ("Up") : ("Down")), 50, 50, 1)
 		case 0x020E:  ;? 0x020E = WM_MOUSEWHEEL (Horizontal)
-			ToolTip(Format("WM_MOUSEWHEEL {}", (NumGet(lParam + 8, "UInt") >> 16 == 120) ? ("Right") : ("Left")), 50, 50)
+			ToolTip(Format("WM_MOUSEWHEEL {}", (NumGet(lParam + 8, "UInt") >> 16 == 120) ? ("Right") : ("Left")), 50, 50, 1)
 	}
 
 	return (DllCall("CallNextHookEx", "Ptr", 0, "Int", nCode, "UInt", wParam, "UInt", lParam))
@@ -115,16 +117,18 @@ LowLevelKeyboardProc(nCode, wParam, lParam) {
 	scCode := ((scCode := (NumGet(lParam + 0, 8, "UInt") & 1 << 8) | NumGet(lParam + 4, "UInt")) == 0x136) ? (0x36) : (scCode), vkCode := Format("{:X}", NumGet(lParam + 0, "UInt"))
 		, key := GetKeyName(Format("vk{}", vkCode))
 
+	ToolTip(key, 50, 75, 2)
+
 	switch (wParam) {
 		case 0x100:  ;? 0x100 = WM_KEYDOWN
-			ToolTip("WM_KEYDOWN", 50, 50)
+			ToolTip("WM_KEYDOWN", 50, 50, 1)
 		case 0x101:  ;? 0x101 = WM_KEYUP
-			ToolTip("WM_KEYUP", 50, 50)
+			ToolTip("WM_KEYUP", 50, 50, 1)
 
 		case 0x104:  ;? 0x104 = WM_SYSKEYDOWN
-			ToolTip("WM_SYSKEYDOWN", 50, 50)
+			ToolTip("WM_SYSKEYDOWN", 50, 50, 1)
 		case 0x105:  ;? 0x105 = WM_SYSKEYUP
-			ToolTip("WM_SYSKEYUP", 50, 50)
+			ToolTip("WM_SYSKEYUP", 50, 50, 1)
 	}
 
 	return (DllCall("CallNextHookEx", "Ptr", 0, "Int", nCode, "UInt", wParam, "UInt", lParam))
