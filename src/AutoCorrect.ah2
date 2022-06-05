@@ -1,32 +1,16 @@
 ;============ Auto-execute ====================================================;
-;======================================================  Include  ==============;
 
-#Include, %A_WorkingDir%\lib\Core.ahk
+#Requires AutoHotkey v2.0-beta
 
 ;======================================================  Setting  ==============;
 
-#KeyHistory, 0
-#NoEnv
 #NoTrayIcon
-#SingleInstance, Force
-#Warn, ClassOverwrite, MsgBox
+#SingleInstance
+#Warn All, MsgBox
+#Warn LocalSameAsGlobal, Off
 
-ListLines, Off
-Process, Priority, , Normal
-SendMode, Input
-SetKeyDelay, -1, -1
-SetTitleMatchMode, 2
-SetWorkingDir, % A_ScriptDir . "\.."
-
-;====================================================== Variable ==============;
-
-IniRead, Debug, % A_WorkingDir . "\cfg\Settings.ini", Debug, Debug
-Global Debug
-	, WindowMessage := DllCall("RegisterWindowMessage", "Str", "WindowMessage", "UInt")
-
-;======================================================== Hook ================;
-
-OnMessage(WindowMessage, "WindowMessage")
+ListLines(False)
+ProcessSetPriority("Normal")
 
 ;=======================================================  Other  ===============;
 
@@ -34,109 +18,140 @@ exit
 
 ;=============== Hotkey =======================================================;
 
-#If (WinActive(A_ScriptName))
+#HotIf (WinActive(A_ScriptName))
 
-	$F10::
+	$F10:: {
 		ListVars
-		return
 
-	~$^s::
-		Critical, On
+		KeyWait("F10")
+	}
 
-		Sleep, 200
+	~$^s:: {
+		Critical(True)
+
+		Sleep(200)
 		Reload
+	}
 
-		return
-
-#If
+#HotIf
 
 ;=============  Hotstring  =====================================================;
 ;====================================================== Personal ==============;
 
-:*x:\@::
-	IniRead, email, % A_WorkingDir . "\cfg\Settings.ini", Email, Email
-	Send, % email
+:*:\\@:: {
+	static email := IniRead(A_ScriptDir . "\..\cfg\Settings.ini", "Email", "Email")
 
-	Return
+	Send(email)
+}
 
-;======================================================== Code ================;
+;==================================================  Window Specific  ==========;
 
-#If (WinActive("ahk_exe Code.exe"))
+#HotIf (WinActive("ahk_exe Code.exe"))
 
-	:*x:\\i::
-		Send, % "if () {{}{}}{Left}{Enter}{Up}Condition^{Left}^+{Right}"
-		return
+	:*:\\c:: {
+		SendText("A_Clipboard := ")
 
-	:*x:\\s::
-		Send, % "switch () {{}{}}{Left}{Enter}case ""_____"":{{}{Enter}{Up 2}{Right 4}condition^{Left}^+{Right}"
-		return
+		KeyWait("c")
+	}
 
-	:*x:\\t::
-		Send, % "(condition) ? (_____) : (_____)^{Left 7}^+{Right}"
-		return
+	:*:\\f:: {
+		Send("Format(`"")
 
-	:*x:\\o::
-	:*x:\\a::
-		c := Clipboard
+		KeyWait("f")
+	}
+
+	:*:\\i:: {
+		Send("if (condition) {{}{}}{Left}{Enter}{Up}^{Left}^+{Right}")
+
+		KeyWait("i")
+	}
+
+	:*:\\s:: {
+		Send("switch () {{}{}}{Left}{Enter}case `"_____`":{}{Enter}{Up 2}{Right 4}condition^{Left}^+{Right}")
+
+		KeyWait("s")
+	}
+
+	:*:\\t:: {
+		SendText("ToolTip(")
+
+		KeyWait("t")
+	}
+
+	:*:\\l:: {
+		Send("Console.Log(")
+
+		KeyWait("l")
+	}
+
+	:*:\\m:: {
+		SendText("MsgBox(")
+
+		KeyWait("m")
+	}
+
+	:*:\\r:: {
+		Send("return")
+
+		KeyWait("r")
+	}
+
+	:*:\\?:: {
+		Send("(condition) ? (_____) : (_____)^{Left 7}^+{Right}")
+
+		KeyWait("/")
+	}
+
+	:*:\\o::
+	:*:\\a:: {
+		c := A_Clipboard
 
 		switch (A_ThisHotkey) {
-			case ":*x:\\o": {
-				Send, % "{{}""key"": ""value""" . (Clipboard := ", ""key"": ""value""") . "{}}{Left}"
-			}
-			case ":*x:\\a": {
-				Send, % "{[}""value""" . (Clipboard := ", ""value""") . "{]}{Left}"
-			}
+			case ":*:\\o":
+				Send("{{}Key: `"value`"" . (A_Clipboard := ", Key: `"value`"") . "{}}{Left}")
+			case ":*:\\a":
+				Send("{[}`"value`"" . (A_Clipboard := ", `"value`"") . "{]}{Left}")
 		}
 
-		SetTimer(Func("Restore").Bind(c), -200)
-		return
+		SetTimer(Restore.Bind(c), -200)
 
-	:*x:\cc::
-		SendRaw, % "Clipboard := "
-		return
+		;* Description:
+			;*	Restores the clipboard to what it was after 0.85 seconds of inactivity.
+		Restore(string) {
+			if (A_TimeIdleKeyboard >= 850) {
+				return (A_Clipboard := string)
+			}
 
-	:*x:\ff::
-		SendRaw, % "Format("""
-		return
+			SetTimer(Restore.Bind(string), -200)
+		}
+	}
 
-	:*x:\mm::
-		SendRaw, % "MsgBox("
-		return
+	:*:\vec2:: {
+		Send("{{}x: _____, y: _____{}}^{Left 3}^+{Right}")
+	}
 
-	:*x:\rr::
-		Send, % "return"
-		return
+	:*:\vec3:: {
+		Send("{{}x: _____, y: _____{}, z: _____{}}^{Left 5}^+{Right}")
+	}
 
-	:*x:\tt::
-		SendRaw, % "ToolTip("
-		return
+	:*:\rect:: {
+		Send("{{}x: _____, y: _____, Width: _____, Height: _____{}}^{Left 7}^+{Right}")
+	}
 
-	:*x:\vec2::
-		Send, % "{{}""x"": _____, ""y"": _____{}}^{Left 5}^+{Right}"
-		return
+#HotIf
 
-	:*x:\vec3::
-		Send, % "{{}""x"": _____, ""y"": _____{}, ""z"": _____{}}^{Left 9}^+{Right}"
-		return
+#HotIf (WinActive("Discord ahk_class Chrome_WidgetWin_1 ahk_exe Discord.exe"))
 
-	:*x:\rect::
-		Send, % "{{}""x"": _____, ""y"": _____, ""Width"": _____, ""Height"": _____{}}^{Left 13}^+{Right}"
-		return
+	:*:``````::``````ahk`n`n``````{Up}
 
-#If
+#HotIf
 
-#If (WinActive("Discord ahk_class Chrome_WidgetWin_1 ahk_exe Discord.exe"))
+#HotIf (WinActive("Command Prompt ahk_exe cmd.exe"))
 
-	:*x:``````::Send, % "``````ahk`n`n``````{Up}"
+	:*:\\h::doskey /history
+	:*:\\f::ipconfig /flushdns
 
-#If
-
-#If (WinActive("Command Prompt ahk_exe cmd.exe"))
-
-	:*:\hh::doskey /history
-	:*:\ff::ipconfig /flushdns
-
-#If
+#HotIf
 
 ;=======================================================  Angle  ===============;  ;: https://altcodeunicode.com/
 
@@ -202,7 +217,7 @@ exit
 
 ;=====================================================   *ign Fix  =============;  ;: https://gist.github.com/endolith/876629
 
-#Hotstring, B0
+#Hotstring ("B0")
 
 ::align::
 ::antiforeign::
@@ -240,9 +255,11 @@ exit
 ::sign::
 ::sovereign::
 ::unbenign::
-::verisign::Return  ;* This makes the above hotstrings do nothing so that they override the ign->ing rule below.
+::verisign:: {
 
-#Hotstring, RB
+}  ;* This makes the above hotstrings do nothing so that they override the ign->ing rule below.
+
+#Hotstring ("RB")
 
 :?:ign::ing
 
@@ -5382,47 +5399,3 @@ exit
 :?:oology::oölogy
 :?:t he:: the
 */
-
-;============== Function ======================================================;
-;======================================================== Hook ================;
-
-WindowMessage(wParam := 0, lParam := 0) {
-	switch (wParam) {
-		case 0x1000: {
-			IniRead, Debug, % A_WorkingDir . "\cfg\Settings.ini", Debug, Debug
-
-			if (!Debug) {
-				ToolTip, , , , 20
-			}
-
-			return (0)
-		}
-	}
-
-	return (-1)
-}
-
-;=======================================================  Other  ===============;
-
-;* Description:
-;*	Restores the clipboard to what it was after 0.85 seconds of inactivity.
-Restore(restore) {
-	Static funcObj := Func("Restore")
-
-	if (A_TimeIdle > 850)  ;? [A_TimeIdle || A_TimeIdleKeyboard].
-		return (Clipboard := restore)
-
-	SetTimer(funcObj.Bind(restore), -25)
-}
-
-;* SetTimer(label, (period), (priority))
-SetTimer(label, period := "", priority := 0) {
-	try {
-		SetTimer, % label, % period, % priority
-	}
-	catch {
-		return (0)
-	}
-
-	return (1)
-}
