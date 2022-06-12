@@ -36,17 +36,17 @@
 ;============== Function ======================================================;
 ;=================================================== Error Handling ===========;
 
-;* ErrorFromMessage(messageID)
-ErrorFromMessage(messageID) {
+;* MessageError(messageID)
+MessageError(messageID) {
 	if (!(length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100  ;? 0x1100 = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER
 		, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", &(buffer := 0), "UInt", 0, "Ptr", 0, "Int"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
-		return (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+		return (MessageError(DllCall("Kernel32\GetLastError")))
 	}
 
 	message := StrGet(buffer, length - 2)  ;* Account for the newline and carriage return characters.
 	DllCall("Kernel32\LocalFree", "Ptr", buffer)
 
-	return (Error(Format("0x{:X}", messageID), -1, message))
+	return (Error(Format("{:#x}", messageID), -1, message))
 }
 
 ;======================================================  Library  ==============;
@@ -56,10 +56,10 @@ LoadLibrary(libraryName) {
 
 	if (!loaded.HasProp(libraryName)) {
 		if (!(ptr := DllCall("Kernel32\LoadLibrary", "Str", libraryName, "Ptr"))) {
-			throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+			throw (MessageError(DllCall("Kernel32\GetLastError")))
 		}
 
-		loaded.%libraryName% := { Count: 0, Ptr: ptr }
+		loaded.%libraryName% := {Count: 0, Ptr: ptr}
 	}
 
 	loaded.%libraryName%.Count++
@@ -74,7 +74,7 @@ FreeLibrary(libraryName) {
 		return (loaded)
 	}
 	else if (Type(libraryName) == "Object") {
-		if (-- loaded.%libraryName := libraryName.Name%.Count) {
+		if (--loaded.%libraryName := libraryName.Name%.Count) {
 			return (False)
 		}
 	}
@@ -86,7 +86,7 @@ FreeLibrary(libraryName) {
 
 		if (handle := DllCall("Kernel32\GetModuleHandle", "Str", libraryName, "Ptr")) {  ;* If the library module is already in the address space of the script's process.
 			if (!DllCall("Kernel32\FreeLibrary", "Ptr", handle, "UInt")) {
-				throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+				throw (MessageError(DllCall("Kernel32\GetLastError")))
 			}
 
 			return (True)
@@ -98,8 +98,8 @@ FreeLibrary(libraryName) {
 
 GetProcAddress(libraryName, functionName) {
 	if (functionName == "*") {
-		static library := { Call: (*) => ({ Class: "Library",
-					__Delete: FreeLibrary }) }
+		static library := {Call: (*) => ({Class: "Library",
+			__Delete: FreeLibrary})}
 
 		(o := library.Call()).Name := libraryName
 			, p := (ptr := LoadLibrary(libraryName)) + NumGet(ptr + 0x3C, "Int") + 24
