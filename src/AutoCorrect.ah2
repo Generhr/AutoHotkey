@@ -1,7 +1,6 @@
-;============ Auto-execute ====================================================;
-
 #Requires AutoHotkey v2.0-beta
 
+;============ Auto-Execute ====================================================;
 ;======================================================  Setting  ==============;
 
 #NoTrayIcon
@@ -14,14 +13,14 @@ ProcessSetPriority("Normal")
 
 ;=======================================================  Other  ===============;
 
-exit
+Exit()
 
 ;=============== Hotkey =======================================================;
 
 #HotIf (WinActive(A_ScriptName))
 
 	$F10:: {
-		ListVars
+		ListVars()
 
 		KeyWait("F10")
 	}
@@ -30,7 +29,7 @@ exit
 		Critical(True)
 
 		Sleep(200)
-		Reload
+		Reload()
 	}
 
 #HotIf

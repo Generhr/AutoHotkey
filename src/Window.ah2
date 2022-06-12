@@ -20,7 +20,7 @@ if (!A_IsAdmin || !DllCall("GetCommandLine", "Str") ~= " /restart(?!\S)") {
 
 ;======================================================  Setting  ==============;
 
-;#NoTrayIcon
+#NoTrayIcon
 #SingleInstance
 #Warn All, MsgBox
 #Warn LocalSameAsGlobal, Off
@@ -52,7 +52,7 @@ global A_Debug := IniRead(A_WorkingDir . "\cfg\Settings.ini", "Debug", "Debug")
 	, A_SavedClipboard
 	, A_Null := Chr(0)
 
-;A_Debug := 0
+A_Debug := 0
 
 ;======================================================== Hook ================;
 
@@ -102,7 +102,7 @@ WindowMonitor(scripts := "") {
 			Console.Clear()
 		}
 
-		if (!(windowTitle := WinGetTitle(windowHandle)) || !(windowClass := WinGetClass(windowHandle)) || ["#32768", "#32770", "Shell_TrayWnd", "MultitaskingViewFrame"].Includes(windowClass) || !(windowProcessName := WinGetProcessName(windowHandle))) {  ;* Catch for right clicking a script menu, a MsgBox window or the AltTab window.
+		if (!(windowTitle := WinGetTitle(windowHandle)) || !(windowClass := WinGetClass(windowHandle)) || ["#32768", "#32770", "Shell_TrayWnd", "MultitaskingViewFrame"].Includes(windowClass) || !(windowProcessName := WinGetProcessName(windowHandle))) {  ;* Catch for right clicking a script menu, a MsgBox window, the taskbar, or the AltTab window.
 			if (A_Debug) {
 				Console.Log("Waiting for a valid window...")
 			}
@@ -289,40 +289,42 @@ WindowMonitor(scripts := "") {
 			}
 		}
 		else {
-			(BoundFunc := WindowPosition.Bind("ahk_id" . windowHandle, windowProcessName, position)).Call()
+			(BoundFunc := WindowPosition.Bind(windowHandle, windowProcessName, position)).Call()
 
 			WindowPosition(handle, processName, position) {
 				if (WinActive(handle)) {
-					if (!WinGetMinMax(handle)) {
-						WinGetPos(&x, &y, &width, &height)
+					try {
+						if (!WinGetMinMax(handle)) {
+							WinGetPos(&x, &y, &width, &height)
 
-						if (position.x != x || position.y != y || position.Width != width || position.Height != height) {
-							if (A_Debug) {
-								Console.Log("Window has moved!")
-							}
-
-							if (GetKeyState("LButton", "P")) {
-								KeyWait("LButton")
-
-								WinGetPos(&x, &y, &width, &height)
-							}
-
-							if (GetKeyState("AppsKey", "P")) {  ;* Allow repositioning and save the new coordinates if `{AppsKey}` is held down when `{LButton}` is released.
-								IniWrite(x . ", " . y . ", " . width . ", " . height, A_WorkingDir . "\cfg\Settings.ini", "Window Positions", processName)
-
-								position := {x: x, y: y, Width: width, Height: height}
-							}
-							else {
+							if (position.x != x || position.y != y || position.Width != width || position.Height != height) {
 								if (A_Debug) {
-									Console.Log("Restoring window positon.")
+									Console.Log("Window has moved!")
 								}
 
-								WinMove(position.x, position.y, position.Width, position.Height, windowHandle)
+								if (GetKeyState("LButton", "P")) {
+									KeyWait("LButton")
+
+									WinGetPos(&x, &y, &width, &height)
+								}
+
+								if (GetKeyState("AppsKey", "P")) {  ;* Allow repositioning and save the new coordinates if `AppsKey` is held down.
+									IniWrite(x . ", " . y . ", " . width . ", " . height, A_WorkingDir . "\cfg\Settings.ini", "Window Positions", processName)
+
+									position := {x: x, y: y, Width: width, Height: height}
+								}
+								else {
+									if (A_Debug) {
+										Console.Log("Restoring window positon.")
+									}
+
+									WinMove(position.x, position.y, position.Width, position.Height, windowHandle)
+								}
 							}
 						}
-					}
 
-					SetTimer(BoundFunc, -50)
+						SetTimer(BoundFunc, -50)
+					}
 				}
 			}
 		}
@@ -351,7 +353,5 @@ __WindowMessage(wParam := 0, lParam := 0, msg := 0, hWnd := 0) {
 __Exit(exitReason, exitCode) {
 	Critical(True)
 
-	ExitApp
+	ExitApp()
 }
-
-;===============  Class  =======================================================;

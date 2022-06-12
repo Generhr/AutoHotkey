@@ -1,15 +1,14 @@
+﻿#Requires AutoHotkey v2.0-beta
+
 ;============ Auto-Execute ====================================================;
-
-#Requires AutoHotkey v2.0-beta
-
 ;=======================================================  Admin  ===============;
 
 if (!A_IsAdmin || !DllCall("GetCommandLine", "Str") ~= " /restart(?!\S)") {
 	try {
-		Run(Format("*RunAs {}", (A_IsCompiled) ? (A_ScriptFullPath . " /restart") : (Format("{} /restart `"{}`"", A_AhkPath, A_ScriptFullPath))))
+		Run(Format("*RunAs {}", (A_IsCompiled) ? (A_ScriptFullPath . " /restart") : (Format('{} /restart "{}"', A_AhkPath, A_ScriptFullPath))))
 	}
 
-	ExitApp
+	ExitApp()
 }
 
 ;======================================================  Include  ==============;
@@ -20,6 +19,7 @@ if (!A_IsAdmin || !DllCall("GetCommandLine", "Str") ~= " /restart(?!\S)") {
 #Include %A_ScriptDir%\..\lib\Console\Console.ah2
 
 #Include %A_ScriptDir%\..\lib\OCR.ah2
+#Include %A_ScriptDir%\..\lib\Spotify.ah2
 
 ;======================================================  Setting  ==============;
 
@@ -30,6 +30,7 @@ if (!A_IsAdmin || !DllCall("GetCommandLine", "Str") ~= " /restart(?!\S)") {
 
 CoordMode("Mouse", "Screen")
 CoordMode("ToolTip", "Screen")
+CoordMode("Pixel", "Screen")
 ;DetectHiddenWindows(True)
 InstallKeybdHook(True)
 InstallMouseHook(True)
@@ -43,7 +44,7 @@ SetWorkingDir(A_ScriptDir . "\..")
 
 ;======================================================== Menu ================;
 
-TraySetIcon("mstscax.dll", 10)	;: https://diymediahome.org/windows-icons-reference-list-with-details-locations-images/
+TraySetIcon("mstscax.dll", 10)  ;: https://diymediahome.org/windows-icons-reference-list-with-details-locations-images/
 
 ;Menu, Tray, NoStandard
 ;for k, v in {"Case": ["", "[&1] lowercase", "[&2] UPPERCASE", "[&3] Sentence case", "[&4] Title Case", "", "[&5] iNVERSE", "[&6] Reverse", ""], "Tray": ["", "[&1] Edit", "[&2] Open Script Folder", "[&3] Window Spy", "[&4] List Lines", "[&5] List Vars", "[&6] List Hotkeys", "[&7] KeyHistory", "", "[&8] Pause", "[&9] Suspend", "", "[10] Restore All", "[11] Exit", ""]} {
@@ -54,7 +55,7 @@ TraySetIcon("mstscax.dll", 10)	;: https://diymediahome.org/windows-icons-referen
 
 ;=======================================================  Group  ===============;
 
-for k, v in Map("Browser", [["Google Chrome ahk_class Chrome_WidgetWin_1 ahk_exe chrome.exe"]],	;? [["Title ahk_class ClassName ahk_exe ProcessName", "ExcludeTitle"], ...]
+for k, v in Map("Browser", [["Google Chrome ahk_class Chrome_WidgetWin_1 ahk_exe chrome.exe"]],  ;? [["Title ahk_class ClassName ahk_exe ProcessName", "ExcludeTitle"], ...]
 	"Editor", [["Notepad++ ahk_class Notepad++ ahk_exe notepad++.exe"], ["ahk_class Chrome_WidgetWin_1 ahk_exe Code.exe"], ["Microsoft Visual Studio ahk_exe devenv.exe"]],
 	"Escape", [["ahk_class ApplicationFrameWindow ahk_exe ApplicationFrameHost.exe", "Calculator"], ["Help ahk_class HH Parent ahk_exe hh.exe"], ["ahk_class MediaPlayerClassicW ahk_exe mpc-hc64.exe"], ["Windows Photo Viewer ahk_class Photo_Lightweight_Viewer ahk_exe DllHost.exe"], ["Window Spy ahk_class AutoHotkeyGUI"]]) {
 	for i, v in v {
@@ -72,9 +73,9 @@ for k, v in Map("Browser", [["Google Chrome ahk_class Chrome_WidgetWin_1 ahk_exe
 global A_Debug := IniRead(A_WorkingDir . "\cfg\Settings.ini", "Debug", "Debug")
 	, A_WindowMessage := DllCall("RegisterWindowMessage", "Str", "WindowMessage", "UInt")
 
-, A_SavedClipboard, A_CapsLockState := False
-, A_HiddenWindows := []
-, A_Null := Chr(0)
+	, A_SavedClipboard, A_CapsLockState := False
+	, A_HiddenWindows := []
+	, A_Null := Chr(0)
 
 ;======================================================== Hook ================;
 
@@ -85,17 +86,17 @@ OnExit(__Exit)
 ;========================================================  Run  ================;
 
 ;for v in ["AutoCorrect", "Connection", "Window"] {
-for v in ["AutoCorrect"] {
+for v in ["AutoCorrect", "Window"] {
 	Run(A_ScriptDir . "\" . v . ".ah2")
 }
 
 ;=======================================================  Other  ===============;
 
-if ((v := DownloadContent("https://autohotkey.com/download/2.0/version.txt")) != A_AhkVersion) {
+if (RegExReplace(v := DownloadContent("https://autohotkey.com/download/2.0/version.txt"), "\s") != A_AhkVersion) {
 	Console.Log(Format("New AHK version: {}", v))
 }
 
-exit
+Exit()
 
 ;q:: {
 ;	s := String.Buffer(Format("{:T}", String.Copy()), ";", "=", 80, 60, 1)
@@ -112,9 +113,9 @@ exit
 ~$WheelDown::
 ~$WheelUp:: {
 	if (A_TimeSincePriorHotkey && A_TimeSincePriorHotkey >= 50 && MouseGet("Pos", "Window").y <= 80 + 30*(WinActive("ahk_group Browser") > 0)) {
-		static keyCombination := Map("WheelUp", "^{PgUp}", "WheelDown", "^{PgDn}")
+		static lookup := Map("WheelUp", "^{PgUp}", "WheelDown", "^{PgDn}")
 
-		Send(keyCombination[KeyGet(A_ThisHotkey)])
+		Send(lookup[KeyGet(A_ThisHotkey)])
 	}
 }
 
@@ -146,7 +147,7 @@ XButton1 & MButton:: {
 *$XButton1:: {
 	KeyWait("XButton1")
 
-	switch (WinGet("ProcessName")) {
+	switch (WinGetProcessName("A")) {
 		case "7zFM.exe":
 			Send("{Backspace}")
 		case "Spotify.exe":
@@ -173,7 +174,7 @@ XButton2 & WheelDown:: {
 $XButton2:: {
 	KeyWait("XButton2")
 
-	switch (WinGet("ProcessName")) {
+	switch (WinGetProcessName("A")) {
 		case "Spotify.exe":
 			Send("!{Right}")
 		default:
@@ -184,7 +185,7 @@ $XButton2:: {
 #HotIf
 
 ;AppsKey & LButton::
-;	if (!WinGet("MinMax")) {
+;	if (!WinGetMinMax("A")) {
 ;		before := [WinGet("Pos"), MouseGet("Pos")]  ;~ before
 ;
 ;		UpdateWindow:
@@ -205,25 +206,12 @@ $XButton2:: {
 ;	KeyWait("LButton")
 ;	return
 
-;~$LButton::
-;	while (GetKeyState("LButton", "P")) {
-;		if (k := ((GetKeyState("Up", "P")) ? ("Up") : ((GetKeyState("Left", "P")) ? ("Left") : ((GetKeyState("Down", "P")) ? ("Down") : ((GetKeyState("Right", "P")) ? ("Right") : (0)))))) {
-;			MouseMove, % Round({"Left": -1, "Right": 1}[k]), % Round({"Up": -1, "Down": 1}[k]), 0, R
-;
-;			KeyWait(k)
-;		}
-;
-;		Sleep, -1
-;	}
-;
-;	return
-
 ;====================================================== Keyboard ==============;
 
-#HotIf (WinActive(A_ScriptName) && !(WinGet("Extension") == "ah1"))
+#HotIf (WinActive(A_ScriptName) && !(WinGetExtension("A") == "ah1"))
 
 $F10:: {
-	ListVars
+	ListVars()
 
 	KeyWait("F10")
 }
@@ -232,7 +220,7 @@ $F10:: {
 	Critical(True)
 
 	Sleep(200)
-	Reload
+	Reload()
 }
 
 #HotIf
@@ -244,7 +232,7 @@ $^c:: {
 
 	A_Clipboard := "/*`n`t" . StrReplace(ControlGetText("Edit1", "Window Spy ahk_class AutoHotkeyGUI"), "`n", "`n`t") . "`n*/"
 
-	;		HotKey("~$^v", SinglePaste, "On")
+;	HotKey("~$^v", SinglePaste, "On")
 }
 
 #HotIf
@@ -264,7 +252,7 @@ $^c:: {
 
 $F1:: {
 	if (KeyWait("F1", "T0.25")) {
-		extension := RegExReplace(WinGet("Title"), "i).*\.(\w+).*", "$1")
+		extension := RegExReplace(WinGetTitle("A"), "i).*\.(\w+).*", "$1")
 
 		if (extension ~= "ah\d*") {
 			if (text := RegExReplace(String.Copy(True, True), "iSs)[^a-z_]*((?<!#(?=[a-z]))[#a-z_]*).*", "$1")) {
@@ -280,7 +268,7 @@ $F1:: {
 				Send("{Enter}")
 			}
 			else {
-				Run(Format("{}\bin\Nircmd.exe speak text `"NO TEXT`"", A_WorkingDir))
+				Run(Format('{}\bin\Nircmd.exe speak text "NO TEXT"', A_WorkingDir))
 			}
 		}
 
@@ -310,7 +298,7 @@ $\:: {
 			SendMessage(A_WindowMessage, 0x1000, 0, scripts)  ;* Tell other running scripts to update their `A_Debug` value.
 		}
 
-		Run(A_WorkingDir . "\bin\Nircmd.exe speak text " . Format("`"DEBUG {}.`"", (A_Debug) ? ("ON") : ("OFF")))
+		Run(A_WorkingDir . "\bin\Nircmd.exe speak text " . Format('"DEBUG {}."', (A_Debug) ? ("ON") : ("OFF")))
 
 		KeyWait("\")
 	}
@@ -382,11 +370,11 @@ $c:: {
 	if (KeyWait("c", "T0.25")) {
 		static extensionLookup := Map("ah", ";", "lib", ";", "cs", "//", "js", "//", "json", "//", "pde", "//", "elm", "--", "py", "#")
 
-		if ((text := String.Copy()) && (comment := extensionLookup[RegExReplace(WinGet("Title"), "iS).*\.([a-z]+).*", "$1")])) {
+		if ((text := String.Copy()) && (comment := extensionLookup[RegExReplace(WinGetTitle("A"), "iS).*\.([a-z]+).*", "$1")])) {
 			String.Paste((SubStr(text, 1, StrLen(comment)) == comment) ? (RegExReplace(text, "`am)^" . comment)) : (RegExReplace(text, "`am)^", comment)))
 		}
 		else {
-			Run(A_WorkingDir . "\bin\Nircmd.exe speak text `"NO TEXT`"")
+			Run(A_WorkingDir . '\bin\Nircmd.exe speak text "NO TEXT"')
 		}
 
 		KeyWait("c")
@@ -459,13 +447,13 @@ $Esc:: {
 
 		KeyWait("Escape")
 	}
-	else if (WinActive("ahk_group Escape") && !WinGet("MinMax")) {
-		WinClose(winTitle := WinGet("ID"))
+	else if (WinActive("ahk_group Escape") && !WinGetMinMax("A")) {
+		WinClose(winTitle := WinGetID("A"))
 
-		if (!WinWaitNotActive(winTitle, , 1) && WinGet("Class") != "#32770") {
-			winTitle := WinGet("Title")
+		if (!WinWaitNotActive(winTitle, , 1) && WinGetClass("A") != "#32770") {
+			winTitle := WinGetTitle("A")
 
-			ProcessClose(WinGet("PID"))
+			ProcessClose(WinGetPID("A"))
 			Console.Log(Format("{} FORCED: {}", A_Clipboard := A_ThisHotkey, winTitle))
 		}
 	}
@@ -514,7 +502,7 @@ $Delete:: {
 #HotIf
 
 AppsKey & Escape:: {
-	Run(A_WorkingDir . "\bin\Nircmd.exe speak text `"KILL SCREEN`"")
+	Run(A_WorkingDir . '\bin\Nircmd.exe speak text "KILL SCREEN"')
 
 	while (GetKeyState("AppsKey", "P") || GetKeyState("Escape", "P")) {
 		Sleep(-1)
@@ -545,12 +533,12 @@ AppsKey & F4:: {
 			}
 		}
 
-		WinClose(winTitle := WinGet("ID"))
+		WinClose(winTitle := WinGetID("A"))
 
-		if (!WinWaitNotActive(winTitle, , 1) && WinGet("Class") != "#32770") {
-			winTitle := WinGet("Title")
+		if (!WinWaitNotActive(winTitle, , 1) && WinGetClass("A") != "#32770") {
+			winTitle := WinGetTitle("A")
 
-			ProcessClose(WinGet("PID"))
+			ProcessClose(WinGetPID("A"))
 			Console.Log(Format("{} FORCED: {}", A_Clipboard := A_ThisHotkey, winTitle))
 		}
 	}
@@ -659,9 +647,7 @@ AppsKey & Tab:: {
 ;}
 
 $`:: {
-	KeyWait("``")
-
-	if (!KeyWait("``", "DT0.25")) {
+	if (KeyWait("``", "T0.25")) {
 		DllCall("SystemParametersInfo", "UInt", 0x70, "UInt", 0, "UInt*", &(originalSpeed := 0), "UInt", 0)	;? 0x70 = SPI_GETMOUSESPEED
 		DllCall("SystemParametersInfo", "UInt", 0x71, "UInt", 0, "Ptr", 2, "UInt", 0)	;? 0x71 = SPI_SETMOUSESPEED (range is 1-20, default is 10)
 
@@ -677,9 +663,13 @@ AppsKey & 1::
 AppsKey & 2::
 AppsKey & 9::
 AppsKey & [:: {
-	characters := Map("1", [Chr(39), Chr(39)], "2", [Chr(34), Chr(34)], "9", [Chr(40), Chr(41)], "[", [Chr(91), Chr(93)])[key := SubStr(A_ThisHotkey, -1)]
+	key := SubStr(A_ThisHotkey, -1)
 
 	if (text := String.Copy()) {
+		static lookup := Map("1", [Chr(39), Chr(39)], "2", [Chr(34), Chr(34)], "9", [Chr(40), Chr(41)], "[", [Chr(91), Chr(93)])
+
+		characters := lookup[key]
+
 		String.Paste(characters[0] . text . characters[1], 1)
 	}
 
@@ -695,10 +685,10 @@ AppsKey & Enter:: {
 AppsKey & Space:: {
 	if (!Desktop()) {
 		if ([255, ""].Includes(WinGetTransparent("A"))) {
-			FadeWindow(WinGet("ID"), 35, 1000)
+			FadeWindow(WinGetID("A"), 35, 1000)
 		}
 		else {
-			FadeWindow(WinGet("ID"), 255, 1000)
+			FadeWindow(WinGetID("A"), 255, 1000)
 		}
 	}
 
@@ -712,9 +702,9 @@ $!q:: {
 }
 
 AppsKey & q:: {
-	static coordinates := "", text := ""
-
 	global A_SavedClipboard
+
+	static coordinates := "", text := ""
 
 	if (text == "Reset") {
 		A_Clipboard := A_SavedClipboard
@@ -736,7 +726,7 @@ AppsKey & q:: {
 		UpdateGui() {
 			MouseGetPos(&x, &y)
 
-			ControlSetText(text := Format("{}, {}", x, y) . ((GetKeyState("Ctrl", "P")) ? (Format(" ({})", Pixelgetcolor(x, y))) : ("")), "Static1", A_ScriptName)
+			ControlSetText(text := Format("{}, {}", x, y) . ((GetKeyState("Ctrl", "P")) ? (Format(" ({})", Pixelgetcolor(x, y, "Slow"))) : ("")), "Static1", A_ScriptName)
 
 			SetTimer(UpdateGui, -25)
 		}
@@ -778,7 +768,7 @@ AppsKey & s:: {
 	BlockInput("On")
 
 	if (!(keyboardHook := DllCall("SetWindowsHookEx", "Int", 13, "Ptr", CallbackCreate(WindowsProc, "Fast"), "Ptr", DllCall("GetModuleHandle", "UInt", 0, "Ptr"), "UInt", 0, "Ptr"))) {
-		throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+		throw (MessageError(DllCall("Kernel32\GetLastError")))
 	}
 
 	WindowsProc(nCode, wParam, lParam) {
@@ -802,7 +792,7 @@ AppsKey & s:: {
 			}
 
 			if (!DllCall("UnhookWindowsHookEx", "Ptr", keyboardHook, "UInt")) {
-				throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+				throw (MessageError(DllCall("Kernel32\GetLastError")))
 			}
 
 			splash.Destroy()
@@ -961,7 +951,7 @@ __Exit(exitReason, exitCode) {	;? ExitReason: Close || Error || Exit || Logoff |
 	;		}
 	;	}
 
-	ExitApp
+	ExitApp()
 }
 
 ;======================================================== Menu ================;
