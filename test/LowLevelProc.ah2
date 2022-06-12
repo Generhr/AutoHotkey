@@ -49,7 +49,7 @@ Exit()
 
 SetWindowsHookEx(idHook, callback) {
 	if (!(hHook := DllCall("User32\SetWindowsHookEx", "Int", idHook, "Ptr", CallbackCreate(callback, "Fast"), "Ptr", DllCall("GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexw
-		throw (Error(Format("0x{:X}", A_LastError), -1, MessageError(A_LastError)))
+		throw (Error(Format("{:#x}", A_LastError), -1, MessageError(A_LastError)))
 	}
 
 	static instance := {Call: (*) => ({Class: "HookEx",
@@ -57,26 +57,24 @@ SetWindowsHookEx(idHook, callback) {
 
 	UnhookWindowsHookEx(hookEx) {
 		if (!DllCall("UnhookWindowsHookEx", "Ptr", hookEx.Handle, "UInt")) {
-			throw (Error(Format("0x{:X}", A_LastError), -1, MessageError(A_LastError)))
+			throw (Error(Format("{:#x}", A_LastError), -1, MessageError(A_LastError)))
 		}
 	}
 
 	(hookEx := instance.Call()).Handle := hHook
-
 	return (hookEx)
-}
 
-;* MessageError(messageID)
-MessageError(messageID) {
-	if (!(length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100  ;? 0x1100 = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER
-		, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", &(buffer := 0), "UInt", 0, "Ptr", 0, "Int"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
-		return (MessageError(DllCall("Kernel32\GetLastError")))
+	;* MessageError(messageID)
+	MessageError(messageID) {
+		if (!(length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", &(buffer := 0), "UInt", 0, "Ptr", 0, "Int"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
+			return (MessageError(DllCall("Kernel32\GetLastError")))
+		}
+
+		message := StrGet(buffer, length - 2)  ;* Account for the newline and carriage return characters.
+		DllCall("Kernel32\LocalFree", "Ptr", buffer)
+
+		return (Error(Format("{:#x}", messageID), -1, message))
 	}
-
-	message := StrGet(buffer, length - 2)  ;* Account for the newline and carriage return characters.
-	DllCall("Kernel32\LocalFree", "Ptr", buffer)
-
-	return (Error(Format("0x{:X}", messageID), -1, message))
 }
 
 LowLevelKeyboardProc(nCode, wParam, lParam) {
@@ -86,10 +84,10 @@ LowLevelKeyboardProc(nCode, wParam, lParam) {
 		flags := NumGet(lParam + 8, "UInt")
 			, extended := flags & 0x00000001, injected := (flags & 0x00000010) >> 4, context := (flags & 0x00000020) >> 5, state := (flags & 0x00000080) >> 7  ;? 0x00000001 = LLKHF_EXTENDED, 0x00000010 = LLKHF_INJECTED, 0x00000020 = LLKHF_ALTDOWN, 0x00000080 = LLKHF_UP
 
-		scanCode := NumGet(lParam + 4, "UInt") | (extended << 8), vkCode := Format("{:X}", NumGet(lParam, "UInt"))  ;* Virtual-Key Codes: https://docs.microsoft.com/en-gb/windows/win32/inputdev/virtual-key-codes?redirectedfrom=MSDN.
-			, key := GetKeyName(Format("vk{}", vkCode))
+		scanCode := NumGet(lParam + 4, "UInt") | (extended << 8), vkCode := Format("{:#x}", NumGet(lParam, "UInt"))  ;* Virtual-Key Codes: https://docs.microsoft.com/en-gb/windows/win32/inputdev/virtual-key-codes?redirectedfrom=MSDN.
+			, keyName := GetKeyName(Format("vk{}", vkCode))
 
-		ToolTip(key, 50, 75, 20)
+		ToolTip(keyName, 50, 75, 20)
 
 		switch (wParam) {
 			case 0x100:  ;? 0x100 = WM_KEYDOWN
