@@ -49,7 +49,7 @@ Exit()
 
 SetWindowsHookEx(idHook, callback) {
 	if (!(hHook := DllCall("User32\SetWindowsHookEx", "Int", idHook, "Ptr", CallbackCreate(callback, "Fast"), "Ptr", DllCall("GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexw
-		throw (Error(Format("{:#x}", A_LastError), -1, MessageError(A_LastError)))
+		throw (MessageError(DllCall("Kernel32\GetLastError")))
 	}
 
 	static instance := {Call: (*) => ({Class: "HookEx",
@@ -57,24 +57,23 @@ SetWindowsHookEx(idHook, callback) {
 
 	UnhookWindowsHookEx(hookEx) {
 		if (!DllCall("UnhookWindowsHookEx", "Ptr", hookEx.Handle, "UInt")) {
-			throw (Error(Format("{:#x}", A_LastError), -1, MessageError(A_LastError)))
+			throw (MessageError(DllCall("Kernel32\GetLastError")))
 		}
 	}
 
 	(hookEx := instance.Call()).Handle := hHook
 	return (hookEx)
+}
 
-	;* MessageError(messageID)
-	MessageError(messageID) {
-		if (!(length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", &(buffer := 0), "UInt", 0, "Ptr", 0, "Int"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
-			return (MessageError(DllCall("Kernel32\GetLastError")))
-		}
-
-		message := StrGet(buffer, length - 2)  ;* Account for the newline and carriage return characters.
-		DllCall("Kernel32\LocalFree", "Ptr", buffer)
-
-		return (Error(Format("{:#x}", messageID), -1, message))
+MessageError(messageID) {
+	if (!(length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", &(buffer := 0), "UInt", 0, "Ptr", 0, "Int"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
+		return (MessageError(DllCall("Kernel32\GetLastError")))
 	}
+
+	message := StrGet(buffer, length - 2)  ;* Account for the newline and carriage return characters.
+	DllCall("Kernel32\LocalFree", "Ptr", buffer)
+
+	return (Error(Format("{:#x}", messageID), -1, message))
 }
 
 LowLevelKeyboardProc(nCode, wParam, lParam) {
