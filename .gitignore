@@ -1,11 +1,19 @@
-# Specific Folders
+# VS Code
 .vscode
-bin
-build
-cfg
-doc
-res
-test
+
+# Ignore default text files
+/CHANGELOG.*
+/LICENSE
+/README.*
+
+# Specific Folders
+*/__Template
+/bin
+/build
+/cfg
+/doc
+/res
+/test
 
 # Prerequisites
 *.d
