@@ -36,11 +36,11 @@
 ;============== Function ======================================================;
 ;=================================================== Error Handling ===========;
 
-;* MessageError(messageID)
-MessageError(messageID) {
+;* ErrorFromMessage(messageID)
+ErrorFromMessage(messageID) {
 	if (!(length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100  ;? 0x1100 = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER
 		, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", &(buffer := 0), "UInt", 0, "Ptr", 0, "Int"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
-		return (MessageError(DllCall("Kernel32\GetLastError")))
+		return (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 	}
 
 	message := StrGet(buffer, length - 2)  ;* Account for the newline and carriage return characters.
@@ -56,7 +56,7 @@ LoadLibrary(libraryName) {
 
 	if (!loaded.HasProp(libraryName)) {
 		if (!(ptr := DllCall("Kernel32\LoadLibrary", "Str", libraryName, "Ptr"))) {
-			throw (MessageError(DllCall("Kernel32\GetLastError")))
+			throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 		}
 
 		loaded.%libraryName% := {Count: 0, Ptr: ptr}
@@ -86,7 +86,7 @@ FreeLibrary(libraryName) {
 
 		if (handle := DllCall("Kernel32\GetModuleHandle", "Str", libraryName, "Ptr")) {  ;* If the library module is already in the address space of the script's process.
 			if (!DllCall("Kernel32\FreeLibrary", "Ptr", handle, "UInt")) {
-				throw (MessageError(DllCall("Kernel32\GetLastError")))
+				throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 			}
 
 			return (True)

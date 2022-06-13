@@ -768,7 +768,7 @@ AppsKey & s:: {
 	BlockInput("On")
 
 	if (!(keyboardHook := DllCall("SetWindowsHookEx", "Int", 13, "Ptr", CallbackCreate(WindowsProc, "Fast"), "Ptr", DllCall("GetModuleHandle", "UInt", 0, "Ptr"), "UInt", 0, "Ptr"))) {
-		throw (MessageError(DllCall("Kernel32\GetLastError")))
+		throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 	}
 
 	WindowsProc(nCode, wParam, lParam) {
@@ -792,7 +792,7 @@ AppsKey & s:: {
 			}
 
 			if (!DllCall("UnhookWindowsHookEx", "Ptr", keyboardHook, "UInt")) {
-				throw (MessageError(DllCall("Kernel32\GetLastError")))
+				throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 			}
 
 			splash.Destroy()

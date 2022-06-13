@@ -177,7 +177,7 @@ WindowMonitor(scripts := "") {
 								offset := index*50
 
 								if (!DllCall("User32\SetWindowPos", "Ptr", handle, "Ptr", 0, "Int", position.x + offset, "Int", position.y - offset, "Int", position.Width, "Int", position.Height, "UInt", 0x0004, "UInt")) {  ;? 0x0004 = SWP_NOZORDER  ;: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowpos
-									throw (MessageError(DllCall("Kernel32\GetLastError")))
+									throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 								}
 							}
 
