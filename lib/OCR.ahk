@@ -27,7 +27,7 @@
 ;============ Auto-Execute ====================================================;
 ;======================================================  Include  ==============;
 
-#Include %A_LineFile%\..\Structure\Structure.ah2  ;~ All `Structure()` calls can be replaced with `Buffer()`, just manually construct the necessary structs.
+#Include %A_LineFile%\..\Structure\Structure.ahk  ;~ All `Structure()` calls can be replaced with `Buffer()`, just manually construct the necessary structs.
 
 ;============== Function ======================================================;
 

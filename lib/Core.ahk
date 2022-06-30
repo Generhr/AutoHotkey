@@ -27,11 +27,11 @@
 ;============ Auto-Execute ====================================================;
 ;======================================================  Include  ==============;
 
-#Include %A_LineFile%\..\ObjectOriented\Array.ah2
-#Include %A_LineFile%\..\ObjectOriented\Object.ah2
-#Include %A_LineFile%\..\String\String.ah2
+#Include %A_LineFile%\..\ObjectOriented\Array.ahk
+#Include %A_LineFile%\..\ObjectOriented\Object.ahk
+#Include %A_LineFile%\..\String\String.ahk
 
-#Include %A_LineFile%\..\Structure\Structure.ah2
+#Include %A_LineFile%\..\Structure\Structure.ahk
 
 ;============== Function ======================================================;
 ;=================================================== Error Handling ===========;
