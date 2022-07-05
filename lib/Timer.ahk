@@ -1,4 +1,4 @@
-﻿#Requires AutoHotkey v2.0-beta
+﻿#Requires AutoHotkey 2.0-beta.6
 
 /*
 * MIT License
@@ -27,7 +27,7 @@
 class Timer {
 	static Instances := Map()
 
-	__New(callback, interval := unset, priority := 0) {
+	__New(callback, interval?, priority := 0) {
 		this.Callback := callback, this.Interval := -1, this.Priority := priority
 			, this.State := 0
 
@@ -40,16 +40,9 @@ class Timer {
 		}
 	}
 
-	static StartAll(interval := unset) {
-		if (IsSet(interval)) {
-			for pointer, object in this.Instances {
-				object.Start(interval)
-			}
-		}
-		else {
-			for pointer, object in this.Instances {
-				object.Start()
-			}
+	static StartAll(interval?) {
+		for pointer, object in this.Instances {
+			object.Start(interval?)
 		}
 	}
 
@@ -67,22 +60,25 @@ class Timer {
 		pointer := ObjPtr(this)
 
 		ObjAddRef(pointer), Timer.Instances.Delete(pointer)  ;* Increase this object's reference count before deleting the copy stored in `Timer.Instances` to avoid crashing the calling script.
+
+		try {
+			if (A_Debug) {
+				Console.Log("__Delete")
+			}
+		}
 	}
 
-	Start(interval := unset) {
+	Start(interval?) {
 		if (IsSet(interval)) {
-			if (interval != 0) {
-				this.State := (interval > 0) - (interval < 0), this.Interval := interval
-			}
-			else {
-				this.State := 0
-			}
-
-			SetTimer(this.Callback, interval, this.Priority)
+			this.Interval := interval
 		}
 		else {
-			SetTimer(this.Callback, this.Interval, this.Priority)
+			interval := this.Interval
 		}
+
+		this.State := 1
+
+		SetTimer(this.Callback, interval, this.Priority)
 	}
 
 	Stop() {
