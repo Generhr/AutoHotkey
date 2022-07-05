@@ -1,4 +1,4 @@
-﻿#Requires AutoHotkey 2.0-beta.6
+﻿#Requires AutoHotkey v2.0-beta.6
 
 /*
 * MIT License
