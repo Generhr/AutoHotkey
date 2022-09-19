@@ -54,7 +54,7 @@ Exit()
 	}
 
 	:*:\\f:: {
-		Send("Format(`"")
+		Send('Format("')
 
 		KeyWait("f")
 	}
@@ -66,7 +66,7 @@ Exit()
 	}
 
 	:*:\\s:: {
-		Send("switch () {{}{}}{Left}{Enter}case `"_____`":{}{Enter}{Up 2}{Right 4}condition^{Left}^+{Right}")
+		Send('switch () {{}{}}{Left}{Enter}case "_____":{}{Enter}{Up 2}{Right 4}condition^{Left}^+{Right}')
 
 		KeyWait("s")
 	}
@@ -107,9 +107,9 @@ Exit()
 
 		switch (A_ThisHotkey) {
 			case ":*:\\o":
-				Send("{{}Key: `"value`"" . (A_Clipboard := ", Key: `"value`"") . "{}}{Left}")
+				Send('{{}Key: "value"' . (A_Clipboard := ', Key: "value"') . '{}}{Left}')
 			case ":*:\\a":
-				Send("{[}`"value`"" . (A_Clipboard := ", `"value`"") . "{]}{Left}")
+				Send('{[}"value"' . (A_Clipboard := ', "value"') . '{]}{Left}')
 		}
 
 		SetTimer(Restore.Bind(c), -200)
