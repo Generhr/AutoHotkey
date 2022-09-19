@@ -67,7 +67,7 @@ Exit()
 #HotIf (WinActive(A_ScriptName))
 
 $F10:: {
-	ListVars
+	ListVars()
 
 	KeyWait("F10")
 }
