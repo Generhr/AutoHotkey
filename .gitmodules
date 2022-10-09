@@ -2,7 +2,7 @@
 	path = lib/Assert
 	url = https://github.com/Onimuru/Assert
 [submodule "lib/Structure"]
-	path = lib/Structure
+	path = lib/Buffer
 	url = https://github.com/Onimuru/Structure
 [submodule "lib/ObjectOriented"]
 	path = lib/ObjectOriented
