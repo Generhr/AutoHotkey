@@ -24,13 +24,6 @@
 * SOFTWARE.
 */
 
-;============ Auto-Execute ====================================================;
-;======================================================  Include  ==============;
-
-#Include %A_LineFile%\..\Structure\Structure.ahk  ;~ All `Structure()` calls can be replaced with `Buffer()`, just manually construct the necessary structs.
-
-;============== Function ======================================================;
-
 ;* OCR([file])
 ;* Parameter:
 	;* [String] file - The directory of the file from which to capture text.
@@ -40,10 +33,17 @@ OCR(file := "") {
 	static image := A_Temp . "\tesseract.tiff", text := A_Temp . "\tesseract.txt"
 
 	if (!(hModule := DllCall("Kernel32\LoadLibrary", "Str", "Gdiplus", "Ptr"))) {  ;* Load the GDIp library.
-		throw (MessageError(DllCall("Kernel32\GetLastError")))
+		throw (__ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 	}
 
-	DllCall("Gdiplus\GdiplusStartup", "Ptr*", &(pToken := 0), "Ptr", Structure.CreateGDIplusStartupInput().Ptr, "Ptr", 0)  ;: https://docs.microsoft.com/en-us/windows/win32/api/gdiplusinit/nf-gdiplusinit-gdiplusstartup
+	DllCall("Gdiplus\GdiplusStartup", "Ptr*", &(pToken := 0), "Ptr", __CreateGDIplusStartupInput().Ptr, "Ptr", 0)  ;: https://docs.microsoft.com/en-us/windows/win32/api/gdiplusinit/nf-gdiplusinit-gdiplusstartup
+
+	__CreateGDIplusStartupInput() {
+		static cbSize := A_PtrSize*2 + 8
+
+		(structure := Buffer(cbSize, 0)).NumPut(0, "UInt", 0x0001)
+		return (structure)
+	}
 
 	if (FileExist(file)) {
 		DllCall("Gdiplus\GdipCreateBitmapFromFile", "WStr", file, "Ptr*", &(pBitmap := 0))
@@ -55,8 +55,8 @@ OCR(file := "") {
 
 		cancel := False
 
-		if (!(hKeyboardHook := DllCall("User32\SetWindowsHookEx", "Int", 13, "Ptr", CallbackCreate(LowLevelKeyboardProc, "Fast"), "Ptr", DllCall("GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {
-			throw (MessageError(DllCall("Kernel32\GetLastError")))
+		if (!(hKeyboardHook := DllCall("User32\SetWindowsHookEx", "Int", 13, "Ptr", CallbackCreate(LowLevelKeyboardProc, "Fast"), "Ptr", DllCall("Kernel32\GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {
+			throw (__ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 		}
 
 		LowLevelKeyboardProc(nCode, wParam, lParam) {
@@ -72,13 +72,13 @@ OCR(file := "") {
 				}
 			}
 
-			return (DllCall("CallNextHookEx", "Ptr", 0, "Int", nCode, "Ptr", wParam, "Ptr", lParam, "Ptr"))
+			return (DllCall("User32\CallNextHookEx", "Ptr", 0, "Int", nCode, "Ptr", wParam, "Ptr", lParam, "Ptr"))
 		}
 
 		capture := False
 
-		if (!(hMouseHook := DllCall("User32\SetWindowsHookEx", "Int", 14, "Ptr", CallbackCreate(LowLevelMouseProc, "Fast"), "Ptr", DllCall("GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {
-			throw (MessageError(DllCall("Kernel32\GetLastError")))
+		if (!(hMouseHook := DllCall("User32\SetWindowsHookEx", "Int", 14, "Ptr", CallbackCreate(LowLevelMouseProc, "Fast"), "Ptr", DllCall("Kernel32\GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {
+			throw (__ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 		}
 
 		LowLevelMouseProc(nCode, wParam, lParam) {
@@ -97,7 +97,7 @@ OCR(file := "") {
 				}
 			}
 
-			return (DllCall("CallNextHookEx", "Ptr", 0, "Int", nCode, "Ptr", wParam, "Ptr", lParam, "Ptr"))
+			return (DllCall("User32\CallNextHookEx", "Ptr", 0, "Int", nCode, "Ptr", wParam, "Ptr", lParam, "Ptr"))
 		}
 
 		while (!(capture || cancel)) {
@@ -135,8 +135,8 @@ OCR(file := "") {
 
 		overlay.Destroy()
 
-		if (!DllCall("UnhookWindowsHookEx", "Ptr", hKeyboardHook, "UInt") || !DllCall("UnhookWindowsHookEx", "Ptr", hMouseHook, "UInt")) {
-			throw (MessageError(DllCall("Kernel32\GetLastError")))
+		if (!DllCall("User32\UnhookWindowsHookEx", "Ptr", hKeyboardHook, "UInt") || !DllCall("User32\UnhookWindowsHookEx", "Ptr", hMouseHook, "UInt")) {
+			throw (__ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 		}
 
 		if (cancel) {
@@ -149,7 +149,7 @@ OCR(file := "") {
 
 		;* Create the bitmap:
 		hDestinationDC := DllCall("Gdi32\CreateCompatibleDC", "Ptr", hSourceDC := DllCall("GetDC", "Ptr", 0, "Ptr"), "Ptr")  ;* Create a compatible DC, which is used in a BitBlt from the source DC (in this case the entire screen).
-			, hCompatibleBitmap := DllCall("CreateDIBSection", "Ptr", hDestinationDC, "Ptr", Structure.CreateBitmapInfoHeader(width, -height).Ptr, "UInt", 0, "Ptr*", 0, "Ptr", 0, "UInt", 0, "Ptr"), hOriginalBitmap := DllCall("SelectObject", "Ptr", hDestinationDC, "Ptr", hCompatibleBitmap, "Ptr")  ;* Select the device-independent bitmap into the compatible DC.
+			, hCompatibleBitmap := DllCall("Gdi32\CreateDIBSection", "Ptr", hDestinationDC, "Ptr", Buffer.CreateBitmapInfoHeader(width, -height).Ptr, "UInt", 0, "Ptr*", 0, "Ptr", 0, "UInt", 0, "Ptr"), hOriginalBitmap := DllCall("Gdi32\SelectObject", "Ptr", hDestinationDC, "Ptr", hCompatibleBitmap, "Ptr")  ;* Select the device-independent bitmap into the compatible DC.
 
 		DllCall("Gdi32\BitBlt", "Ptr", hDestinationDC, "Int", 0, "Int", 0, "Int", width, "Int", height, "Ptr", hSourceDC, "Int", x2, "Int", y2, "UInt", 0x00CC0020 | 0x40000000)  ;* Copy a portion of the source DC's bitmap to the destination DC's bitmap.
 		DllCall("Gdiplus\GdipCreateBitmapFromHBITMAP", "Ptr", hCompatibleBitmap, "Ptr", 0, "Ptr*", &(pBitmap := 0))  ;* Convert the hBitmap to a pBitmap.
@@ -160,16 +160,16 @@ OCR(file := "") {
 	}
 
 	;* Save the bitmap to file:
-	if (DllCall("Gdiplus\GdipGetImageEncodersSize", "UInt*", &(numEncoders := 0), "UInt*", &(size := 0))) {  ;: https://docs.microsoft.com/en-us/windows/win32/gdiplus/-gdiplus-retrieving-the-class-identifier-for-an-encoder-use
-		throw (Error("Could not get a list of image codec encoders on this system."))
+	if (status := DllCall("Gdiplus\GdipGetImageEncodersSize", "UInt*", &(numEncoders := 0), "UInt*", &(size := 0), "UInt")) {  ;: https://docs.microsoft.com/en-us/windows/win32/gdiplus/-gdiplus-retrieving-the-class-identifier-for-an-encoder-use
+		throw (__ErrorFromStatus(status))
 	}
 
-	DllCall("Gdiplus\GdipGetImageEncoders", "UInt", numEncoders, "UInt", size, "Ptr", (imageCodecInfo := Structure(size)).Ptr)  ;* Fill a buffer with the available encoders.
+	DllCall("Gdiplus\GdipGetImageEncoders", "UInt", numEncoders, "UInt", size, "Ptr", (imageCodecInfo := Buffer(size)).Ptr)  ;* Fill a buffer with the available encoders.
 
 	extension := RegExReplace(image, ".*\.(\w+)$", "$1")
 
 	loop (numEncoders) {
-		encoderExtensions := StrGet(imageCodecInfo.NumGet((index := (48 + A_PtrSize*7)*(A_Index - 1)) + 32 + A_PtrSize*3, "UPtr"), "UTF-16")
+		encoderExtensions := StrGet(imageCodecInfo.NumGet((index := (48 + A_PtrSize*7)*(A_Index - 1)) + 32 + A_PtrSize*3, "Ptr*"), "UTF-16")
 
 		if (InStr(encoderExtensions, "*." . extension, False)) {
 			pCodec := imageCodecInfo.Ptr + index  ;* Get the pointer to the matching encoder.
@@ -195,22 +195,27 @@ Shutdown:
 	DllCall("Gdiplus\GdiplusShutdown", "Ptr", pToken)
 
 	if (!DllCall("Kernel32\FreeLibrary", "Ptr", hModule, "UInt")) {  ;* Free the GDIp library.
-		throw (MessageError(DllCall("Kernel32\GetLastError")))
+		throw (__ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 	}
 
 	try {
 		return (content)
 	}
 
-	;* MessageError(messageID)
-	MessageError(messageID) {
+	__ErrorFromMessage(messageID) {
 		if (!(length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", &(buffer := 0), "UInt", 0, "Ptr", 0, "Int"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
-			return (MessageError(DllCall("Kernel32\GetLastError")))
+			return (__ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 		}
 
 		message := StrGet(buffer, length - 2)  ;* Account for the newline and carriage return characters.
 		DllCall("Kernel32\LocalFree", "Ptr", buffer)
 
 		return (Error(Format("{:#x}", messageID), -1, message))
+	}
+
+	__ErrorFromStatus(status) {
+		static statusLookup := Map(1, "GenericError", 2, "InvalidParameter", 3, "OutOfMemory", 4, "ObjectBusy", 5, "InsufficientBuffer", 6, "NotImplemented", 7, "Win32Error", 8, "WrongState", 9, "Aborted", 10, "FileNotFound", 11, "ValueOverflow", 12, "AccessDenied", 13, "UnknownImageFormat", 14, "FontFamilyNotFound", 15, "FontStyleNotFound", 16, "NotTrueTypeFont", 17, "UnsupportedGdiplusVersion", 18, "GdiplusNotInitialized", 19, "PropertyNotFound", 20, "PropertyNotSupported", 21, "ProfileNotFound")  ;: https://docs.microsoft.com/en-us/windows/win32/api/gdiplustypes/ne-gdiplustypes-status
+
+		return (Error(status, -2, statusLookup[status]))
 	}
 }
