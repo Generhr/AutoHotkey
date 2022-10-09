@@ -20,7 +20,7 @@ if (!A_IsAdmin || !DllCall("Kernel32\GetCommandLine", "Str") ~= " /restart(?!\S)
 
 ;======================================================  Setting  ==============;
 
-;#NoTrayIcon
+#NoTrayIcon
 #SingleInstance
 #Warn All, MsgBox
 #Warn LocalSameAsGlobal, Off
@@ -35,11 +35,11 @@ SetWinDelay(-1)
 
 ;=======================================================  Group  ===============;
 
-;for i, v in [[]] {  ;? [["Title Class ahk_class ahk_exe ProcessName", "ExcludeTitle"], ...]
+;for v in [[]] {  ;? [["Title Class ahk_class ahk_exe ProcessName", "ExcludeTitle"], ...]
 ;	try {
 ;		GroupAdd("Suspend", v[0], , v[1])
 ;	}
-;	catch {
+;	catch IndexError {
 ;		GroupAdd("Suspend", v[0])
 ;	}
 ;}
@@ -86,8 +86,15 @@ $F10:: {
 ShellMessage(wParam, windowHandle, *) {
 	Critical(True)
 
-	switch (wParam) {  ;* My best guess is that nVidia is is not using CallNextHookEx, so many of these messages can't be received.
+	switch (wParam) {
 		case 1:  ;? 1 = HSHELL_WINDOWCREATED
+			windowClass := WinGetClass(windowHandle), windowProcessName := WinGetProcessName(windowHandle)
+
+			if (windowClass == "#32770" && windowProcessName == "AutoHotkey64.exe") {
+				WinActivate(windowHandle)
+				WinWaitActive(windowHandle)
+			}
+
 		case 2:  ;? 2 = HSHELL_WINDOWDESTROYED
 		case 3:  ;? 3 = HSHELL_ACTIVATESHELLWINDOW
 		case 4, 0x8004:  ;? 4 = HSHELL_WINDOWACTIVATED, 0x8004 = HSHELL_RUDEAPPACTIVATED (HSHELL_WINDOWACTIVATED | HSHELL_HIGHBIT)

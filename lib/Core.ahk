@@ -27,11 +27,10 @@
 ;============ Auto-Execute ====================================================;
 ;======================================================  Include  ==============;
 
+#Include %A_LineFile%\..\Buffer\Buffer.ahk
 #Include %A_LineFile%\..\ObjectOriented\Array.ahk
 #Include %A_LineFile%\..\ObjectOriented\Object.ahk
 #Include %A_LineFile%\..\String\String.ahk
-
-#Include %A_LineFile%\..\Structure\Structure.ahk
 
 ;============== Function ======================================================;
 ;=================================================== Error Handling ===========;
@@ -140,7 +139,7 @@ StringFromCLSID(CLSID) {
 }
 
 CLSIDFromString(string) {
-	if (DllCall("Ole32\CLSIDFromString", "Ptr", StrPtr(string), "Ptr", (CLSID := Structure(16).Ptr), "UInt")) {
+	if (DllCall("Ole32\CLSIDFromString", "Ptr", StrPtr(string), "Ptr", (CLSID := Buffer(16).Ptr), "UInt")) {
 		throw
 	}
 

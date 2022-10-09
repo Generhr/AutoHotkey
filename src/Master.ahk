@@ -91,43 +91,7 @@ for v in ["AutoCorrect", "Window"] {
 
 ;=======================================================  Other  ===============;
 
-if (RegExReplace(v := DownloadContent("https://autohotkey.com/download/2.0/version.txt"), "\s") != A_AhkVersion) {
-	hide := (*) => (Console.Hide(), Console.Clear())
-
-	Console.KeyboardHook := LowLevelKeyboardProc
-
-	LowLevelKeyboardProc(nCode, wParam, lParam) {
-		Critical(True)
-
-		if (!nCode) {  ;? 0 = HC_ACTION
-			switch (Format("{:#x}", NumGet(lParam, "UInt"))) {
-				case 0x1B:  ;? 0x1B = VK_ESCAPE
-					if (wParam == 0x0101) {  ;? 0x0101 = WM_KEYUP
-						SetTimer(hide, -1)
-					}
-
-					return (1)
-				case 0x20:  ;? 0x20 = VK_SPACE
-					if (wParam == 0x0101) {
-						Run(Format("{}\Google\Chrome\Application\chrome.exe https://www.autohotkey.com/download/ahk-v2.exe", A_ProgramFiles))
-
-						WinActivate("Google Chrome ahk_exe chrome.exe")
-						WinWaitActive("Google Chrome ahk_exe chrome.exe")
-
-						SetTimer(hide, -1)
-					}
-
-					return (1)
-			}
-		}
-
-		return (DllCall("User32\CallNextHookEx", "Ptr", 0, "Int", nCode, "Ptr", wParam, "Ptr", lParam, "Ptr"))
-	}
-
-	Console.Log(Format("New AHK version: {}`nPress {Spacebar} to download.", v))
-
-	SetTimer(hide, -20000)
-}
+CheckForNewVersion()
 
 Exit()
 
@@ -176,13 +140,15 @@ XButton1 & MButton:: {
 *$XButton1:: {
 	KeyWaitEx("XButton1")
 
-	switch (WinGetProcessName("A")) {
-		case "7zFM.exe":
-			Send("{Backspace}")
-		case "YouTube Music Desktop App.exe":
-			Send("!{Left}")
-		default:
-			Send("{XButton1}")
+	try {
+		switch (WinGetProcessName("A")) {
+			case "7zFM.exe":
+				Send("{Backspace}")
+			case "YouTube Music Desktop App.exe":
+				Send("!{Left}")
+			default:
+				Send("{XButton1}")
+		}
 	}
 }
 
@@ -203,11 +169,14 @@ XButton2 & WheelDown:: {
 $XButton2:: {
 	KeyWaitEx("XButton2")
 
-	switch (WinGetProcessName("A")) {
-		case "YouTube Music Desktop App.exe":
-			Send("!{Right}")
-		default:
-			Send("{XButton2}")
+
+	try {
+		switch (WinGetProcessName("A")) {
+			case "YouTube Music Desktop App.exe":
+				Send("!{Right}")
+			default:
+				Send("{XButton2}")
+		}
 	}
 }
 
@@ -261,11 +230,11 @@ $^c:: {
 
 	A_Clipboard := "/*`n`t" . StrReplace(ControlGetText("Edit1", "Window Spy ahk_class AutoHotkeyGUI"), "`n", "`n`t") . "`n*/"
 
-	if (!(keyboardHook := DllCall("User32\SetWindowsHookEx", "Int", 13, "Ptr", CallbackCreate(LowLevelKeyboardProc2, "Fast"), "Ptr", DllCall("Kernel32\GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {
+	if (!(keyboardHook := DllCall("User32\SetWindowsHookEx", "Int", 13, "Ptr", CallbackCreate(LowLevelKeyboardProc, "Fast"), "Ptr", DllCall("Kernel32\GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {
 		throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 	}
 
-	LowLevelKeyboardProc2(nCode, wParam, lParam) {
+	LowLevelKeyboardProc(nCode, wParam, lParam) {
 		Critical(True)
 
 		if (!nCode) {
@@ -696,9 +665,9 @@ AppsKey & Tab:: {
 	KeyWaitEx("Tab")
 }
 
-;AppsKey & `:: {
-;	SetSystemCursor()
-;}
+AppsKey & `:: {
+	SetSystemCursor()
+}
 
 $`:: {
 	if (KeyWaitEx("``", "T0.25")) {
@@ -991,21 +960,19 @@ __WindowMessage(wParam := 0, lParam := 0, msg := 0, hWnd := 0) {
 ;	return (0)
 ;}
 
-__Exit(exitReason, exitCode) {	;? ExitReason: Close || Error || Exit || Logoff || Menu || Reload || Restart || ShutDown || Single
+__Exit(exitReason, exitCode) {	;? ExitReason = Close || Error || Exit || Logoff || Menu || Reload || Restart || ShutDown || Single
 	Critical(True)
 
-	;	SetSystemCursor("Restore")
-	;	Menu("RestoreAll")
+	SetSystemCursor("Restore")
+;	Menu("RestoreAll")
 
-	;	if (exitReason && exitReason ~= "Close|Error|Exit|Menu|Restart") {  ;* Need this check to avoid double calling when `ExitApp` is called internally for script close. It isn't a big deal, only to avoid throwing an error with `WinGet()`.
-	;		DetectHiddenWindows, On
-	;
-	;		for i, v in WinGet("List", "ahk_class AutoHotkey", , A_ScriptName) {  ;* Close all AutoHotkey processes.
-	;			PostMessage(0x111, 65307, , "ahk_id" . v)
-	;		}
-	;	}
+	if (exitReason && exitReason ~= "Close|Error|Exit|Menu") {
+		DetectHiddenWindows(True)
 
-	ExitApp()
+		for script in WinGetList("ahk_class AutoHotkey", , A_ScriptName) {  ;* Close all AutoHotkey processes besides this one.
+			PostMessage(0x111, 65307, , , script)
+		}
+	}
 }
 
 ;======================================================== Menu ================;
@@ -1138,44 +1105,75 @@ __Exit(exitReason, exitCode) {	;? ExitReason: Close || Error || Exit || Logoff |
 
 ;=======================================================  Other  ===============;
 
-;__SetSystemCursor() {
-;	Local
-;
-;	VarSetCapacity(pvANDPlane, 128, 0xFF), VarSetCapacity(pvXORPlane, 128, 0)
-;
-;	for index, lpCursorName in (default := [32512, 32513, 32514, 32515, 32516, 32642, 32643, 32644, 32645, 32646, 32648, 32649, 32650], hide := [], show := []) {
-;		hide[index] := DllCall("CreateCursor", "Ptr", 0, "Int", 0, "Int", 0, "Int", 32, "Int", 32, "Ptr", &pvANDPlane, "Ptr", &pvXORPlane)
-;			, show[index] := DllCall("CopyImage", "Ptr", DllCall("LoadCursor", "Ptr", 0, "Ptr", lpCursorName), "UInt", 2, "Int", 0, "Int", 0, "UInt", 0)
-;	}
-;
-;	return {"Default": default, "Hide": hide, "Show": show}
-;}
+CheckForNewVersion() {
+	if (RegExReplace(version := DownloadContent("https://autohotkey.com/download/2.0/version.txt"), "\s") != A_AhkVersion) {
+		static hide := (*) => (Console.Hide(), Console.Clear())
 
-;SetSystemCursor(mode := "") {
-;	Local
-;
-;	Static default := (v := __SetSystemCursor()).Default, hide := v.Hide, show := v.Show
-;		, internal, mouse
-;
-;	if (mode == "Timer" && MouseGet("Pos").Print() == mouse.Print()) {
-;		if (internal == "Hide") {
-;			SetTimer(Func(A_ThisFunc).Bind("Timer"), -50)
-;		}
-;
-;		return
-;	}
-;
-;	internal := ["Show", "Hide"][internal != "Hide" && mode != "Restore"]
-;
-;	if (internal == "Hide") {
-;		mouse := MouseGet("Pos")
-;
-;		SetTimer(Func(A_ThisFunc).Bind("Timer"), -50)
-;	}
-;
-;	for index, id in default {
-;		DllCall("SetSystemCursor", "Ptr", DllCall("CopyImage", "Ptr", %internal%[index], "UInt", 2, "Int", 0, "Int", 0, "UInt", 0), "UInt", id)
-;	}
-;}
+		Console.KeyboardHook := LowLevelKeyboardProc
+
+		LowLevelKeyboardProc(nCode, wParam, lParam) {
+			Critical(True)
+
+			if (!nCode) {  ;? 0 = HC_ACTION
+				switch (Format("{:#x}", NumGet(lParam, "UInt"))) {
+					case 0x1B:  ;? 0x1B = VK_ESCAPE
+						if (wParam == 0x0101) {  ;? 0x0101 = WM_KEYUP
+							SetTimer(hide, -1)
+						}
+
+						return (1)
+					case 0x20:  ;? 0x20 = VK_SPACE
+						if (wParam == 0x0101) {
+							static filename := Format("C:\Users\{}\Downloads\AutoHotkey v{}.exe", A_UserName, version)
+
+							Download "https://www.autohotkey.com/download/ahk-v2.exe", filename
+							Run(filename)
+
+							SetTimer(hide, -1)
+						}
+
+						return (1)
+				}
+			}
+
+			return (DllCall("User32\CallNextHookEx", "Ptr", 0, "Int", nCode, "Ptr", wParam, "Ptr", lParam, "Ptr"))
+		}
+
+		Console.Log(Format("New AHK version: {}`nPress {Spacebar} to download.", version))
+
+		SetTimer(hide, -20000)
+	}
+}
+
+SetSystemCursor(mode := "") {
+	static internal := 0, mouse := [0, 0]
+
+	if (mode == "Timer" && __MouseGetPos().Every((value, index, *) => (value == mouse[index]))) {
+		if (internal == "Hide") {
+			SetTimer(SetSystemCursor.Bind("Timer"), -50)
+		}
+
+		return
+	}
+
+	__MouseGetPos() {
+		MouseGetPos(&x, &y)
+
+		return ([x, y])
+	}
+
+	if ((internal := (internal != "Hide" && mode != "Restore") ? ("Hide") : ("Show")) == "Hide") {
+		mouse := __MouseGetPos()
+
+		SetTimer(SetSystemCursor.Bind("Timer"), -50)
+	}
+
+	static cursorNames := [32512, 32513, 32514, 32515, 32516, 32642, 32643, 32644, 32645, 32646, 32648, 32649, 32650]  ;? 32650 = OCR_APPSTARTING, 32512 = OCR_NORMAL, 32515 = OCR_CROSS, 32649 = OCR_HAND, 32651 = OCR_HELP, 32513 = OCR_IBEAM, 32648 = OCR_NO, 32646 = OCR_SIZEALL, 32643 = OCR_SIZENESW, 32645 = OCR_SIZENS, 32642 = OCR_SIZENWSE, 32644 = OCR_SIZEWE, 32516 = OCR_UP, 32514 = OCR_WAIT
+		, hide := (array := [], ANDPlane := Buffer(128, 0xFF), XORPlane := Buffer(128, 0), cursorNames.Every((*) => (array.Push(DllCall("User32\CreateCursor", "Ptr", 0, "Int", 0, "Int", 0, "Int", 32, "Int", 32, "Ptr", ANDPlane, "Ptr", XORPlane)))), array), show := (array := [], cursorNames.Every((cursorName, *) => (array.Push(DllCall("User32\CopyImage", "Ptr", DllCall("LoadCursor", "Ptr", 0, "Ptr", cursorName), "UInt", 2, "Int", 0, "Int", 0, "UInt", 0)))), array)
+
+	for index, cursorName in cursorNames {
+		DllCall("SetSystemCursor", "Ptr", DllCall("CopyImage", "Ptr", %internal%[index], "UInt", 2, "Int", 0, "Int", 0, "UInt", 0), "UInt", cursorName)
+	}
+}
 
 ;===============  Class  =======================================================;
