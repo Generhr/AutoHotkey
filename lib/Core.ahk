@@ -125,7 +125,7 @@ GetProcAddress(libraryName, functionName) {
 	return (DllCall("Kernel32\GetProcAddress", "Ptr", DllCall("Kernel32\GetModuleHandle", "Str", libraryName, "Ptr"), "AStr", functionName, "Ptr"))
 }
 
-;=======================================================  Ole32  ===============;
+;=======================================================  CLSID  ===============;
 
 StringFromCLSID(CLSID) {
 	if (DllCall("Ole32\StringFromCLSID", "Ptr", CLSID, "Ptr*", &(pointer := 0), "UInt")) {
@@ -146,7 +146,13 @@ CLSIDFromString(string) {
 	return (CLSID)
 }
 
-;======================================================= MSVCRT ===============;
+;======================================================= Memory ===============;
+
+SizeOf(type) {
+	static sizeLookup := Map("Char", 1, "UChar", 1, "Short", 2, "UShort", 2, "Float", 4, "Int", 4, "UInt", 4, "Double", 8, "Int64", 8, "UInt64", 8, "Ptr", A_PtrSize, "UPtr", A_PtrSize)
+
+	return (sizeLookup[type])
+}
 
 MemoryCopy(dest, src, bytes) {
 	return (DllCall("msvcrt\memcpy", "Ptr", dest, "Ptr", src, "UInt", bytes))
