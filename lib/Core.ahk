@@ -125,6 +125,25 @@ GetProcAddress(libraryName, functionName) {
 	return (DllCall("Kernel32\GetProcAddress", "Ptr", DllCall("Kernel32\GetModuleHandle", "Str", libraryName, "Ptr"), "AStr", functionName, "Ptr"))
 }
 
+;=======================================================  Hook  ===============;
+
+SetWindowsHookEx(idHook, callback) {
+	if (!(hHook := DllCall("User32\SetWindowsHookEx", "Int", idHook, "Ptr", CallbackCreate(callback, "Fast"), "Ptr", DllCall("Kernel32\GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexw
+		throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+	}
+
+	static instance := {Call: (*) => ({__Delete: __UnhookWindowsHookEx})}  ;! static instance := {Call: (*) => ({__Delete: (this) => (DllCall("User32\UnhookWindowsHookEx", "Ptr", this.Handle, "UInt"))})}
+
+	__UnhookWindowsHookEx(this) {
+		if (!DllCall("User32\UnhookWindowsHookEx", "Ptr", this.Handle, "UInt")) {
+			throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+		}
+	}
+
+	(hook := instance.Call()).Handle := hHook
+	return (hook)
+}
+
 ;=======================================================  CLSID  ===============;
 
 StringFromCLSID(CLSID) {

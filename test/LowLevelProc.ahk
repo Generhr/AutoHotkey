@@ -48,26 +48,26 @@ Exit()
 ;============== Function ======================================================;
 
 SetWindowsHookEx(idHook, callback) {
-	if (!(hHook := DllCall("User32\SetWindowsHookEx", "Int", idHook, "Ptr", CallbackCreate(callback, "Fast"), "Ptr", DllCall("GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexw
-		throw (MessageError(DllCall("Kernel32\GetLastError")))
+	if (!(hHook := DllCall("User32\SetWindowsHookEx", "Int", idHook, "Ptr", CallbackCreate(callback, "Fast"), "Ptr", DllCall("Kernel32\GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexw
+		throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 	}
 
 	static instance := {Call: (*) => ({Class: "HookEx",
-		__Delete: UnhookWindowsHookEx})}
+		__Delete: __UnhookWindowsHookEx})}
 
-	UnhookWindowsHookEx(hookEx) {
-		if (!DllCall("UnhookWindowsHookEx", "Ptr", hookEx.Handle, "UInt")) {
-			throw (MessageError(DllCall("Kernel32\GetLastError")))
+	__UnhookWindowsHookEx(hook) {
+		if (!DllCall("User32\UnhookWindowsHookEx", "Ptr", hook.Handle, "UInt")) {
+			throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 		}
 	}
 
-	(hookEx := instance.Call()).Handle := hHook
-	return (hookEx)
+	(hook := instance.Call()).Handle := hHook
+	return (hook)
 }
 
-MessageError(messageID) {
+ErrorFromMessage(messageID) {
 	if (!(length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", &(buffer := 0), "UInt", 0, "Ptr", 0, "Int"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
-		return (MessageError(DllCall("Kernel32\GetLastError")))
+		return (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 	}
 
 	message := StrGet(buffer, length - 2)  ;* Account for the newline and carriage return characters.
@@ -101,7 +101,7 @@ LowLevelKeyboardProc(nCode, wParam, lParam) {
 		}
 	}
 
-	return (DllCall("CallNextHookEx", "Ptr", 0, "Int", nCode, "Ptr", wParam, "Ptr", lParam, "Ptr"))
+	return (DllCall("User32\CallNextHookEx", "Ptr", 0, "Int", nCode, "Ptr", wParam, "Ptr", lParam, "Ptr"))
 }
 
 LowLevelMouseProc(nCode, wParam, lParam) {
@@ -138,5 +138,5 @@ LowLevelMouseProc(nCode, wParam, lParam) {
 		}
 	}
 
-	return (DllCall("CallNextHookEx", "Ptr", 0, "Int", nCode, "Ptr", wParam, "Ptr", lParam, "Ptr"))
+	return (DllCall("User32\CallNextHookEx", "Ptr", 0, "Int", nCode, "Ptr", wParam, "Ptr", lParam, "Ptr"))
 }

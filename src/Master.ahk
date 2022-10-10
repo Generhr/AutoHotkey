@@ -52,7 +52,7 @@ for v in ["", "[&1] Edit", "[&2] Open Script Folder", "[&3] Window Spy", "[&4] L
 }
 
 CaseMenu := Menu()
-for v in ["", "[&1] lowercase", "[&2] UPPERCASE", "[&3] Sentence case", "[&4] Title Case", "", "[&5] iNVERSE", "[&6] Reverse", ""] {
+for v in ["", "[&1] lowercase", "[&2] UPPERCASE", "[&3] Sentence case", "[&4] Title Case", "", "[&5] iNVERSE", "[&6] esreveR", ""] {
 	CaseMenu.Add(v, MenuHandler)
 }
 
@@ -465,25 +465,29 @@ $^f:: {
 #HotIf (!WinActive("ahk_group Game"))
 
 $Escape:: {
-	static single := (*) => (Send("{Escape}"))
-
-	if (A_PriorHotkey == "$Escape" && A_TimeSincePriorHotkey <= 200) {
-		SetTimer(single, 0)
+	if (A_PriorHotkey == "$Escape" && A_TimeSincePriorHotkey <= 350) {
+		SetTimer(__SinglePress, 0)
 
 		ShowDesktop()
 	}
-	else if (WinActive("ahk_group Escape") && !WinGetMinMax("A")) {
-		WinClose(winTitle := WinGetID("A"))
-
-		if (!WinWaitNotActive(winTitle, , 1) && WinGetClass("A") != "#32770") {
-			winTitle := WinGetTitle("A")
-
-			ProcessClose(WinGetPID("A"))
-			Console.Log(Format("{} Forced: {}", A_Clipboard := A_ThisHotkey, winTitle))
-		}
-	}
 	else {
-		SetTimer(single, -200)
+		SetTimer(__SinglePress, -350)
+	}
+
+	__SinglePress() {
+		if (WinActive("ahk_group Escape") && !WinGetMinMax("A")) {
+			WinClose(hWnd := WinGetID("A"))
+
+			if (!WinWaitNotActive(hWnd, , 1) && WinGetClass("A") != "#32770") {
+				title := WinGetTitle(hWnd)
+
+				ProcessClose(WinGetPID(hWnd))
+				Console.Log(Format("{} Forced: {}", A_Clipboard := A_ThisHotkey, title))
+			}
+		}
+		else {
+			Send("{Escape}")
+		}
 	}
 
 	KeyWait("Escape")
@@ -492,12 +496,12 @@ $Escape:: {
 $Space:: {
 	if (!KeyWait("Space", "T0.5") && !Desktop()) {
 		if ([255, ""].Includes(WinGetTransparent("A"))) {
-			window := WinGetID("A")
+			hWnd := WinGetID("A")
 
-			FadeWindow(window, 35, 500)
+			FadeWindow(hWnd, 35, 500)
 
 			KeyWait("Space")
-			FadeWindow(window, 255, 0)
+			FadeWindow(hWnd, 255, 0)
 		}
 
 		KeyWait("Space")
@@ -560,13 +564,13 @@ AppsKey & F4:: {
 			}
 		}
 
-		WinClose(winTitle := WinGetID("A"))
+		WinClose(hWnd := WinGetID("A"))
 
-		if (!WinWaitNotActive(winTitle, , 1) && WinGetClass("A") != "#32770") {
-			winTitle := WinGetTitle("A")
+		if (!WinWaitNotActive(hWnd, , 1) && WinGetClass("A") != "#32770") {
+			title := WinGetTitle(hWnd)
 
-			ProcessClose(WinGetPID("A"))
-			Console.Log(Format("{} FORCED: {}", A_Clipboard := A_ThisHotkey, winTitle))
+			ProcessClose(WinGetPID(hWnd))
+			Console.Log(Format("{} FORCED: {}", A_Clipboard := A_ThisHotkey, title))
 		}
 	}
 
@@ -653,7 +657,27 @@ CapsLock(*) {
 $CapsLock:: {
 	if (!KeyWait("CapsLock", "T0.25")) {
 		if (String.Copy(True)) {
-			CaseMenu.Show()  ;* ** Need a different script to handle hiding this menu, the thread is locked up. **
+			keyboardHook := SetWindowsHookEx(13, __LowLevelKeyboardProc)
+
+			__LowLevelKeyboardProc(nCode, wParam, lParam) {
+				Critical(True)
+
+				if (!nCode) {
+					if (Format("{:#x}", NumGet(lParam, "UInt")) == 0x1B) {  ;? 0x1B = VK_ESCAPE
+						if (wParam == 0x0101) {
+							if (!DllCall("User32\EndMenu", "UInt")) {  ;~ If a platform does not support EndMenu, send the owner of the active menu a WM_CANCELMODE message.  ;: https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-endmenu
+								throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+							}
+						}
+
+						return (1)
+					}
+				}
+
+				return (DllCall("CallNextHookEx", "Ptr", 0, "Int", nCode, "Ptr", wParam, "Ptr", lParam, "Ptr"))
+			}
+
+			CaseMenu.Show()
 		}
 	}
 	else {
@@ -1077,7 +1101,7 @@ MenuHandler(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := TrayMenu) {
 					}
 				case "iNVERSE":
 					text := String.Inverse(text)
-				case "Reverse":
+				case "esreveR":
 					text := String.Reverse(text)
 				default:
 					text := Format("{:" . SubStr(thisMenuItem, 6, 1) . "}", text)
@@ -1110,7 +1134,7 @@ CheckForNewVersion() {
 						if (wParam == 0x0101) {
 							static filename := Format("C:\Users\{}\Downloads\AutoHotkey v{}.exe", A_UserName, version)
 
-							Download "https://www.autohotkey.com/download/ahk-v2.exe", filename
+							Download("https://www.autohotkey.com/download/ahk-v2.exe", filename)
 							Run(filename)
 
 							SetTimer(hide, -1)
