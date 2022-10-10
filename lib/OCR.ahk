@@ -41,7 +41,7 @@ OCR(file := "") {
 	__CreateGDIplusStartupInput() {
 		static cbSize := A_PtrSize*2 + 8
 
-		(structure := Buffer(cbSize, 0)).NumPut(0, "UInt", 0x0001)
+		(structure := Buffer(cbSize, 0)), NumPut("UInt", 0x0001, structure.Ptr)
 		return (structure)
 	}
 
@@ -149,7 +149,12 @@ OCR(file := "") {
 
 		;* Create the bitmap:
 		hDestinationDC := DllCall("Gdi32\CreateCompatibleDC", "Ptr", hSourceDC := DllCall("GetDC", "Ptr", 0, "Ptr"), "Ptr")  ;* Create a compatible DC, which is used in a BitBlt from the source DC (in this case the entire screen).
-			, hCompatibleBitmap := DllCall("Gdi32\CreateDIBSection", "Ptr", hDestinationDC, "Ptr", Buffer.CreateBitmapInfoHeader(width, -height).Ptr, "UInt", 0, "Ptr*", 0, "Ptr", 0, "UInt", 0, "Ptr"), hOriginalBitmap := DllCall("Gdi32\SelectObject", "Ptr", hDestinationDC, "Ptr", hCompatibleBitmap, "Ptr")  ;* Select the device-independent bitmap into the compatible DC.
+			, hCompatibleBitmap := DllCall("Gdi32\CreateDIBSection", "Ptr", hDestinationDC, "Ptr", __CreateBitmapInfoHeader(width, -height).Ptr, "UInt", 0, "Ptr*", 0, "Ptr", 0, "UInt", 0, "Ptr"), hOriginalBitmap := DllCall("Gdi32\SelectObject", "Ptr", hDestinationDC, "Ptr", hCompatibleBitmap, "Ptr")  ;* Select the device-independent bitmap into the compatible DC.
+
+		__CreateBitmapInfoHeader(width, height) {
+			structure := Buffer(40), NumPut("UInt", 40, "Int", width, "Int", height, "UShort", 1, "UShort", 32, "UInt", 0x0000, "UInt", 0, "Int", 0, "Int", 0, "UInt", 0, "UInt", 0, structure.Ptr)
+			return (structure)
+		}
 
 		DllCall("Gdi32\BitBlt", "Ptr", hDestinationDC, "Int", 0, "Int", 0, "Int", width, "Int", height, "Ptr", hSourceDC, "Int", x2, "Int", y2, "UInt", 0x00CC0020 | 0x40000000)  ;* Copy a portion of the source DC's bitmap to the destination DC's bitmap.
 		DllCall("Gdiplus\GdipCreateBitmapFromHBITMAP", "Ptr", hCompatibleBitmap, "Ptr", 0, "Ptr*", &(pBitmap := 0))  ;* Convert the hBitmap to a pBitmap.
