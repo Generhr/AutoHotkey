@@ -36,6 +36,17 @@ OCR(file := "") {
 		throw (__ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 	}
 
+	__ErrorFromMessage(messageID) {
+		if (!(length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", &(buffer := 0), "UInt", 0, "Ptr", 0, "Int"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
+			return (__ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+		}
+
+		message := StrGet(buffer, length - 2)  ;* Account for the newline and carriage return characters.
+		DllCall("Kernel32\LocalFree", "Ptr", buffer)
+
+		return (Error(Format("{:#x}", messageID), -1, message))
+	}
+
 	DllCall("Gdiplus\GdiplusStartup", "Ptr*", &(pToken := 0), "Ptr", __CreateGDIplusStartupInput().Ptr, "Ptr", 0)  ;: https://docs.microsoft.com/en-us/windows/win32/api/gdiplusinit/nf-gdiplusinit-gdiplusstartup
 
 	__CreateGDIplusStartupInput() {
@@ -55,11 +66,11 @@ OCR(file := "") {
 
 		cancel := False
 
-		if (!(hKeyboardHook := DllCall("User32\SetWindowsHookEx", "Int", 13, "Ptr", CallbackCreate(LowLevelKeyboardProc, "Fast"), "Ptr", DllCall("Kernel32\GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {
+		if (!(hKeyboardHook := DllCall("User32\SetWindowsHookEx", "Int", 13, "Ptr", CallbackCreate(__LowLevelKeyboardProc, "Fast"), "Ptr", DllCall("Kernel32\GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {
 			throw (__ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 		}
 
-		LowLevelKeyboardProc(nCode, wParam, lParam) {
+		__LowLevelKeyboardProc(nCode, wParam, lParam) {
 			Critical(True)
 
 			if (!nCode) {  ;? 0 = HC_ACTION
@@ -77,11 +88,11 @@ OCR(file := "") {
 
 		capture := False
 
-		if (!(hMouseHook := DllCall("User32\SetWindowsHookEx", "Int", 14, "Ptr", CallbackCreate(LowLevelMouseProc, "Fast"), "Ptr", DllCall("Kernel32\GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {
+		if (!(hMouseHook := DllCall("User32\SetWindowsHookEx", "Int", 14, "Ptr", CallbackCreate(__LowLevelMouseProc, "Fast"), "Ptr", DllCall("Kernel32\GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {
 			throw (__ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 		}
 
-		LowLevelMouseProc(nCode, wParam, lParam) {
+		__LowLevelMouseProc(nCode, wParam, lParam) {
 			Critical(True)
 
 			if (!nCode) {
@@ -169,6 +180,12 @@ OCR(file := "") {
 		throw (__ErrorFromStatus(status))
 	}
 
+	__ErrorFromStatus(status) {
+		static statusLookup := Map(1, "GenericError", 2, "InvalidParameter", 3, "OutOfMemory", 4, "ObjectBusy", 5, "InsufficientBuffer", 6, "NotImplemented", 7, "Win32Error", 8, "WrongState", 9, "Aborted", 10, "FileNotFound", 11, "ValueOverflow", 12, "AccessDenied", 13, "UnknownImageFormat", 14, "FontFamilyNotFound", 15, "FontStyleNotFound", 16, "NotTrueTypeFont", 17, "UnsupportedGdiplusVersion", 18, "GdiplusNotInitialized", 19, "PropertyNotFound", 20, "PropertyNotSupported", 21, "ProfileNotFound")  ;: https://docs.microsoft.com/en-us/windows/win32/api/gdiplustypes/ne-gdiplustypes-status
+
+		return (Error(status, -2, statusLookup[status]))
+	}
+
 	DllCall("Gdiplus\GdipGetImageEncoders", "UInt", numEncoders, "UInt", size, "Ptr", (imageCodecInfo := Buffer(size)).Ptr)  ;* Fill a buffer with the available encoders.
 
 	extension := RegExReplace(image, ".*\.(\w+)$", "$1")
@@ -205,22 +222,5 @@ Shutdown:
 
 	try {
 		return (content)
-	}
-
-	__ErrorFromMessage(messageID) {
-		if (!(length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", &(buffer := 0), "UInt", 0, "Ptr", 0, "Int"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
-			return (__ErrorFromMessage(DllCall("Kernel32\GetLastError")))
-		}
-
-		message := StrGet(buffer, length - 2)  ;* Account for the newline and carriage return characters.
-		DllCall("Kernel32\LocalFree", "Ptr", buffer)
-
-		return (Error(Format("{:#x}", messageID), -1, message))
-	}
-
-	__ErrorFromStatus(status) {
-		static statusLookup := Map(1, "GenericError", 2, "InvalidParameter", 3, "OutOfMemory", 4, "ObjectBusy", 5, "InsufficientBuffer", 6, "NotImplemented", 7, "Win32Error", 8, "WrongState", 9, "Aborted", 10, "FileNotFound", 11, "ValueOverflow", 12, "AccessDenied", 13, "UnknownImageFormat", 14, "FontFamilyNotFound", 15, "FontStyleNotFound", 16, "NotTrueTypeFont", 17, "UnsupportedGdiplusVersion", 18, "GdiplusNotInitialized", 19, "PropertyNotFound", 20, "PropertyNotSupported", 21, "ProfileNotFound")  ;: https://docs.microsoft.com/en-us/windows/win32/api/gdiplustypes/ne-gdiplustypes-status
-
-		return (Error(status, -2, statusLookup[status]))
 	}
 }

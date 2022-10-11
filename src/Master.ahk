@@ -19,6 +19,7 @@ if (!A_IsAdmin || !DllCall("Kernel32\GetCommandLine", "Str") ~= " /restart(?!\S)
 #Include ..\lib\Console\Console.ahk
 
 #Include ..\lib\OCR.ahk
+#Include ..\lib\Timer.ahk
 #Include ..\lib\YouTube_Music.ahk
 
 ;======================================================  Setting  ==============;
@@ -82,9 +83,9 @@ global A_Debug := IniRead(A_WorkingDir . "\cfg\Settings.ini", "Debug", "Debug")
 
 ;======================================================== Hook ================;
 
-OnMessage(A_WindowMessage, __WindowMessage)
+OnMessage(A_WindowMessage, WindowMessageHandler)
 
-OnExit(__Exit)
+OnExit(ExitHandler)
 
 ;========================================================  Run  ================;
 
@@ -232,11 +233,9 @@ $^c:: {
 
 	A_Clipboard := "/*`n`t" . StrReplace(ControlGetText("Edit1", "Window Spy ahk_class AutoHotkeyGUI"), "`n", "`n`t") . "`n*/"
 
-	if (!(keyboardHook := DllCall("User32\SetWindowsHookEx", "Int", 13, "Ptr", CallbackCreate(LowLevelKeyboardProc, "Fast"), "Ptr", DllCall("Kernel32\GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {
-		throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
-	}
+	keyboardHook := Hook(13, __LowLevelKeyboardProc)
 
-	LowLevelKeyboardProc(nCode, wParam, lParam) {
+	__LowLevelKeyboardProc(nCode, wParam, lParam) {
 		Critical(True)
 
 		if (!nCode) {
@@ -258,9 +257,7 @@ $^c:: {
 							Console.Log("^v")
 						}
 
-						if (!DllCall("User32\UnhookWindowsHookEx", "Ptr", keyboardHook, "UInt")) {
-							throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
-						}
+						keyboardHook := A_Null
 
 						SetTimer((*) => (A_Clipboard := A_SavedClipboard), -50)
 					}
@@ -293,7 +290,7 @@ $F1:: {
 				Send("{Enter}")
 			}
 			else {
-				Run(Format('{}\bin\Nircmd.exe speak text "NO TEXT"', A_WorkingDir))
+				Speak("No text.")
 			}
 		}
 
@@ -323,7 +320,7 @@ $\:: {
 			SendMessage(A_WindowMessage, 0x1000, 0, , scripts)  ;* Tell other running scripts to update their `A_Debug` value.
 		}
 
-		Run(A_WorkingDir . "\bin\Nircmd.exe speak text " . Format('"DEBUG {}."', (A_Debug) ? ("ON") : ("OFF")))
+		Speak(Format("Debug {}.", (A_Debug) ? ("on") : ("off")))
 
 		KeyWait("\")
 	}
@@ -399,7 +396,7 @@ $c:: {
 			String.Paste((SubStr(text, 1, StrLen(comment)) == comment) ? (RegExReplace(text, "`am)^" . comment)) : (RegExReplace(text, "`am)^", comment)))
 		}
 		else {
-			Run(A_WorkingDir . '\bin\Nircmd.exe speak text "NO TEXT"')
+			Speak("No text.")
 		}
 
 		KeyWait("c")
@@ -411,7 +408,7 @@ $c:: {
 
 #HotIf
 
-#HotIf (WinActive("__Rename ahk_exe Explorer.EXE"))
+#HotIf (WinActive("__Rename ahk_exe explorer.exe"))
 
 $F9:: {
 	loop Files ("C:\Users\Onimuru\OneDrive\__User\Pictures\__Rename\*.*") {
@@ -475,15 +472,19 @@ $Escape:: {
 	}
 
 	__SinglePress() {
-		if (WinActive("ahk_group Escape") && !WinGetMinMax("A")) {
-			WinClose(hWnd := WinGetID("A"))
+		if (WinActive("ahk_group Escape") && WinGetMinMax(hWnd := WinGetID("A")) != 1) {
+			WinClose(hWnd)
 
-			if (!WinWaitNotActive(hWnd, , 1) && WinGetClass("A") != "#32770") {
-				title := WinGetTitle(hWnd)
+			if (!WinWaitClose("ahk_ID" . hWnd, , 1) && WinGetClass(hWnd) != "#32770") {  ;* Passing `"ahk_ID" . hWnd` here to respect `A_DetectHiddenWindows`.
+				if (A_Debug) {
+					Console.Log(Format("{} forced close: {}", A_Clipboard := A_ThisHotkey, WinGetProcessName(hWnd)))
+				}
 
 				ProcessClose(WinGetPID(hWnd))
-				Console.Log(Format("{} Forced: {}", A_Clipboard := A_ThisHotkey, title))
 			}
+		}
+		else if (DllCall("User32\IsWindowVisible", "UInt", hWnd := WinExist("Window Spy ahk_class AutoHotkeyGUI"), "UInt")) {
+			WinClose(hWnd)
 		}
 		else {
 			Send("{Escape}")
@@ -498,10 +499,10 @@ $Space:: {
 		if ([255, ""].Includes(WinGetTransparent("A"))) {
 			hWnd := WinGetID("A")
 
-			FadeWindow(hWnd, 35, 500)
+			WinFade(hWnd, 35, 500)
 
 			KeyWait("Space")
-			FadeWindow(hWnd, 255, 0)
+			WinFade(hWnd, 255, 0)
 		}
 
 		KeyWait("Space")
@@ -533,7 +534,7 @@ $Delete:: {
 #HotIf
 
 AppsKey & Escape:: {
-	Run(A_WorkingDir . '\bin\Nircmd.exe speak text "Kill screen"')
+	Speak("Kill screen.")
 
 	while (GetKeyState("AppsKey", "P") || GetKeyState("Escape", "P")) {
 		Sleep(-1)
@@ -566,11 +567,12 @@ AppsKey & F4:: {
 
 		WinClose(hWnd := WinGetID("A"))
 
-		if (!WinWaitNotActive(hWnd, , 1) && WinGetClass("A") != "#32770") {
-			title := WinGetTitle(hWnd)
+		if (!WinWaitClose("ahk_ID" . hWnd, , 1) && WinGetClass(hWnd) != "#32770") {
+			if (A_Debug) {
+				Console.Log(Format("{} forced close: {}", A_Clipboard := A_ThisHotkey, WinGetProcessName(hWnd)))
+			}
 
 			ProcessClose(WinGetPID(hWnd))
-			Console.Log(Format("{} FORCED: {}", A_Clipboard := A_ThisHotkey, title))
 		}
 	}
 
@@ -578,7 +580,7 @@ AppsKey & F4:: {
 }
 
 AppsKey & F5:: {
-	RunActivate("ahk_exe chrome.exe", Format("{} (x86)\Google\Chrome\Application\chrome.exe", A_ProgramFiles))
+	RunActivate("ahk_exe chrome.exe", Format("{}\Google\Chrome\Application\chrome.exe", A_ProgramFiles))
 
 	KeyWait("F5")
 }
@@ -620,7 +622,7 @@ AppsKey & PrintScreen:: {
 }
 
 AppsKey & ScrollLock:: {
-	Run(Format("{}\bin\Camera", A_WorkingDir))
+	Run(Format("*RunAs Camera.exe"))
 
 	KeyWait("ScrollLock")
 }
@@ -657,7 +659,7 @@ CapsLock(*) {
 $CapsLock:: {
 	if (!KeyWait("CapsLock", "T0.25")) {
 		if (String.Copy(True)) {
-			keyboardHook := SetWindowsHookEx(13, __LowLevelKeyboardProc)
+			keyboardHook := Hook(13, __LowLevelKeyboardProc)  ;* No need to capture this in the function as this variable exists as long as the thread is captured by the menu.
 
 			__LowLevelKeyboardProc(nCode, wParam, lParam) {
 				Critical(True)
@@ -665,7 +667,7 @@ $CapsLock:: {
 				if (!nCode) {
 					if (Format("{:#x}", NumGet(lParam, "UInt")) == 0x1B) {  ;? 0x1B = VK_ESCAPE
 						if (wParam == 0x0101) {
-							if (!DllCall("User32\EndMenu", "UInt")) {  ;~ If a platform does not support EndMenu, send the owner of the active menu a WM_CANCELMODE message.  ;: https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-endmenu
+							if (!DllCall("User32\EndMenu", "UInt")) {  ;~ If a platform does not support EndMenu, send the owner of the active menu a WM_CANCELMODE message.
 								throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 							}
 						}
@@ -674,7 +676,7 @@ $CapsLock:: {
 					}
 				}
 
-				return (DllCall("CallNextHookEx", "Ptr", 0, "Int", nCode, "Ptr", wParam, "Ptr", lParam, "Ptr"))
+				return (DllCall("User32\CallNextHookEx", "Ptr", 0, "Int", nCode, "Ptr", wParam, "Ptr", lParam, "Ptr"))
 			}
 
 			CaseMenu.Show()
@@ -736,10 +738,10 @@ AppsKey & Enter:: {
 AppsKey & Space:: {
 	if (!Desktop()) {
 		if ([255, ""].Includes(WinGetTransparent("A"))) {
-			FadeWindow(WinGetID("A"), 35, 1000)
+			WinFade(WinGetID("A"), 35, 1000)
 		}
 		else {
-			FadeWindow(WinGetID("A"), 255, 1000)
+			WinFade(WinGetID("A"), 255, 1000)
 		}
 	}
 
@@ -818,11 +820,9 @@ AppsKey & s:: {
 	Suspend(True)
 	BlockInput("On")
 
-	if (!(keyboardHook := DllCall("User32\SetWindowsHookEx", "Int", 13, "Ptr", CallbackCreate(LowLevelKeyboardProc, "Fast"), "Ptr", DllCall("Kernel32\GetModuleHandle", "UInt", 0, "Ptr"), "UInt", 0, "Ptr"))) {
-		throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
-	}
+	keyboardHook := Hook(13, __LowLevelKeyboardProc)
 
-	LowLevelKeyboardProc(nCode, wParam, lParam) {
+	__LowLevelKeyboardProc(nCode, wParam, lParam) {
 		Critical(True)
 
 		if (wParam == 0x0101) {  ;? 0x0101 = WM_KEYUP
@@ -842,11 +842,11 @@ AppsKey & s:: {
 					DllCall("PowrProf\SetSuspendState", "Int", 0, "Int", 0, "Int", 0)
 			}
 
-			if (!DllCall("User32\UnhookWindowsHookEx", "Ptr", keyboardHook, "UInt")) {
-				throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
-			}
+			keyboardHook := A_Null
 
 			splash.Destroy()
+
+			return (1)
 		}
 
 		return (DllCall("User32\CallNextHookEx", "Ptr", 0, "Int", nCode, "UInt", wParam, "Ptr", lParam))
@@ -922,31 +922,26 @@ AppsKey & .:: {
 	Send("#.")
 }
 
-;AppsKey & Up::
-;AppsKey & Left::
-;AppsKey & Down::
-;AppsKey & Right::
-;	k := StripModifiers(A_ThisHotkey)
-;
-;	MouseMove, % Round({"Left": -1, "Right": 1}[k]), % Round({"Up": -1, "Down": 1}[k]), 0, R
-;	return
+AppsKey & Left:: {
+	MouseMove(-1, 0, 0, "R")
+}
 
-;*$Up::
-;*$Left::
-;*$Down::
-;*$Right::
-;	if (GetKeyState("LButton", "P")) {
-;		KeyWait(A_ThisHotkey)
-;		return
-;	}
-;
-;	Send, % "{" . StripModifiers(A_ThisHotkey) . "}"
-;	return
+AppsKey & Up:: {
+	MouseMove(0, -1, 0, "R")
+}
+
+AppsKey & Right:: {
+	MouseMove(1, 0, 0, "R")
+}
+
+AppsKey & Down:: {
+	MouseMove(0, 1, 0, "R")
+}
 
 ;============== Function ======================================================;
 ;======================================================== Hook ================;
 
-__WindowMessage(wParam := 0, lParam := 0, msg := 0, hWnd := 0) {
+WindowMessageHandler(wParam := 0, lParam := 0, msg := 0, hWnd := 0) {
 	switch (wParam) {
 		case 0x1000:
 			if (!(A_Debug := IniRead(A_WorkingDir . "\cfg\Settings.ini", "Debug", "Debug"))) {
@@ -968,7 +963,7 @@ __WindowMessage(wParam := 0, lParam := 0, msg := 0, hWnd := 0) {
 	return (-1)
 }
 
-__Exit(exitReason, exitCode) {	;? ExitReason = Close || Error || Exit || Logoff || Menu || Reload || Restart || ShutDown || Single
+ExitHandler(exitReason, exitCode) {	;? ExitReason = Close || Error || Exit || Logoff || Menu || Reload || Restart || ShutDown || Single
 	Critical(True)
 
 	SetSystemCursor("Restore")
@@ -977,8 +972,8 @@ __Exit(exitReason, exitCode) {	;? ExitReason = Close || Error || Exit || Logoff 
 	if (exitReason && exitReason ~= "Close|Error|Exit|Menu") {
 		DetectHiddenWindows(True)
 
-		for script in WinGetList("ahk_class AutoHotkey", , A_ScriptName) {  ;* Close all AutoHotkey processes besides this one.
-			PostMessage(0x111, 65307, , , script)
+		for hWnd in WinGetList("ahk_class AutoHotkey", , A_ScriptName) {  ;* Close all AutoHotkey processes besides this one.
+			PostMessage(0x111, 65307, , , hWnd)
 		}
 	}
 }
@@ -1044,7 +1039,7 @@ MenuHandler(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := TrayMenu) {
 					}
 
 					Pause(-1)
-					Run(Format('{}\bin\Nircmd.exe speak text "{}"', A_WorkingDir, (A_IsPaused) ? ("Paused") : ("Unpaused")))
+					Speak((A_IsPaused) ? ("Paused") : ("Unpaused"))
 
 					__TryActivate(hWnd)
 				case "Suspend":
@@ -1057,7 +1052,7 @@ MenuHandler(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := TrayMenu) {
 					}
 
 					Suspend(-1)
-					Run(Format('{}\bin\Nircmd.exe speak text "{}"', A_WorkingDir, (A_IsSuspended) ? ("You're suspended young lady!") : ("Carry on...")))
+					Speak((A_IsSuspended) ? ("You're suspended young lady!") : ("Carry on..."))
 
 					__TryActivate(hWnd)
 				case "RestoreAll":
@@ -1117,9 +1112,9 @@ CheckForNewVersion() {
 	if (RegExReplace(version := DownloadContent("https://autohotkey.com/download/2.0/version.txt"), "\s") != A_AhkVersion) {
 		static hide := (*) => (Console.Hide(), Console.Clear())
 
-		Console.KeyboardHook := LowLevelKeyboardProc
+		Console.KeyboardHook := Hook(13, __LowLevelKeyboardProc)
 
-		LowLevelKeyboardProc(nCode, wParam, lParam) {
+		__LowLevelKeyboardProc(nCode, wParam, lParam) {
 			Critical(True)
 
 			if (!nCode) {  ;? 0 = HC_ACTION
@@ -1180,7 +1175,7 @@ SetSystemCursor(mode := "") {
 		, hide := (array := [], ANDPlane := Buffer(128, 0xFF), XORPlane := Buffer(128, 0), cursorNames.Every((*) => (array.Push(DllCall("User32\CreateCursor", "Ptr", 0, "Int", 0, "Int", 0, "Int", 32, "Int", 32, "Ptr", ANDPlane, "Ptr", XORPlane)))), array), show := (array := [], cursorNames.Every((cursorName, *) => (array.Push(DllCall("User32\CopyImage", "Ptr", DllCall("LoadCursor", "Ptr", 0, "Ptr", cursorName), "UInt", 2, "Int", 0, "Int", 0, "UInt", 0)))), array)
 
 	for index, cursorName in cursorNames {
-		DllCall("SetSystemCursor", "Ptr", DllCall("CopyImage", "Ptr", %internal%[index], "UInt", 2, "Int", 0, "Int", 0, "UInt", 0), "UInt", cursorName)
+		DllCall("User32\SetSystemCursor", "Ptr", DllCall("User32\CopyImage", "Ptr", %internal%[index], "UInt", 2, "Int", 0, "Int", 0, "UInt", 0), "UInt", cursorName)
 	}
 }
 

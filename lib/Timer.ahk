@@ -40,18 +40,6 @@ class Timer {
 		}
 	}
 
-	static StartAll(interval?) {
-		for pointer, object in this.Instances {
-			object.Start(interval?)
-		}
-	}
-
-	static StopAll() {
-		for pointer, object in this.Instances {
-			object.Stop()
-		}
-	}
-
 	__Delete() {
 		if (this.State) {
 			SetTimer(this.Callback, 0)
@@ -60,11 +48,17 @@ class Timer {
 		pointer := ObjPtr(this)
 
 		ObjAddRef(pointer), Timer.Instances.Delete(pointer)  ;* Increase this object's reference count before deleting the copy stored in `Timer.Instances` to avoid crashing the calling script.
+	}
 
-		try {
-			if (A_Debug) {
-				Console.Log("__Delete")
-			}
+	static StartAll(interval?) {
+		for pointer, instance in this.Instances {
+			instance.Start(interval?)
+		}
+	}
+
+	static StopAll() {
+		for pointer, instance in this.Instances {
+			instance.Stop()
 		}
 	}
 
