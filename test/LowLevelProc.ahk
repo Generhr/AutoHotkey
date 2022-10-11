@@ -13,8 +13,8 @@ ProcessSetPriority("High")
 
 ;====================================================== Variable ==============;
 
-global keyboardHook := SetWindowsHookEx(13, LowLevelKeyboardProc)  ;? 13 = WH_KEYBOARD_LL
-	, mouseHook := SetWindowsHookEx(14, LowLevelMouseProc)  ;? 14 = WH_MOUSE_LL
+global keyboardHook := Hook(13, LowLevelKeyboardProc)  ;? 13 = WH_KEYBOARD_LL
+	, mouseHook := Hook(14, LowLevelMouseProc)  ;? 14 = WH_MOUSE_LL
 
 ;=======================================================  Other  ===============;
 
@@ -39,31 +39,15 @@ Exit()
 
 #HotIf
 
-~$Escape:: {
-	global keyboardHook := "", mouseHook := ""
+Pause:: {
+	Hook.ToggleAll()
+}
 
+~$Escape:: {
 	ExitApp()
 }
 
 ;============== Function ======================================================;
-
-SetWindowsHookEx(idHook, callback) {
-	if (!(hHook := DllCall("User32\SetWindowsHookEx", "Int", idHook, "Ptr", CallbackCreate(callback, "Fast"), "Ptr", DllCall("Kernel32\GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexw
-		throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
-	}
-
-	static instance := {Call: (*) => ({Class: "HookEx",
-		__Delete: __UnhookWindowsHookEx})}
-
-	__UnhookWindowsHookEx(hook) {
-		if (!DllCall("User32\UnhookWindowsHookEx", "Ptr", hook.Handle, "UInt")) {
-			throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
-		}
-	}
-
-	(hook := instance.Call()).Handle := hHook
-	return (hook)
-}
 
 ErrorFromMessage(messageID) {
 	if (!(length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", &(buffer := 0), "UInt", 0, "Ptr", 0, "Int"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
@@ -139,4 +123,78 @@ LowLevelMouseProc(nCode, wParam, lParam) {
 	}
 
 	return (DllCall("User32\CallNextHookEx", "Ptr", 0, "Int", nCode, "Ptr", wParam, "Ptr", lParam, "Ptr"))
+}
+
+;===============  Class  =======================================================;
+
+class Hook {
+	static Instances := Map()
+
+	__New(idHook, function, options := "Fast") {
+		if (!(hHook := DllCall("User32\SetWindowsHookEx", "Int", idHook, "Ptr", pCallback := CallbackCreate(function, options), "Ptr", DllCall("Kernel32\GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexw
+			CallbackFree(pCallback)
+
+			throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+		}
+
+		this.Handle := hHook, this.Callback := pCallback
+			, this.State := 1
+
+		pointer := ObjPtr(this)
+
+		Hook.Instances[pointer] := this, ObjRelease(pointer)  ;* Decrease this object's reference count to allow `__Delete()` to be triggered while still keeping a copy in `Hook.Instances`.
+	}
+
+	__Delete() {
+		if (this.State && !DllCall("User32\UnhookWindowsHookEx", "Ptr", this.Handle, "UInt")) {
+			throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+		}
+
+		CallbackFree(this.Callback)
+
+		try {  ;* Catch for the error generated when the class is deleted before the instances.
+			pointer := ObjPtr(this)
+
+			ObjAddRef(pointer), Hook.Instances.Delete(pointer)  ;* Increase this object's reference count before deleting the copy stored in `Hook.Instances` to avoid crashing the calling script.
+		}
+	}
+
+	static ToggleAll() {
+		for pointer, instance in this.Instances {
+			instance.Toggle()
+		}
+	}
+
+	Hook(function?, options := "Fast") {
+		if (IsSet(function)) {
+			if (this.State) {
+				if (!DllCall("User32\UnhookWindowsHookEx", "Ptr", this.Handle, "UInt")) {
+					throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+				}
+
+				CallbackFree(this.Callback)
+			}
+
+			if (!(this.Handle := DllCall("User32\SetWindowsHookEx", "Int", 13, "Ptr", this.Callback := CallbackCreate(function, options), "Ptr", DllCall("Kernel32\GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {
+				throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+			}
+		}
+		else if (!this.State && !(this.Handle := DllCall("User32\SetWindowsHookEx", "Int", 13, "Ptr", this.Callback, "Ptr", DllCall("Kernel32\GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {
+			throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+		}
+
+		this.State := 1
+	}
+
+	UnHook() {
+		if (!DllCall("User32\UnhookWindowsHookEx", "Ptr", this.Handle, "UInt")) {
+			throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+		}
+
+		this.State := 0
+	}
+
+	Toggle() {
+		this.%(this.State) ? ("UnHook") : ("Hook")%()
+	}
 }
