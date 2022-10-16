@@ -1,7 +1,7 @@
-#Requires AutoHotkey v2.0-beta
+#Requires AutoHotkey v2.0-beta.12
 
 ;============ Auto-Execute ====================================================;
-;======================================================  Setting  ==============;
+;--------------  Setting  ------------------------------------------------------;
 
 #SingleInstance
 #Warn All, MsgBox
@@ -11,12 +11,12 @@ CoordMode("ToolTip", "Screen")
 ListLines(False)
 ProcessSetPriority("High")
 
-;====================================================== Variable ==============;
+;-------------- Variable ------------------------------------------------------;
 
 global keyboardHook := Hook(13, LowLevelKeyboardProc)  ;? 13 = WH_KEYBOARD_LL
 	, mouseHook := Hook(14, LowLevelMouseProc)  ;? 14 = WH_MOUSE_LL
 
-;=======================================================  Other  ===============;
+;---------------  Other  -------------------------------------------------------;
 
 Exit()
 
@@ -48,17 +48,6 @@ Pause:: {
 }
 
 ;============== Function ======================================================;
-
-ErrorFromMessage(messageID) {
-	if (!(length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", &(buffer := 0), "UInt", 0, "Ptr", 0, "Int"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
-		return (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
-	}
-
-	message := StrGet(buffer, length - 2)  ;* Account for the newline and carriage return characters.
-	DllCall("Kernel32\LocalFree", "Ptr", buffer)
-
-	return (Error(Format("{:#x}", messageID), -1, message))
-}
 
 LowLevelKeyboardProc(nCode, wParam, lParam) {
 	Critical(True)
@@ -123,6 +112,17 @@ LowLevelMouseProc(nCode, wParam, lParam) {
 	}
 
 	return (DllCall("User32\CallNextHookEx", "Ptr", 0, "Int", nCode, "Ptr", wParam, "Ptr", lParam, "Ptr"))
+}
+
+ErrorFromMessage(messageID) {
+	if (!(length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", &(buffer := 0), "UInt", 0, "Ptr", 0, "Int"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
+		return (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+	}
+
+	message := StrGet(buffer, length - 2)  ;* Account for the newline and carriage return characters.
+	DllCall("Kernel32\LocalFree", "Ptr", buffer)
+
+	return (OSError(Format("{:#x}", messageID), -1, message))
 }
 
 ;===============  Class  =======================================================;

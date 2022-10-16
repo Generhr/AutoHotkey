@@ -1,4 +1,4 @@
-﻿#Requires AutoHotkey v2.0-beta.6
+﻿#Requires AutoHotkey v2.0-beta.12
 
 /*
 * MIT License
@@ -25,17 +25,20 @@
 */
 
 ;============ Auto-Execute ====================================================;
-;======================================================  Include  ==============;
 
-#Include %A_LineFile%\..\Buffer\Buffer.ahk
-#Include %A_LineFile%\..\ObjectOriented\Array.ahk
-#Include %A_LineFile%\..\ObjectOriented\Object.ahk
-#Include %A_LineFile%\..\String\String.ahk
+#Include ..\lib\Buffer\Buffer.ahk
+#Include ..\lib\ObjectOriented\Array.ahk
+#Include ..\lib\ObjectOriented\Object.ahk
+#Include ..\lib\String\String.ahk
 
 ;============== Function ======================================================;
-;=================================================== Error Handling ===========;
+;----------- Error Handling ---------------------------------------------------;
 
-;* ErrorFromMessage(messageID)
+/**
+ * Finds the message definition in a message table resource based on a message identifier.
+ * @param {Integer} messageID - The message identifier, typically retrieved with `DllCall("Kernel32\GetLastError")`.
+ * @returns {Error}
+ */
 ErrorFromMessage(messageID) {
 	if (!(length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100  ;? 0x1100 = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER
 		, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", &(buffer := 0), "UInt", 0, "Ptr", 0, "Int"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
@@ -45,10 +48,10 @@ ErrorFromMessage(messageID) {
 	message := StrGet(buffer, length - 2)  ;* Account for the newline and carriage return characters.
 	DllCall("Kernel32\LocalFree", "Ptr", buffer)
 
-	return (Error(Format("{:#x}", messageID), -1, message))
+	return (OSError(Format("{:#x}", messageID), -1, message))
 }
 
-;======================================================  Library  ==============;
+;--------------  Library  ------------------------------------------------------;
 
 LoadLibrary(libraryName) {
 	static loaded := FreeLibrary("__SuperSecretString")
@@ -125,11 +128,62 @@ GetProcAddress(libraryName, functionName) {
 	return (DllCall("Kernel32\GetProcAddress", "Ptr", DllCall("Kernel32\GetModuleHandle", "Str", libraryName, "Ptr"), "AStr", functionName, "Ptr"))
 }
 
-;=======================================================  Hook  ===============;
+;---------------  CLSID  -------------------------------------------------------;
+
+StringFromCLSID(CLSID) {
+	if (DllCall("Ole32\StringFromCLSID", "Ptr", CLSID, "Ptr*", &(pointer := 0), "UInt")) {
+		throw
+	}
+
+	string := StrGet(pointer)
+	DllCall("Ole32\CoTaskMemFree", "Ptr", pointer)
+
+	return (string)
+}
+
+CLSIDFromString(string) {
+	if (DllCall("Ole32\CLSIDFromString", "Ptr", StrPtr(string), "Ptr", (CLSID := Buffer(16).Ptr), "UInt")) {
+		throw
+	}
+
+	return (CLSID)
+}
+
+;--------------- Memory -------------------------------------------------------;
+
+SizeOf(type) {
+	static sizeLookup := Map("Char", 1, "UChar", 1, "Short", 2, "UShort", 2, "Float", 4, "Int", 4, "UInt", 4, "Double", 8, "Int64", 8, "UInt64", 8, "Ptr", A_PtrSize, "UPtr", A_PtrSize)
+
+	return (sizeLookup[type])
+}
+
+MemoryCopy(dest, src, bytes) {
+	return (DllCall("msvcrt\memcpy", "Ptr", dest, "Ptr", src, "UInt", bytes))
+}
+
+MemoryMove(dest, src, bytes) {
+	return (DllCall("msvcrt\memmove", "Ptr", dest, "Ptr", src, "UInt", bytes))
+}
+
+MemoryDifference(ptr1, ptr2, bytes) {
+	return (DllCall("msvcrt\memcmp", "Ptr", ptr1, "Ptr", ptr2, "Int", bytes))
+}
+
+;===============  Class  =======================================================;
+;---------------- Hook --------------------------------------------------------;
 
 class Hook {
+	/** @private */
 	static Instances := Map()
 
+	/**
+	 * Creates a new Hook instance.
+	 * @constructor
+	 * @param {Integer} idHook - The type of hook procedure to be installed.
+	 * @param {Function} function - The DLL or function to use as the callback for the hook.
+	 * @param {String} [options]
+	 * @returns {Hook}
+	 */
 	__New(idHook, function, options := "Fast") {
 		if (!(hHook := DllCall("User32\SetWindowsHookEx", "Int", idHook, "Ptr", pCallback := CallbackCreate(function, options), "Ptr", DllCall("Kernel32\GetModuleHandle", "Ptr", 0, "Ptr"), "UInt", 0, "Ptr"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexw
 			CallbackFree(pCallback)
@@ -197,45 +251,4 @@ class Hook {
 	Toggle() {
 		this.%(this.State) ? ("UnHook") : ("Hook")%()
 	}
-}
-
-;=======================================================  CLSID  ===============;
-
-StringFromCLSID(CLSID) {
-	if (DllCall("Ole32\StringFromCLSID", "Ptr", CLSID, "Ptr*", &(pointer := 0), "UInt")) {
-		throw
-	}
-
-	string := StrGet(pointer)
-	DllCall("Ole32\CoTaskMemFree", "Ptr", pointer)
-
-	return (string)
-}
-
-CLSIDFromString(string) {
-	if (DllCall("Ole32\CLSIDFromString", "Ptr", StrPtr(string), "Ptr", (CLSID := Buffer(16).Ptr), "UInt")) {
-		throw
-	}
-
-	return (CLSID)
-}
-
-;======================================================= Memory ===============;
-
-SizeOf(type) {
-	static sizeLookup := Map("Char", 1, "UChar", 1, "Short", 2, "UShort", 2, "Float", 4, "Int", 4, "UInt", 4, "Double", 8, "Int64", 8, "UInt64", 8, "Ptr", A_PtrSize, "UPtr", A_PtrSize)
-
-	return (sizeLookup[type])
-}
-
-MemoryCopy(dest, src, bytes) {
-	return (DllCall("msvcrt\memcpy", "Ptr", dest, "Ptr", src, "UInt", bytes))
-}
-
-MemoryMove(dest, src, bytes) {
-	return (DllCall("msvcrt\memmove", "Ptr", dest, "Ptr", src, "UInt", bytes))
-}
-
-MemoryDifference(ptr1, ptr2, bytes) {
-	return (DllCall("msvcrt\memcmp", "Ptr", ptr1, "Ptr", ptr2, "Int", bytes))
 }

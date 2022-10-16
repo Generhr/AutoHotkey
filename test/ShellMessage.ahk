@@ -1,11 +1,11 @@
-#Requires AutoHotkey v2.0-beta.9
+#Requires AutoHotkey v2.0-beta.12
 
 ;============ Auto-Execute ====================================================;
-;======================================================  Include  ==============;
+;--------------  Include  ------------------------------------------------------;
 
 #Include ..\lib\Console\Console.ahk
 
-;======================================================  Setting  ==============;
+;--------------  Setting  ------------------------------------------------------;
 
 #SingleInstance
 #Warn All, MsgBox
@@ -15,7 +15,7 @@ CoordMode("ToolTip", "Screen")
 ListLines(False)
 ProcessSetPriority("High")
 
-;====================================================== Variable ==============;
+;-------------- Variable ------------------------------------------------------;
 
 global A_Debug := IniRead("..\cfg\Settings.ini", "Debug", "Debug")
 
@@ -33,14 +33,14 @@ LowLevelKeyboardProc(nCode, wParam, lParam) {
 	return (DllCall("User32\CallNextHookEx", "Ptr", 0, "Int", nCode, "Ptr", wParam, "Ptr", lParam, "Ptr"))
 }
 
-;======================================================== Hook ================;
-
-OnExit(__Exit)
+;---------------- Hook --------------------------------------------------------;
 
 DllCall("User32\RegisterShellHookWindow", "UInt", A_ScriptHwnd)
-OnMessage(DllCall("User32\RegisterWindowMessage", "Str", "SHELLHOOK"), ShellMessage)
+OnMessage(DllCall("User32\RegisterWindowMessage", "Str", "SHELLHOOK"), ShellMessageHandler)
 
-;=======================================================  Other  ===============;
+OnExit(ExitHandler)
+
+;---------------  Other  -------------------------------------------------------;
 
 Exit()
 
@@ -65,15 +65,7 @@ Exit()
 
 ;============== Function ======================================================;
 
-__Exit(exitReason, exitCode) {
-	Critical(True)
-
-	DllCall("User32\DeregisterShellHookWindow", "UInt", A_ScriptHwnd)
-
-	ExitApp()
-}
-
-ShellMessage(wParam, lParam, msg, hWnd) {
+ShellMessageHandler(wParam, lParam, msg, hWnd) {
 	Critical(True)
 
 	switch (wParam) {  ;* My best guess is that nVidia is is not using CallNextHookEx, so many of these messages can't be received.
@@ -130,4 +122,12 @@ ShellMessage(wParam, lParam, msg, hWnd) {
 		default:
 			Console.Log("UNKNOWN: " wParam ", " lParam ", " msg ", " hWnd)
 	}
+}
+
+ExitHandler(exitReason, exitCode) {
+	Critical(True)
+
+	DllCall("User32\DeregisterShellHookWindow", "UInt", A_ScriptHwnd)
+
+	ExitApp()
 }

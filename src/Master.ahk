@@ -1,7 +1,7 @@
-﻿#Requires AutoHotkey v2.0-beta.9
+﻿#Requires AutoHotkey v2.0-beta.12
 
 ;============ Auto-Execute ====================================================;
-;=======================================================  Admin  ===============;
+;---------------  Admin  -------------------------------------------------------;
 
 if (!A_IsAdmin || !DllCall("Kernel32\GetCommandLine", "Str") ~= " /restart(?!\S)") {
 	try {
@@ -11,18 +11,19 @@ if (!A_IsAdmin || !DllCall("Kernel32\GetCommandLine", "Str") ~= " /restart(?!\S)
 	ExitApp()
 }
 
-;======================================================  Include  ==============;
+;--------------  Include  ------------------------------------------------------;
 
 #Include ..\lib\Core.ahk
 
 #Include ..\lib\General\General.ahk
 #Include ..\lib\Console\Console.ahk
+#Include ..\lib\Math\Math.ahk
 
 #Include ..\lib\OCR.ahk
 #Include ..\lib\Timer.ahk
 #Include ..\lib\YouTube_Music.ahk
 
-;======================================================  Setting  ==============;
+;--------------  Setting  ------------------------------------------------------;
 
 #SingleInstance
 #Warn All, MsgBox
@@ -36,13 +37,13 @@ InstallKeybdHook(True)
 InstallMouseHook(True)
 ListLines(False)
 ProcessSetPriority("High")
-SetCapsLockState(("AlwaysOff"))
+SetCapsLockState("AlwaysOff")
 SetNumlockState("AlwaysOn")
 SetScrollLockState("AlwaysOff")
 SetWinDelay(-1)
 SetWorkingDir(A_ScriptDir . "\..")
 
-;======================================================== Menu ================;
+;---------------- Menu --------------------------------------------------------;
 
 TraySetIcon("Mstscax.dll", 10)  ;: https://diymediahome.org/windows-icons-reference-list-with-details-locations-images/
 
@@ -57,7 +58,7 @@ for v in ["", "[&1] lowercase", "[&2] UPPERCASE", "[&3] Sentence case", "[&4] Ti
 	CaseMenu.Add(v, MenuHandler)
 }
 
-;=======================================================  Group  ===============;
+;---------------  Group  -------------------------------------------------------;
 
 for k, v in Map("Browser", [["Google Chrome ahk_class Chrome_WidgetWin_1 ahk_exe chrome.exe"]],  ;? [["Title ahk_class ClassName ahk_exe ProcessName", "ExcludeTitle"], ...]
 	"Editor", [["Notepad++ ahk_class Notepad++ ahk_exe notepad++.exe"], ["ahk_class Chrome_WidgetWin_1 ahk_exe Code.exe"], ["Microsoft Visual Studio ahk_exe devenv.exe"]],
@@ -72,7 +73,7 @@ for k, v in Map("Browser", [["Google Chrome ahk_class Chrome_WidgetWin_1 ahk_exe
 	}
 }
 
-;====================================================== Variable ==============;
+;-------------- Variable ------------------------------------------------------;
 
 global A_Debug := IniRead(A_WorkingDir . "\cfg\Settings.ini", "Debug", "Debug")
 	, A_WindowMessage := DllCall("User32\RegisterWindowMessage", "Str", "WindowMessage", "UInt")
@@ -81,26 +82,28 @@ global A_Debug := IniRead(A_WorkingDir . "\cfg\Settings.ini", "Debug", "Debug")
 	, A_HiddenWindows := []
 	, A_Null := Chr(0)
 
-;======================================================== Hook ================;
+;---------------- Hook --------------------------------------------------------;
 
 OnMessage(A_WindowMessage, WindowMessageHandler)
 
 OnExit(ExitHandler)
 
-;========================================================  Run  ================;
+;----------------  Run  --------------------------------------------------------;
 
 for v in ["AutoCorrect", "Window"] {
 	Run(A_ScriptDir . "\" . v . ".ahk")
 }
 
-;=======================================================  Other  ===============;
+;---------------  Other  -------------------------------------------------------;
+
+Console.Log(Math.Surd(-2, 2))
 
 CheckForNewVersion()
 
 Exit()
 
 ;=============== Hotkey =======================================================;
-;=======================================================  Mouse  ===============;
+;---------------  Mouse  -------------------------------------------------------;
 
 #HotIf ((WinActive("ahk_group Editor") || WinActive("ahk_group Browser")) && !WinActive("ahk_group Game"))
 
@@ -112,7 +115,7 @@ Exit()
 	if (A_TimeSincePriorHotkey && A_TimeSincePriorHotkey >= 50 && y <= 80 + 30*(WinActive("ahk_group Browser") > 0)) {
 		static lookup := Map("WheelUp", "^{PgUp}", "WheelDown", "^{PgDn}")
 
-		Send(lookup[StripModifiers(A_ThisHotkey)])
+		Send(lookup[KeyStripModifiers(A_ThisHotkey)])
 	}
 }
 
@@ -207,7 +210,7 @@ $XButton2:: {
 ;	KeyWait("LButton")
 ;	return
 
-;====================================================== Keyboard ==============;
+;-------------- Keyboard ------------------------------------------------------;
 
 #HotIf (WinActive(A_ScriptName))
 
@@ -231,7 +234,7 @@ $F10:: {
 $^c:: {
 	global A_SavedClipboard := A_Clipboard
 
-	A_Clipboard := "/*`n`t" . StrReplace(ControlGetText("Edit1", "Window Spy ahk_class AutoHotkeyGUI"), "`n", "`n`t") . "`n*/"
+	A_Clipboard := "`n`n/*`n`t" . StrReplace(ControlGetText("Edit1", "Window Spy ahk_class AutoHotkeyGUI"), "`n", "`n`t") . "`n*/"
 
 	keyboardHook := Hook(13, __LowLevelKeyboardProc)
 
@@ -277,7 +280,7 @@ $F1:: {
 		extension := RegExReplace(WinGetTitle("A"), "i).*\.(\w+).*", "$1")
 
 		if (extension ~= "ah\d*") {
-			if (text := RegExReplace(String.Copy(True, True), "iSs)[^a-z_]*((?<!#(?=[a-z]))[#a-z_]*).*", "$1")) {
+			if (text := RegExReplace(Copy(True, True), "iSs)[^a-z_]*((?<!#(?=[a-z]))[#a-z_]*).*", "$1")) {
 				version := SubStr(extension, -1)
 
 				RunActivate("AutoHotkey v2 Help ahk_class HH Parent ahk_exe hh.exe", A_ProgramFiles . "\AutoHotkey\v2\AutoHotkey.chm", , , -7, 730, 894, 357)  ;* Force the position here to avoid flickering with Window.ahk.
@@ -331,7 +334,7 @@ $\:: {
 
 $w::
 $s:: {
-	if (!KeyWait((k := StripModifiers(A_ThisHotkey)), "T0.25")) {
+	if (!KeyWait((k := KeyStripModifiers(A_ThisHotkey)), "T0.25")) {
 		Send((k == "w") ? ("^{Home}") : ("^{End}"))
 
 		KeyWait(k)
@@ -365,7 +368,7 @@ $p:: {
 
 $a::
 $d:: {
-	if (!KeyWait((k := StripModifiers(A_ThisHotkey)), "T0.25")) {
+	if (!KeyWait((k := KeyStripModifiers(A_ThisHotkey)), "T0.25")) {
 		switch (k) {
 			case "a":
 				Send("^{Left}")
@@ -392,8 +395,8 @@ $c:: {
 	if (!KeyWait("c", "T0.25")) {
 		static extensionLookup := Map("ahk", ";", "lib", ";", "cs", "//", "js", "//", "json", "//", "pde", "//", "elm", "--", "py", "#")
 
-		if ((text := String.Copy()) && (comment := extensionLookup[RegExReplace(WinGetTitle("A"), "iS).*\.([a-z]+).*", "$1")])) {
-			String.Paste((SubStr(text, 1, StrLen(comment)) == comment) ? (RegExReplace(text, "`am)^" . comment)) : (RegExReplace(text, "`am)^", comment)))
+		if ((text := Copy()) && (comment := extensionLookup[RegExReplace(WinGetTitle("A"), "iS).*\.([a-z]+).*", "$1")])) {
+			Paste((SubStr(text, 1, StrLen(comment)) == comment) ? (RegExReplace(text, "`am)^" . comment)) : (RegExReplace(text, "`am)^", comment)))
 		}
 		else {
 			Speak("No text.")
@@ -447,12 +450,12 @@ $t:: {
 }
 
 $^f:: {
-	text := String.Copy(True)
+	text := Copy(True)
 
 	Send("^f")
 	Sleep(50)
 
-	String.Paste(text)
+	Paste(text)
 
 	KeyWait("f")
 }
@@ -658,7 +661,7 @@ CapsLock(*) {
 
 $CapsLock:: {
 	if (!KeyWait("CapsLock", "T0.25")) {
-		if (String.Copy(True)) {
+		if (Copy(True)) {
 			keyboardHook := Hook(13, __LowLevelKeyboardProc)  ;* No need to capture this in the function as this variable exists as long as the thread is captured by the menu.
 
 			__LowLevelKeyboardProc(nCode, wParam, lParam) {
@@ -690,7 +693,7 @@ $CapsLock:: {
 }
 
 AppsKey & Tab:: {
-	String.Paste("`t")
+	Paste("`t")
 
 	KeyWait("Tab")
 }
@@ -718,19 +721,19 @@ AppsKey & 9::
 AppsKey & [:: {
 	key := SubStr(A_ThisHotkey, -1)
 
-	if (text := String.Copy()) {
+	if (text := Copy()) {
 		static lookup := Map("1", [Chr(39), Chr(39)], "2", [Chr(34), Chr(34)], "9", [Chr(40), Chr(41)], "[", [Chr(91), Chr(93)])
 
 		characters := lookup[key]
 
-		String.Paste(characters[0] . text . characters[1], 1)
+		Paste(characters[0] . text . characters[1], 1)
 	}
 
 	KeyWait(key)
 }
 
 AppsKey & Enter:: {
-	String.Paste("`r`n")
+	Paste("`r`n")
 
 	KeyWait("Enter")
 }
@@ -814,7 +817,7 @@ AppsKey & s:: {
 	WinSetTransColor("FF0E05", splash)
 
 	splash.SetFont("s20 Bold", "Fira Code Retina")
-	splash.Add("Text", "cFFFFFF", "[R] Restart`n[S] Shutdown`n[L] Log Off`n`n[H] Hibernate`n[P] Sleep")
+	splash.Add("Text", "cFFFFFF", "[R] Restart`n[S] Shutdown`n[L] Lock Computer`n`n[H] Hibernate`n[P] Sleep")
 	splash.Show("x5 y5 NoActivate")
 
 	Suspend(True)
@@ -835,7 +838,7 @@ AppsKey & s:: {
 				case "s":
 					ShutDown(8)
 				case "l":
-					ShutDown(0)
+					DllCall("User32\LockWorkStation", "UInt")  ;! ShutDown(0)
 				case "h":
 					DllCall("PowrProf\SetSuspendState", "Int", 1, "Int", 0, "Int", 0)
 				case "p":
@@ -854,7 +857,7 @@ AppsKey & s:: {
 }
 
 AppsKey & g:: {
-	if (text := String.Copy(True, True)) {
+	if (text := Copy(True, True)) {
 		Run(Format("{}\Google\Chrome\Application\chrome.exe {}", A_ProgramFiles, (text ~= "i)(http|ftp)s?:\/\/|w{3}\.") ? (RegExReplace(text, "iS).*?(((http|ftp)s?|w{3})[a-z0-9-+&./?=#_%@:]+)(.|\s)*", "$1")) : ("www.google.com/search?&q=" . StrReplace(text, A_Space, "+"))))
 	}
 
@@ -939,14 +942,12 @@ AppsKey & Down:: {
 }
 
 ;============== Function ======================================================;
-;======================================================== Hook ================;
+;---------------- Hook --------------------------------------------------------;
 
-WindowMessageHandler(wParam := 0, lParam := 0, msg := 0, hWnd := 0) {
+WindowMessageHandler(wParam, lParam, msg, hWnd) {
 	switch (wParam) {
 		case 0x1000:
-			if (!(A_Debug := IniRead(A_WorkingDir . "\cfg\Settings.ini", "Debug", "Debug"))) {
-				ToolTip("", , , 20)
-			}
+			A_Debug := IniRead(A_WorkingDir . "\cfg\Settings.ini", "Debug", "Debug")
 
 			return (True)
 ;		case 0x1001:
@@ -978,7 +979,7 @@ ExitHandler(exitReason, exitCode) {	;? ExitReason = Close || Error || Exit || Lo
 	}
 }
 
-;======================================================== Menu ================;  ;~ Menus (Menus and Other Resources): https://learn.microsoft.com/en-gb/windows/win32/menurc/menus?redirectedfrom=MSDN
+;---------------- Menu --------------------------------------------------------;  ;~ Menus (Menus and Other Resources): https://learn.microsoft.com/en-gb/windows/win32/menurc/menus?redirectedfrom=MSDN
 
 MenuHandler(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := TrayMenu) {
 	switch (thisMenu.Handle) {
@@ -1085,7 +1086,7 @@ MenuHandler(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := TrayMenu) {
 				Console.Log("CaseMenu")
 			}
 
-			text := String.Copy()
+			text := Copy()
 
 			switch (RegExReplace(thisMenuItem, "iS).*?([a-z])", "$1")) {
 				case "Sentencecase":
@@ -1102,11 +1103,11 @@ MenuHandler(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := TrayMenu) {
 					text := Format("{:" . SubStr(thisMenuItem, 6, 1) . "}", text)
 			}
 
-			String.Paste(text)
+			Paste(text)
 		}
 }
 
-;=======================================================  Other  ===============;
+;---------------  Other  -------------------------------------------------------;
 
 CheckForNewVersion() {
 	if (RegExReplace(version := DownloadContent("https://autohotkey.com/download/2.0/version.txt"), "\s") != A_AhkVersion) {
@@ -1172,11 +1173,9 @@ SetSystemCursor(mode := "") {
 	}
 
 	static cursorNames := [32512, 32513, 32514, 32515, 32516, 32642, 32643, 32644, 32645, 32646, 32648, 32649, 32650]  ;? 32650 = OCR_APPSTARTING, 32512 = OCR_NORMAL, 32515 = OCR_CROSS, 32649 = OCR_HAND, 32651 = OCR_HELP, 32513 = OCR_IBEAM, 32648 = OCR_NO, 32646 = OCR_SIZEALL, 32643 = OCR_SIZENESW, 32645 = OCR_SIZENS, 32642 = OCR_SIZENWSE, 32644 = OCR_SIZEWE, 32516 = OCR_UP, 32514 = OCR_WAIT
-		, hide := (array := [], ANDPlane := Buffer(128, 0xFF), XORPlane := Buffer(128, 0), cursorNames.Every((*) => (array.Push(DllCall("User32\CreateCursor", "Ptr", 0, "Int", 0, "Int", 0, "Int", 32, "Int", 32, "Ptr", ANDPlane, "Ptr", XORPlane)))), array), show := (array := [], cursorNames.Every((cursorName, *) => (array.Push(DllCall("User32\CopyImage", "Ptr", DllCall("LoadCursor", "Ptr", 0, "Ptr", cursorName), "UInt", 2, "Int", 0, "Int", 0, "UInt", 0)))), array)
+		, hide := (ANDPlane := Buffer(128, 0xFF), XORPlane := Buffer(128, 0), cursorNames.Map((*) => (DllCall("User32\CreateCursor", "Ptr", 0, "Int", 0, "Int", 0, "Int", 32, "Int", 32, "Ptr", ANDPlane, "Ptr", XORPlane)))), show := cursorNames.Map((cursorName, *) => (DllCall("User32\CopyImage", "Ptr", DllCall("User32\LoadCursor", "Ptr", 0, "Ptr", cursorName), "UInt", 2, "Int", 0, "Int", 0, "UInt", 0)))
 
 	for index, cursorName in cursorNames {
 		DllCall("User32\SetSystemCursor", "Ptr", DllCall("User32\CopyImage", "Ptr", %internal%[index], "UInt", 2, "Int", 0, "Int", 0, "UInt", 0), "UInt", cursorName)
 	}
 }
-
-;===============  Class  =======================================================;

@@ -1,7 +1,7 @@
 #Requires AutoHotkey v2.0-beta
 
 ;============ Auto-Execute ====================================================;
-;======================================================  Setting  ==============;
+;--------------  Setting  ------------------------------------------------------;
 
 #NoTrayIcon
 #SingleInstance
@@ -11,7 +11,7 @@
 ListLines(False)
 ProcessSetPriority("Normal")
 
-;=======================================================  Other  ===============;
+;---------------  Other  -------------------------------------------------------;
 
 Exit()
 
@@ -112,16 +112,16 @@ Exit()
 				Send('{[}"value"' . (A_Clipboard := ', "value"') . '{]}{Left}')
 		}
 
-		SetTimer(Restore.Bind(c), -200)
+		SetTimer(__Restore.Bind(c), -200)
 
 		;* Description:
 			;*	Restores the clipboard to what it was after 0.85 seconds of inactivity.
-		Restore(string) {
+		__Restore(string) {
 			if (A_TimeIdleKeyboard >= 850) {
 				return (A_Clipboard := string)
 			}
 
-			SetTimer(Restore.Bind(string), -200)
+			SetTimer(__Restore.Bind(string), -200)
 		}
 	}
 

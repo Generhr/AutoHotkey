@@ -1,4 +1,4 @@
-﻿#Requires AutoHotkey v2.0-beta
+﻿#Requires AutoHotkey v2.0-beta.12
 
 /*
 * MIT License
@@ -24,11 +24,17 @@
 * SOFTWARE.
 */
 
-;* OCR([file])
-;* Parameter:
-	;* [String] file - The directory of the file from which to capture text.
-;* Return:
-	;* [String] - The text that was catured from the image.
+;============ Auto-Execute ====================================================;
+
+global A_Debug := IniRead("..\cfg\Settings.ini", "Debug", "Debug", False)
+
+;============== Function ======================================================;
+
+/**
+ * Captures a portion of the screen and passes the image to tesseract to be processed for text.
+ * @param {String} [file] - The directory of an image to be processed instead of capturing a portion of the screen.
+ * @return {String} The text that was catured from the image.
+ */
 OCR(file := "") {
 	static image := A_Temp . "\tesseract.tiff", text := A_Temp . "\tesseract.txt"
 
@@ -38,13 +44,13 @@ OCR(file := "") {
 
 	__ErrorFromMessage(messageID) {
 		if (!(length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", &(buffer := 0), "UInt", 0, "Ptr", 0, "Int"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
-			return (__ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+			return (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
 		}
 
 		message := StrGet(buffer, length - 2)  ;* Account for the newline and carriage return characters.
 		DllCall("Kernel32\LocalFree", "Ptr", buffer)
 
-		return (Error(Format("{:#x}", messageID), -1, message))
+		return (OSError(Format("{:#x}", messageID), -1, message))
 	}
 
 	DllCall("Gdiplus\GdiplusStartup", "Ptr*", &(pToken := 0), "Ptr", __CreateGDIplusStartupInput().Ptr, "Ptr", 0)  ;: https://docs.microsoft.com/en-us/windows/win32/api/gdiplusinit/nf-gdiplusinit-gdiplusstartup

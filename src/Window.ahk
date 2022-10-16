@@ -1,7 +1,7 @@
-﻿#Requires AutoHotkey v2.0-beta.9
+﻿#Requires AutoHotkey v2.0-beta.12
 
 ;============ Auto-Execute ====================================================;
-;=======================================================  Admin  ===============;
+;---------------  Admin  -------------------------------------------------------;
 
 if (!A_IsAdmin || !DllCall("Kernel32\GetCommandLine", "Str") ~= " /restart(?!\S)") {
 	try {
@@ -11,14 +11,16 @@ if (!A_IsAdmin || !DllCall("Kernel32\GetCommandLine", "Str") ~= " /restart(?!\S)
 	ExitApp()
 }
 
-;======================================================  Include  ==============;
+;--------------  Include  ------------------------------------------------------;
 
 #Include ..\lib\Core.ahk
 
 #Include ..\lib\General\General.ahk
 #Include ..\lib\Console\Console.ahk
 
-;======================================================  Setting  ==============;
+#Include ..\lib\YouTube_Music.ahk
+
+;--------------  Setting  ------------------------------------------------------;
 
 #NoTrayIcon
 #SingleInstance
@@ -33,7 +35,7 @@ ProcessSetPriority("High")
 SetWorkingDir(A_ScriptDir . "\..")
 SetWinDelay(-1)
 
-;=======================================================  Group  ===============;
+;---------------  Group  -------------------------------------------------------;
 
 ;for v in [[]] {  ;? [["Title Class ahk_class ahk_exe ProcessName", "ExcludeTitle"], ...]
 ;	try {
@@ -44,21 +46,28 @@ SetWinDelay(-1)
 ;	}
 ;}
 
-;====================================================== Variable ==============;
+;-------------- Variable ------------------------------------------------------;
 
-global A_Debug := False  ;! A_Debug := IniRead(A_WorkingDir . "\cfg\Settings.ini", "Debug", "Debug")
+global A_Debug := IniRead("..\cfg\Settings.ini", "Debug", "Debug", False)
 	, A_WindowMessage := DllCall("User32\RegisterWindowMessage", "Str", "WindowMessage", "UInt")
 
-;======================================================== Hook ================;
+;---------------- Hook --------------------------------------------------------;
 
-OnMessage(A_WindowMessage, __WindowMessage)
+OnMessage(A_WindowMessage, WindowMessageHandler)
 
-OnExit(__Exit)
+if !(DllCall("Wtsapi32\WTSRegisterSessionNotificationEx", "Ptr", 0  ;? 0 = WTS_CURRENT_SERVER
+	, "Ptr", A_ScriptHwnd, "UInt", 1)) {  ;? 1 = NOTIFY_FOR_ALL_SESSIONS  ;: https://learn.microsoft.com/en-gb/windows/win32/api/wtsapi32/nf-wtsapi32-wtsregistersessionnotificationex?redirectedfrom=MSDN
+	throw (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+}
+
+OnMessage(0x02B1, WindowMessageHandler)
 
 DllCall("User32\RegisterShellHookWindow", "UInt", A_ScriptHwnd)
-OnMessage(DllCall("User32\RegisterWindowMessage", "Str", "SHELLHOOK"), ShellMessage)
+OnMessage(DllCall("User32\RegisterWindowMessage", "Str", "SHELLHOOK"), ShellMessageHandler)
 
-;=======================================================  Other  ===============;
+OnExit(ExitHandler)
+
+;---------------  Other  -------------------------------------------------------;
 
 Exit()
 
@@ -82,8 +91,30 @@ $F10:: {
 #HotIf
 
 ;============== Function ======================================================;
+;---------------- Hook --------------------------------------------------------;
 
-ShellMessage(wParam, windowHandle, *) {
+WindowMessageHandler(wParam, lParam, msg, hWnd) {
+	switch (msg) {
+		case A_WindowMessage:
+			switch (wParam) {
+				case 0x1000:
+					A_Debug := IniRead(A_WorkingDir . "\cfg\Settings.ini", "Debug", "Debug")
+
+					return (True)
+				}
+		case 0x02B1:
+			switch (wParam) {  ;: https://learn.microsoft.com/en-gb/windows/win32/termserv/wm-wtssession-change?redirectedfrom=MSDN
+				case 0x7:  ;? 0x7 = WTS_SESSION_LOCK
+					YouTube_Music.Pause()
+				case 0x8:  ;? 0x8 = WTS_SESSION_UNLOCK
+					YouTube_Music.Play()
+			}
+	}
+
+	return (-1)
+}
+
+ShellMessageHandler(wParam, windowHandle, *) {
 	Critical(True)
 
 	switch (wParam) {
@@ -351,45 +382,13 @@ ShellMessage(wParam, windowHandle, *) {
 					Console.Log("Waiting for a valid window...")
 				}
 			}
-		case 5:  ;? 5 = HSHELL_GETMINRECT
-		case 6:  ;? 6 = HSHELL_REDRAW
-		case 7:  ;? 7 = HSHELL_TASKMAN
-		case 8:  ;? 8 = HSHELL_LANGUAGE
-		case 9:  ;? 9 = HSHELL_SYSMENU
-		case 10:  ;? 10 = HSHELL_ENDTASK
-		case 11:  ;? 11 = HSHELL_ACCESSIBILITYSTATE
-		case 12:  ;? 12 = HSHELL_APPCOMMAND
-		case 13:  ;? 13 = HSHELL_WINDOWREPLACED
-		case 14:  ;? 14 = HSHELL_WINDOWREPLACING
-
-		case 0x8006:  ;? 0x8006 = HSHELL_FLASH (HSHELL_REDRAW | HSHELL_HIGHBIT)
-
-		case 16:
-
-		case 53, 54:
-
-		default:
-			Console.Log("UNKNOWN: " wParam ", " windowHandle)
 	}
 }
 
-;======================================================== Hook ================;
-
-__WindowMessage(wParam := 0, lParam := 0, msg := 0, hWnd := 0) {
-	switch (wParam) {
-		case 0x1000:
-			if (!(A_Debug := IniRead(A_WorkingDir . "\cfg\Settings.ini", "Debug", "Debug"))) {
-				ToolTip("", , , 20)
-			}
-
-			return (True)
-	}
-
-	return (-1)
-}
-
-__Exit(exitReason, exitCode) {
+ExitHandler(exitReason, exitCode) {
 	Critical(True)
+
+	DllCall("Wtsapi32\WTSUnRegisterSessionNotificationEx", "Ptr", 0, "Ptr", A_ScriptHwnd)  ;: https://learn.microsoft.com/en-gb/windows/win32/api/wtsapi32/nf-wtsapi32-wtsunregistersessionnotificationex?redirectedfrom=MSDN
 
 	DllCall("User32\DeregisterShellHookWindow", "UInt", A_ScriptHwnd)
 
