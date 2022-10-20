@@ -96,8 +96,6 @@ for v in ["AutoCorrect", "Window"] {
 
 ;---------------  Other  -------------------------------------------------------;
 
-Console.Log(Math.Surd(-2, 2))
-
 CheckForNewVersion()
 
 Exit()

@@ -39,7 +39,7 @@
  * @param {Integer} messageID - The message identifier, typically retrieved with `DllCall("Kernel32\GetLastError")`.
  * @returns {Error}
  */
-ErrorFromMessage(messageID) {
+ErrorFromMessage(messageID := DllCall("Kernel32\GetLastError")) {
 	if (!(length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100  ;? 0x1100 = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER
 		, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", &(buffer := 0), "UInt", 0, "Ptr", 0, "Int"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
 		return (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
@@ -113,7 +113,7 @@ GetProcAddress(libraryName, functionName) {
 		}
 
 		loop (n := ptr + NumGet(ts + 32, "UInt"), NumGet(ts + 24, "UInt")) {
-			if (p := NumGet(n + (A_Index - 1) * 4, "UInt")) {
+			if (p := NumGet(n + (A_Index - 1)*4, "UInt")) {
 				o.%f := StrGet(ptr + p, "CP0")% := DllCall("Kernel32\GetProcAddress", "Ptr", ptr, "AStr", f, "Ptr")
 
 				if (SubStr(f, -1) == "W") {
@@ -170,7 +170,6 @@ MemoryDifference(ptr1, ptr2, bytes) {
 }
 
 ;===============  Class  =======================================================;
-;---------------- Hook --------------------------------------------------------;
 
 class Hook {
 	/** @private */
