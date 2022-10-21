@@ -75,16 +75,16 @@ for k, v in Map("Browser", [["Google Chrome ahk_class Chrome_WidgetWin_1 ahk_exe
 
 ;-------------- Variable ------------------------------------------------------;
 
-global A_Debug := IniRead(A_WorkingDir . "\cfg\Settings.ini", "Debug", "Debug")
-	, A_WindowMessage := DllCall("User32\RegisterWindowMessage", "Str", "WindowMessage", "UInt")
+global debug := IniRead(A_WorkingDir . "\cfg\Settings.ini", "Debug", "Debug")
+	, windowMessage := DllCall("User32\RegisterWindowMessage", "Str", "WindowMessage", "UInt")
 
-	, A_SavedClipboard := A_Clipboard, A_CapsLockState := False
-	, A_HiddenWindows := []
-	, A_Null := Chr(0)
+	, savedClipboard := A_Clipboard, capsLockState := False
+	, hiddenWindows := []
+	, null := Chr(0)
 
 ;---------------- Hook --------------------------------------------------------;
 
-OnMessage(A_WindowMessage, WindowMessageHandler)
+OnMessage(windowMessage, WindowMessageHandler)
 
 OnExit(ExitHandler)
 
@@ -230,7 +230,7 @@ $F10:: {
 #HotIf (WinExist("Window Spy ahk_class AutoHotkeyGUI"))
 
 $^c:: {
-	global A_SavedClipboard := A_Clipboard
+	global savedClipboard := A_Clipboard
 
 	A_Clipboard := "`n`n/*`n`t" . StrReplace(ControlGetText("Edit1", "Window Spy ahk_class AutoHotkeyGUI"), "`n", "`n`t") . "`n*/"
 
@@ -254,13 +254,13 @@ $^c:: {
 					}
 				case 0x56:  ;? 0x56 = V key
 					if (ctrlDown) {
-						if (A_Debug) {
+						if (debug) {
 							Console.Log("^v")
 						}
 
-						keyboardHook := A_Null
+						keyboardHook := null
 
-						SetTimer((*) => (A_Clipboard := A_SavedClipboard), -50)
+						SetTimer((*) => (A_Clipboard := savedClipboard), -50)
 					}
 			}
 		}
@@ -311,17 +311,17 @@ $^e:: {
 
 $\:: {
 	if (!KeyWait("\", "T0.5")) {
-		global A_Debug
+		global debug := !debug
 
-		IniWrite(A_Debug := !A_Debug, A_WorkingDir . "\cfg\Settings.ini", "Debug", "Debug")
+		IniWrite(debug, A_WorkingDir . "\cfg\Settings.ini", "Debug", "Debug")
 
 		DetectHiddenWindows(True)
 
 		for scripts in WinGetList("ahk_class AutoHotkey", , A_ScriptName) {
-			SendMessage(A_WindowMessage, 0x1000, 0, , scripts)  ;* Tell other running scripts to update their `A_Debug` value.
+			SendMessage(windowMessage, 0x1000, 0, , scripts)  ;* Tell other running scripts to update their `debug` value.
 		}
 
-		Speak(Format("Debug {}.", (A_Debug) ? ("on") : ("off")))
+		Speak(Format("Debug {}.", (debug) ? ("on") : ("off")))
 
 		KeyWait("\")
 	}
@@ -338,7 +338,7 @@ $s:: {
 		KeyWait(k)
 	}
 	else {
-		Send((A_CapsLockState) ? (k.ToUpperCase()) : (k))
+		Send((capsLockState) ? (k.ToUpperCase()) : (k))
 	}
 }
 
@@ -349,7 +349,7 @@ $t:: {
 		KeyWait("t")
 	}
 	else {
-		Send((A_CapsLockState) ? ("T") : ("t"))
+		Send((capsLockState) ? ("T") : ("t"))
 	}
 }
 
@@ -360,7 +360,7 @@ $p:: {
 		KeyWait("p")
 	}
 	else {
-		Send((A_CapsLockState) ? ("P") : ("p"))
+		Send((capsLockState) ? ("P") : ("p"))
 	}
 }
 
@@ -385,7 +385,7 @@ $d:: {
 		KeyWait(k)
 	}
 	else {
-		Send((A_CapsLockState) ? (k.ToUpperCase()) : (k))
+		Send((capsLockState) ? (k.ToUpperCase()) : (k))
 	}
 }
 
@@ -403,7 +403,7 @@ $c:: {
 		KeyWait("c")
 	}
 	else {
-		Send((A_CapsLockState) ? ("C") : ("c"))
+		Send((capsLockState) ? ("C") : ("c"))
 	}
 }
 
@@ -417,7 +417,7 @@ $F9:: {
 			extension := Random(0, 9) . extension
 		}
 
-		if (A_Debug) {
+		if (debug) {
 			Console.Log(Format("{} --> {} ({})", A_LoopFileName, extension, 10 + 5*(extension ~= "gif|mov|mp4|webm" != 0)))
 		}
 
@@ -443,7 +443,7 @@ $t:: {
 		KeyWait("t")
 	}
 	else {
-		Send((A_CapsLockState) ? ("T") : ("t"))
+		Send((capsLockState) ? ("T") : ("t"))
 	}
 }
 
@@ -477,7 +477,7 @@ $Escape:: {
 			WinClose(hWnd)
 
 			if (!WinWaitClose("ahk_ID" . hWnd, , 1) && WinGetClass(hWnd) != "#32770") {  ;* Passing `"ahk_ID" . hWnd` here to respect `A_DetectHiddenWindows`.
-				if (A_Debug) {
+				if (debug) {
 					Console.Log(Format("{} forced close: {}", A_Clipboard := A_ThisHotkey, WinGetProcessName(hWnd)))
 				}
 
@@ -569,7 +569,7 @@ AppsKey & F4:: {
 		WinClose(hWnd := WinGetID("A"))
 
 		if (!WinWaitClose("ahk_ID" . hWnd, , 1) && WinGetClass(hWnd) != "#32770") {
-			if (A_Debug) {
+			if (debug) {
 				Console.Log(Format("{} forced close: {}", A_Clipboard := A_ThisHotkey, WinGetProcessName(hWnd)))
 			}
 
@@ -649,10 +649,10 @@ $+CapsLock:: {
 
 AppsKey & CapsLock::
 CapsLock(*) {
-	global A_CapsLockState
+	global capsLockState
 
-	SetCapsLockState((A_CapsLockState := !A_CapsLockState) ? ("On") : ("AlwaysOff"))
-	SetTimer(CapsLock, (A_CapsLockState) ? (-30000) : (0))
+	SetCapsLockState((capsLockState := !capsLockState) ? ("On") : ("AlwaysOff"))
+	SetTimer(CapsLock, (capsLockState) ? (-30000) : (0))
 
 	KeyWait("CapsLock")
 }
@@ -756,12 +756,10 @@ $!q:: {
 }
 
 AppsKey & q:: {
-	global A_SavedClipboard
-
 	static coordinates := "", text := ""
 
 	if (text == "Reset") {
-		A_Clipboard := A_SavedClipboard
+		A_Clipboard := savedClipboard
 
 		coordinates.Destroy()
 		coordinates := text := ""
@@ -786,7 +784,7 @@ AppsKey & q:: {
 		}
 	}
 	else if (coordinates) {
-		A_SavedClipboard := ClipboardAll()
+		global savedClipboard := ClipboardAll()
 		A_Clipboard := text
 
 		SetTimer(__UpdateGui, 0)
@@ -843,7 +841,7 @@ AppsKey & s:: {
 					DllCall("PowrProf\SetSuspendState", "Int", 0, "Int", 0, "Int", 0)
 			}
 
-			keyboardHook := A_Null
+			keyboardHook := null
 
 			splash.Destroy()
 
@@ -863,7 +861,7 @@ AppsKey & g:: {
 }
 
 AppsKey & h:: {
-	if (A_HiddenWindows.Length < 50) {
+	if (hiddenWindows.Length < 50) {
 		if (Desktop()) {
 			MsgBox("The desktop and taskbar may not be hidden.")
 
@@ -875,14 +873,14 @@ AppsKey & h:: {
 		Send("!{Esc}")  ;* Because hiding the window won't deactivate it, activate the window beneath this one.
 		WinHide(hWnd)
 
-		if (!A_HiddenWindows.Includes(name)) {  ;* Ensure that this window doesn't already exist in the array.
-			length := A_HiddenWindows.Length + 16
+		if (!hiddenWindows.Includes(name)) {  ;* Ensure that this window doesn't already exist in the array.
+			length := hiddenWindows.Length + 16
 
 			loop 3 {
 				TrayMenu.Delete(length-- . "&")
 			}
 
-			A_HiddenWindows.Push(name)
+			hiddenWindows.Push(name)
 
 			TrayMenu.Add(name, MenuHandler)
 			TrayMenu.Add("[11] Reload", MenuHandler)
@@ -898,8 +896,8 @@ AppsKey & h:: {
 }
 
 AppsKey & u:: {
-	if (length := A_HiddenWindows.Length) {
-		MenuHandler(A_HiddenWindows[length - 1])
+	if (length := hiddenWindows.Length) {
+		MenuHandler(hiddenWindows[length - 1])
 	}
 
 	KeyWait("u")
@@ -945,7 +943,7 @@ AppsKey & Down:: {
 WindowMessageHandler(wParam, lParam, msg, hWnd) {
 	switch (wParam) {
 		case 0x1000:
-			A_Debug := IniRead(A_WorkingDir . "\cfg\Settings.ini", "Debug", "Debug")
+			global debug := IniRead(A_WorkingDir . "\cfg\Settings.ini", "Debug", "Debug")
 
 			return (True)
 ;		case 0x1001:
@@ -982,7 +980,7 @@ ExitHandler(exitReason, exitCode) {	;? ExitReason = Close || Error || Exit || Lo
 MenuHandler(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := TrayMenu) {
 	switch (thisMenu.Handle) {
 		case TrayMenu.Handle:
-			if (A_Debug) {
+			if (debug) {
 				Console.Log("TrayMenu")
 			}
 
@@ -1057,8 +1055,8 @@ MenuHandler(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := TrayMenu) {
 				case "RestoreAll":
 					hWnd := __TryActivate() || 0
 
-					loop (length := A_HiddenWindows.Length) {
-						MenuHandler(A_HiddenWindows[--length])
+					loop (length := hiddenWindows.Length) {
+						MenuHandler(hiddenWindows[--length])
 					}
 
 					__TryActivate(hWnd)
@@ -1077,10 +1075,10 @@ MenuHandler(thisMenuItem := "", thisMenuItemPos := 0, thisMenu := TrayMenu) {
 					}
 
 					TrayMenu.Delete(thisMenuItem)
-					A_HiddenWindows.RemoveAt(A_HiddenWindows.IndexOf(thisMenuItem))
+					hiddenWindows.RemoveAt(hiddenWindows.IndexOf(thisMenuItem))
 			}
 		case CaseMenu.Handle:
-			if (A_Debug) {
+			if (debug) {
 				Console.Log("CaseMenu")
 			}
 
