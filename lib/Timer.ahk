@@ -1,9 +1,9 @@
 ﻿#Requires AutoHotkey v2.0-beta.6
 
 /*
-* MIT License
+* The MIT License (MIT)
 *
-* Copyright (c) 2022 Onimuru
+* Copyright (c) 2021 - 2023, Chad Blease
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -25,61 +25,61 @@
 */
 
 class Timer {
-	static Instances := Map()
+  static Instances := Map()
 
-	__New(callback, interval?, priority := 0) {
-		this.Callback := callback, this.Interval := -1, this.Priority := priority
-			, this.State := 0
+  __New(callback, interval?, priority := 0) {
+    this.Callback := callback, this.Interval := -1, this.Priority := priority
+      , this.State := 0
 
-		pointer := ObjPtr(this)
+    pointer := ObjPtr(this)
 
-		Timer.Instances[pointer] := this, ObjRelease(pointer)  ;* Decrease this object's reference count to allow `__Delete()` to be triggered while still keeping a copy in `Timer.Instances`.
+    Timer.Instances[pointer] := this, ObjRelease(pointer)  ;* Decrease this object's reference count to allow `__Delete()` to be triggered while still keeping a copy in `Timer.Instances`.
 
-		if (IsSet(interval)) {
-			this.Start(interval)
-		}
-	}
+    if (IsSet(interval)) {
+      this.Start(interval)
+    }
+  }
 
-	__Delete() {
-		if (this.State) {
-			SetTimer(this.Callback, 0)
-		}
+  __Delete() {
+    if (this.State) {
+      SetTimer(this.Callback, 0)
+    }
 
-		pointer := ObjPtr(this)
+    pointer := ObjPtr(this)
 
-		ObjAddRef(pointer), Timer.Instances.Delete(pointer)  ;* Increase this object's reference count before deleting the copy stored in `Timer.Instances` to avoid crashing the calling script.
-	}
+    ObjAddRef(pointer), Timer.Instances.Delete(pointer)  ;* Increase this object's reference count before deleting the copy stored in `Timer.Instances` to avoid crashing the calling script.
+  }
 
-	static StartAll(interval?) {
-		for pointer, instance in this.Instances {
-			instance.Start(interval?)
-		}
-	}
+  static StartAll(interval?) {
+    for pointer, instance in this.Instances {
+      instance.Start(interval?)
+    }
+  }
 
-	static StopAll() {
-		for pointer, instance in this.Instances {
-			instance.Stop()
-		}
-	}
+  static StopAll() {
+    for pointer, instance in this.Instances {
+      instance.Stop()
+    }
+  }
 
-	Start(interval?) {
-		if (IsSet(interval)) {
-			this.Interval := interval
-		}
-		else {
-			interval := this.Interval
-		}
+  Start(interval?) {
+    if (IsSet(interval)) {
+      this.Interval := interval
+    }
+    else {
+      interval := this.Interval
+    }
 
-		this.State := 1
+    this.State := 1
 
-		SetTimer(this.Callback, interval, this.Priority)
-	}
+    SetTimer(this.Callback, interval, this.Priority)
+  }
 
-	Stop() {
-		if (this.State) {
-			this.State := 0
+  Stop() {
+    if (this.State) {
+      this.State := 0
 
-			SetTimer(this.Callback, 0)
-		}
-	}
+      SetTimer(this.Callback, 0)
+    }
+  }
 }

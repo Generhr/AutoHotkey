@@ -1,9 +1,9 @@
 ﻿#Requires AutoHotkey v2.0-beta
 
 /*
-* MIT License
+* The MIT License (MIT)
 *
-* Copyright (c) 2022 Onimuru
+* Copyright (c) 2021 - 2023, Chad Blease
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -25,57 +25,57 @@
 */
 
 class Spotify {
-	static Handle := 0
+    static Handle := 0
 
-	static Pause() {
-		PostMessage(0x319, 0, 0x2F0000, this.GetWindow(False))  ;? 0x319 = WM_APPCOMMAND, 0x2F0000 = APPCOMMAND_MEDIA_PAUSE  ;: https://docs.microsoft.com/en-us/windows/win32/inputdev/wm-appcommand
-	}
+    static Pause() {
+        PostMessage(0x319, 0, 0x2F0000, this.GetWindow(False))  ;? 0x319 = WM_APPCOMMAND, 0x2F0000 = APPCOMMAND_MEDIA_PAUSE  ;: https://docs.microsoft.com/en-us/windows/win32/inputdev/wm-appcommand
+    }
 
-	static PlayPause() {
-		PostMessage(0x319, 0, 0xE0000, this.GetWindow(False))  ;? 0xE0000 = APPCOMMAND_MEDIA_PLAY_PAUSE
-	}
+    static PlayPause() {
+        PostMessage(0x319, 0, 0xE0000, this.GetWindow(False))  ;? 0xE0000 = APPCOMMAND_MEDIA_PLAY_PAUSE
+    }
 
-	static Play() {
-		hWnd := this.GetWindow(False)
+    static Play() {
+        hWnd := this.GetWindow(False)
 
-		PostMessage(0x319, 0, 0xD0000, hWnd)  ;? 0xD0000 = APPCOMMAND_MEDIA_STOP
-		PostMessage(0x319, 0, 0xE0000, hWnd)
-	}
+        PostMessage(0x319, 0, 0xD0000, hWnd)  ;? 0xD0000 = APPCOMMAND_MEDIA_STOP
+        PostMessage(0x319, 0, 0xE0000, hWnd)
+    }
 
-	static Next() {
-		PostMessage(0x319, 0, 0xB0000, this.GetWindow(False))  ;? 0xB0000 = APPCOMMAND_MEDIA_NEXTTRACK
-	}
+    static Next() {
+        PostMessage(0x319, 0, 0xB0000, this.GetWindow(False))  ;? 0xB0000 = APPCOMMAND_MEDIA_NEXTTRACK
+    }
 
-	static Prev() {
-		PostMessage(0x319, 0, 0xC0000, this.GetWindow(False))  ;? 0xC0000 = APPCOMMAND_MEDIA_PREVIOUSTRACK
-	}
+    static Prev() {
+        PostMessage(0x319, 0, 0xC0000, this.GetWindow(False))  ;? 0xC0000 = APPCOMMAND_MEDIA_PREVIOUSTRACK
+    }
 
-	static GetWindow(prefix := False) {
-		detect := A_DetectHiddenWindows
-		DetectHiddenWindows(True)
+    static GetWindow(prefix := False) {
+        detect := A_DetectHiddenWindows
+        DetectHiddenWindows(True)
 
-		if (WinExist("ahk_exe Spotify.exe")) {
-			hWnd := this.Handle
+        if (WinExist("ahk_exe Spotify.exe")) {
+            hWnd := this.Handle
 
-			if (!(hWnd && DllCall("IsWindow", "Ptr", hWnd, "UInt"))) {
-				for hWnd in WinGetList("ahk_exe Spotify.exe") {
-					if (WinGetClass(hWnd) == "Chrome_WidgetWin_0" && WinGetTitle(hWnd) ~= "^(Spotify.*|.* - .*)$") {
-						this.Handle := hWnd
+            if (!(hWnd && DllCall("IsWindow", "Ptr", hWnd, "UInt"))) {
+                for hWnd in WinGetList("ahk_exe Spotify.exe") {
+                    if (WinGetClass(hWnd) == "Chrome_WidgetWin_0" && WinGetTitle(hWnd) ~= "^(Spotify.*|.* - .*)$") {
+                        this.Handle := hWnd
 
-						break
-					}
-				}
-			}
-		}
-		else {
-			Run("C:\Users\Onimuru\AppData\Local\Microsoft\WindowsApps\Spotify.exe")  ;* ** Gaining access to WindowsApps: https://helpdeskgeek.com/windows-10/how-to-access-the-windowsapps-folder-in-windows-10/. **
-			WinWaitActive("ahk_exe Spotify.exe")
+                        break
+                    }
+                }
+            }
+        }
+        else {
+            Run("C:\Users\Onimuru\AppData\Local\Microsoft\WindowsApps\Spotify.exe")  ;* ** Gaining access to WindowsApps: https://helpdeskgeek.com/windows-10/how-to-access-the-windowsapps-folder-in-windows-10/. **
+            WinWaitActive("ahk_exe Spotify.exe")
 
-			this.Handle := WinGetID("A")
-		}
+            this.Handle := WinGetID("A")
+        }
 
-		DetectHiddenWindows(detect)  ;* Avoid leaving `A_DetectHiddenWindows` on for the calling thread.
+        DetectHiddenWindows(detect)  ;* Avoid leaving `A_DetectHiddenWindows` on for the calling thread.
 
-		return ((prefix) ? ("ahk_ID" . this.Handle) : (this.Handle))
-	}
+        return ((prefix) ? ("ahk_ID" . this.Handle) : (this.Handle))
+    }
 }

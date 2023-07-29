@@ -1,9 +1,9 @@
 ﻿#Requires AutoHotkey v2.0-beta
 
 /*
-* MIT License
+* The MIT License (MIT)
 *
-* Copyright (c) 2022 Onimuru
+* Copyright (c) 2021 - 2023, Chad Blease
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -25,61 +25,61 @@
 */
 
 class YouTube_Music {
-	static Handle := 0
+    static Handle := 0
 
-	static Pause() {
-		PostMessage(0x319, 0, 0x2F0000, , this.GetWindow(False))  ;? 0x319 = WM_APPCOMMAND, 0x2F0000 = APPCOMMAND_MEDIA_PAUSE  ;: https://docs.microsoft.com/en-us/windows/win32/inputdev/wm-appcommand
-	}
+    static Pause() {
+        PostMessage(0x319, 0, 0x2F0000, , this.GetWindow(False))  ;? 0x319 = WM_APPCOMMAND, 0x2F0000 = APPCOMMAND_MEDIA_PAUSE  ;: https://docs.microsoft.com/en-us/windows/win32/inputdev/wm-appcommand
+    }
 
-	static PlayPause() {
-		PostMessage(0x319, 0, 0xE0000, , this.GetWindow(False))  ;? 0xE0000 = APPCOMMAND_MEDIA_PLAY_PAUSE
-	}
+    static PlayPause() {
+        PostMessage(0x319, 0, 0xE0000, , this.GetWindow(False))  ;? 0xE0000 = APPCOMMAND_MEDIA_PLAY_PAUSE
+    }
 
-	static Play() {
-		hWnd := this.GetWindow(False)
+    static Play() {
+        hWnd := this.GetWindow(False)
 
-		PostMessage(0x319, 0, 0xD0000, , hWnd)  ;? 0xD0000 = APPCOMMAND_MEDIA_STOP
-		PostMessage(0x319, 0, 0xE0000, , hWnd)
-	}
+        PostMessage(0x319, 0, 0xD0000, , hWnd)  ;? 0xD0000 = APPCOMMAND_MEDIA_STOP
+        PostMessage(0x319, 0, 0xE0000, , hWnd)
+    }
 
-	static Next() {
-		PostMessage(0x319, 0, 0xB0000, , this.GetWindow(False))  ;? 0xB0000 = APPCOMMAND_MEDIA_NEXTTRACK
-	}
+    static Next() {
+        PostMessage(0x319, 0, 0xB0000, , this.GetWindow(False))  ;? 0xB0000 = APPCOMMAND_MEDIA_NEXTTRACK
+    }
 
-	static Prev() {
-		PostMessage(0x319, 0, 0xC0000, , this.GetWindow(False))  ;? 0xC0000 = APPCOMMAND_MEDIA_PREVIOUSTRACK
-	}
+    static Prev() {
+        PostMessage(0x319, 0, 0xC0000, , this.GetWindow(False))  ;? 0xC0000 = APPCOMMAND_MEDIA_PREVIOUSTRACK
+    }
 
-	static GetWindow(prefix := False) {
-		detect := A_DetectHiddenWindows
+    static GetWindow(prefix := False) {
+        detect := A_DetectHiddenWindows
 
-		DetectHiddenWindows(True)
+        DetectHiddenWindows(True)
 
-		if (WinExist("ahk_class Chrome_WidgetWin_1 ahk_exe YouTube Music Desktop App.exe")) {
-			hWnd := this.Handle
+        if (WinExist("ahk_class Chrome_WidgetWin_1 ahk_exe YouTube Music Desktop App.exe")) {
+            hWnd := this.Handle
 
-			if (!(hWnd && DllCall("User32\IsWindow", "Ptr", hWnd, "UInt"))) {
-				for hWnd in WinGetList("ahk_class Chrome_WidgetWin_1 ahk_exe YouTube Music Desktop App.exe") {
-					if (WinGetClass(hWnd) == "Chrome_WidgetWin_1") {
-						this.Handle := hWnd
+            if (!(hWnd && DllCall("User32\IsWindow", "Ptr", hWnd, "UInt"))) {
+                for hWnd in WinGetList("ahk_class Chrome_WidgetWin_1 ahk_exe YouTube Music Desktop App.exe") {
+                    if (WinGetClass(hWnd) == "Chrome_WidgetWin_1") {
+                        this.Handle := hWnd
 
-						break
-					}
-				}
-			}
-		}
-		else {
-			Run("C:\Users\" . A_UserName . "\AppData\Local\Programs\youtube-music-desktop-app\YouTube Music Desktop App.exe")
+                        break
+                    }
+                }
+            }
+        }
+        else {
+            Run("C:\Users\" . A_UserName . "\AppData\Local\Programs\youtube-music-desktop-app\YouTube Music Desktop App.exe")
 
-			while (!hWnd := WinExist("ahk_class Chrome_WidgetWin_1 ahk_exe YouTube Music Desktop App.exe")) {
-				Sleep(-1)
-			}
+            while (!hWnd := WinExist("ahk_class Chrome_WidgetWin_1 ahk_exe YouTube Music Desktop App.exe")) {
+                Sleep(-1)
+            }
 
-			this.Handle := hWnd
-		}
+            this.Handle := hWnd
+        }
 
-		DetectHiddenWindows(detect)  ;* Avoid leaving `A_DetectHiddenWindows` on for the calling thread.
+        DetectHiddenWindows(detect)  ;* Avoid leaving `A_DetectHiddenWindows` on for the calling thread.
 
-		return ((prefix) ? (Format("ahk_ID {}", this.Handle)) : (this.Handle))
-	}
+        return ((prefix) ? (Format("ahk_ID {}", this.Handle)) : (this.Handle))
+    }
 }
