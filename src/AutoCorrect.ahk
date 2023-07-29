@@ -1,156 +1,164 @@
-#Requires AutoHotkey v2.0-beta
+;============ Auto-execute ====================================================;
+;======================================================  Setting  ==============;
 
-;============ Auto-Execute ====================================================;
-;--------------  Setting  ------------------------------------------------------;
-
+#KeyHistory, 0
+#NoEnv
 #NoTrayIcon
-#SingleInstance
-#Warn All, MsgBox
-#Warn LocalSameAsGlobal, Off
+#SingleInstance, Force
+#Warn, ClassOverwrite, MsgBox
 
-ListLines(False)
-ProcessSetPriority("Normal")
+ListLines, Off
+Process, Priority, , Normal
+SendMode, Input
+SetKeyDelay, -1, -1
+SetTitleMatchMode, 2
+SetWorkingDir, % A_ScriptDir . "\.."
 
-;---------------  Other  -------------------------------------------------------;
+;======================================================  Include  ==============;
 
-Exit()
+#Include, %A_ScriptDir%\..\lib\Core.ahk
+
+;====================================================== Variable ==============;
+
+IniRead, Debug, % A_WorkingDir . "\cfg\Settings.ini", Debug, Debug
+Global Debug
+    , WindowMessage := DllCall("RegisterWindowMessage", "Str", "WindowMessage", "UInt")
+
+;======================================================== Hook ================;
+
+OnMessage(WindowMessage, "WindowMessage")
+
+;=======================================================  Other  ===============;
+
+exit
 
 ;=============== Hotkey =======================================================;
 
-#HotIf (WinActive(A_ScriptName))
+#If (WinActive(A_ScriptName))
 
-	$F10:: {
-		ListVars()
+    $F10::
+        ListVars
+        return
 
-		KeyWait("F10")
-	}
+    ~$^s::
+        Critical, On
 
-	~$^s:: {
-		Critical(True)
+        Sleep, 200
+        Reload
 
-		Sleep(200)
-		Reload()
-	}
+        return
 
-#HotIf
+#If
 
 ;=============  Hotstring  =====================================================;
 ;====================================================== Personal ==============;
 
-:*:\\@:: {
-	static email := IniRead(A_ScriptDir . "\..\cfg\Settings.ini", "Email", "Email")
+:*x:\\@::
+    IniRead, email, % A_WorkingDir . "\cfg\Settings.ini", Email, Email
+    Send, % email
 
-	Send(email)
-}
+    Return
 
-;==================================================  Window Specific  ==========;
+;======================================================== Code ================;
 
-#HotIf (WinActive("ahk_exe Code.exe"))
+#If (WinActive("ahk_exe Code.exe"))
 
-	:*:\\c:: {
-		SendText("A_Clipboard := ")
+    :*x:\\c::
+        SendRaw, % "A_Clipboard := "
 
-		KeyWait("c")
-	}
+        KeyWait, c
+        return
 
-	:*:\\f:: {
-		Send('Format("')
+    :*x:\\f::
+        SendRaw, % "Format("""
 
-		KeyWait("f")
-	}
+        KeyWait, f
+        return
 
-	:*:\\i:: {
-		Send("if (condition) {{}{}}{Left}{Enter}{Up}^{Left}^+{Right}")
+    :*x:\\i::
+        Send, % "if () {{}{}}{Left}{Enter}{Up}condition^{Left}^+{Right}"
 
-		KeyWait("i")
-	}
+        KeyWait, i
+        return
 
-	:*:\\s:: {
-		Send('switch () {{}{}}{Left}{Enter}case "_____":{}{Enter}{Up 2}{Right 4}condition^{Left}^+{Right}')
+    :*x:\\s::
+        Send, % "switch () {{}{}}{Left}{Enter}case ""_____"":{}{Enter}{Up 2}{Right 4}condition^{Left}^+{Right}"
 
-		KeyWait("s")
-	}
+        KeyWait, s
+        return
 
-	:*:\\t:: {
-		SendText("ToolTip(")
+    :*x:\\t::
+        KeyWait, t, "T0.5"
+        if (ErrorLevel) {
+            SendRaw, % "ToolTip("
+        }
+        else {
+            Send, % "(condition) ? (_____) : (_____)^{Left 7}^+{Right}"
+        }
 
-		KeyWait("t")
-	}
+        KeyWait, t
+        return
 
-	:*:\\l:: {
-		Send("Console.Log(")
+    :*x:\\l::
+        Send, % "Console.Log("
 
-		KeyWait("l")
-	}
+        KeyWait, l
+        return
 
-	:*:\\m:: {
-		SendText("MsgBox(")
+    :*x:\\m::
+        SendRaw, % "MsgBox("
 
-		KeyWait("m")
-	}
+        KeyWait, m
+        return
 
-	:*:\\r:: {
-		Send("return")
+    :*x:\\r::
+        Send, % "return"
 
-		KeyWait("r")
-	}
+        KeyWait, r
+        return
 
-	:*:\\?:: {
-		Send("(condition) ? (_____) : (_____)^{Left 7}^+{Right}")
+    :*x:\\o::
+    :*x:\\a::
+        c := Clipboard
 
-		KeyWait("/")
-	}
+        switch (A_ThisHotkey) {
+            case ":*x:\\o": {
+                Send, % "{{}Key: ""value""" . (Clipboard := ", Key: ""value""") . "{}}{Left}"
+            }
+            case ":*x:\\a": {
+                Send, % "{[}""value""" . (Clipboard := ", ""value""") . "{]}{Left}"
+            }
+        }
 
-	:*:\\o::
-	:*:\\a:: {
-		c := A_Clipboard
+        SetTimer(Func("Restore").Bind(c), -200)
+        return
 
-		switch (A_ThisHotkey) {
-			case ":*:\\o":
-				Send('{{}Key: "value"' . (A_Clipboard := ', Key: "value"') . '{}}{Left}')
-			case ":*:\\a":
-				Send('{[}"value"' . (A_Clipboard := ', "value"') . '{]}{Left}')
-		}
+    :*x:\vec2::
+        Send, % "{{}x: _____, y: _____{}}^{Left 3}^+{Right}"
+        return
 
-		SetTimer(__Restore.Bind(c), -200)
+    :*x:\vec3::
+        Send, % "{{}x: _____, y: _____{}, z: _____{}}^{Left 5}^+{Right}"
+        return
 
-		;* Description:
-			;*	Restores the clipboard to what it was after 0.85 seconds of inactivity.
-		__Restore(string) {
-			if (A_TimeIdleKeyboard >= 850) {
-				return (A_Clipboard := string)
-			}
+    :*x:\rect::
+        Send, % "{{}x: _____, y: _____, Width: _____, Height: _____{}}^{Left 7}^+{Right}"
+        return
 
-			SetTimer(__Restore.Bind(string), -200)
-		}
-	}
+#If
 
-	:*:\vec2:: {
-		Send("{{}x: _____, y: _____{}}^{Left 3}^+{Right}")
-	}
+#If (WinActive("Discord ahk_class Chrome_WidgetWin_1 ahk_exe Discord.exe"))
 
-	:*:\vec3:: {
-		Send("{{}x: _____, y: _____{}, z: _____{}}^{Left 5}^+{Right}")
-	}
+    :*x:``````::Send, % "``````ahk`n`n``````{Up}"
 
-	:*:\rect:: {
-		Send("{{}x: _____, y: _____, Width: _____, Height: _____{}}^{Left 7}^+{Right}")
-	}
+#If
 
-#HotIf
+#If (WinActive("Command Prompt ahk_exe cmd.exe"))
 
-#HotIf (WinActive("Discord ahk_class Chrome_WidgetWin_1 ahk_exe Discord.exe"))
+    :*:\\h::doskey /history
+    :*:\\f::ipconfig /flushdns
 
-	:*:``````::``````ahk`n`n``````{Up}
-
-#HotIf
-
-#HotIf (WinActive("Command Prompt ahk_exe cmd.exe"))
-
-	:*:\\h::doskey /history
-	:*:\\f::ipconfig /flushdns
-
-#HotIf
+#If
 
 ;=======================================================  Angle  ===============;  ;: https://altcodeunicode.com/
 
@@ -216,7 +224,7 @@ Exit()
 
 ;=====================================================   *ign Fix  =============;  ;: https://gist.github.com/endolith/876629
 
-#Hotstring ("B0")
+#Hotstring, B0
 
 ::align::
 ::antiforeign::
@@ -254,11 +262,9 @@ Exit()
 ::sign::
 ::sovereign::
 ::unbenign::
-::verisign:: {
+::verisign::Return  ;* This makes the above hotstrings do nothing so that they override the ign->ing rule below.
 
-}  ;* This makes the above hotstrings do nothing so that they override the ign->ing rule below.
-
-#Hotstring ("RB")
+#Hotstring, RB
 
 :?:ign::ing
 
@@ -2702,7 +2708,7 @@ Exit()
 :C:ill::I'll
 :C:ive::I've
 ::iconclastic::iconoclastic
-:C:Id::I'd
+::Id::I'd
 ::idae::idea
 ::idaeidae::idea
 ::idaes::ideas
@@ -5398,3 +5404,47 @@ Exit()
 :?:oology::oölogy
 :?:t he:: the
 */
+
+;============== Function ======================================================;
+;======================================================== Hook ================;
+
+WindowMessage(wParam := 0, lParam := 0) {
+    switch (wParam) {
+        case 0x1000: {
+            IniRead, Debug, % A_WorkingDir . "\cfg\Settings.ini", Debug, Debug
+
+            if (!Debug) {
+                ToolTip, , , , 20
+            }
+
+            return (0)
+        }
+    }
+
+    return (-1)
+}
+
+;=======================================================  Other  ===============;
+
+;* Description:
+;*  Restores the clipboard to what it was after 0.85 seconds of inactivity.
+Restore(restore) {
+    Static funcObj := Func("Restore")
+
+    if (A_TimeIdle > 850)  ;? [A_TimeIdle || A_TimeIdleKeyboard].
+        return (Clipboard := restore)
+
+    SetTimer(funcObj.Bind(restore), -25)
+}
+
+;* SetTimer(label, (period), (priority))
+SetTimer(label, period := "", priority := 0) {
+    try {
+        SetTimer, % label, % period, % priority
+    }
+    catch {
+        return (0)
+    }
+
+    return (1)
+}
