@@ -31,11 +31,7 @@
 #Include ..\lib\ObjectOriented\Object.ahk
 #Include ..\lib\String\String.ahk
 
-#Include *i ..\lib\Geometry\Vec2.ahk
-#Include *i ..\lib\Geometry\Vec3.ahk
-#Include *i ..\lib\Geometry\Matrix3.ahk
-#Include *i ..\lib\Geometry\RotationMatrix.ahk
-#Include *i ..\lib\Geometry\TransformMatrix.ahk
+#Include Geometry.ahk
 
 #Include *i ..\lib\GDIp\Direct2D.ahk
 #Include *i ..\lib\GDIp\DirectWrite.ahk

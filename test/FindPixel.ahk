@@ -14,6 +14,7 @@ if (!A_IsAdmin || !DllCall("Kernel32\GetCommandLine", "Str") ~= " /restart(?!\S)
 ;--------------  Include  ------------------------------------------------------;
 
 #Include ..\lib\FindPixel.ahk
+#Include ..\lib\Console\Console.ahk
 
 ;--------------  Setting  ------------------------------------------------------;
 
