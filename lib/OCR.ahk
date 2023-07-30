@@ -44,7 +44,7 @@ OCR(file := "") {
 
     __ErrorFromMessage(messageID) {
         if (!(length := DllCall("Kernel32\FormatMessage", "UInt", 0x1100, "Ptr", 0, "UInt", messageID, "UInt", 0, "Ptr*", &(buffer := 0), "UInt", 0, "Ptr", 0, "Int"))) {  ;: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
-            return (ErrorFromMessage(DllCall("Kernel32\GetLastError")))
+            return (__ErrorFromMessage(DllCall("Kernel32\GetLastError")))
         }
 
         message := StrGet(buffer, length - 2)  ;* Account for the newline and carriage return characters.
