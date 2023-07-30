@@ -37,8 +37,7 @@ FindSinglePixel_WholeScreen(color) {
 
     DllCall("Gdi32\BitBlt", "Ptr", GDIp.DC.Handle, "Int", x1, "Int", y1, "Int", width - 1, "Int", height - 1, "Ptr", DllCall("User32\GetDC", "Ptr", 0, "Ptr"), "Int", x1, "Int", y1, "UInt", 0x00CC0020 | 0x40000000)  ;* Copy a portion of the source DC's bitmap to the destination DC's bitmap.
 
-    bitmap := GDIp.Bitmap, pBitmap := bitmap.Ptr
-    bitmap.LockBits()
+    (bitmap := GDIp.Bitmap).LockBits(), pBitmap := bitmap.Ptr
 
     reset := x1
         , y2 := y1
@@ -69,8 +68,7 @@ FindSinglePixel_WholeScreen(color) {
 FindSinglePixel_Rectangle(x1, y1, width, height, color) {
     DllCall("Gdi32\BitBlt", "Ptr", GDIp.DC.Handle, "Int", x1, "Int", y1, "Int", width - 1, "Int", height - 1, "Ptr", DllCall("User32\GetDC", "Ptr", 0, "Ptr"), "Int", x1, "Int", y1, "UInt", 0x00CC0020 | 0x40000000)  ;* Copy a portion of the source DC's bitmap to the destination DC's bitmap.
 
-    bitmap := GDIp.Bitmap, pBitmap := bitmap.Ptr
-    bitmap.LockBits()
+    (bitmap := GDIp.Bitmap).LockBits(), pBitmap := bitmap.Ptr
 
     static __Clamp(number, lower, upper) {
         return (((number := (number < lower) ? (lower) : (number)) > upper) ? (upper) : (number))
